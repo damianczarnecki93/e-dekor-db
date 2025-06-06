@@ -1,61 +1,87 @@
-// import.js
-require('dotenv').config();
+const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
 const Papa = require('papaparse');
-const mongoose = require('mongoose');
-const Product = require('./models/Product');
+const ProductList = require('./models/ProductList');
+const Inventory = require('./models/Inventory');
+require('dotenv').config();
 
-const importData = async () => {
-    try {
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log('Połączono z MongoDB na potrzeby importu...');
-
-        // Wyczyść kolekcję przed importem
-        await Product.deleteMany({});
-        console.log('Kolekcja produktów wyczyszczona.');
-
-        const files = ['produkty.csv', 'produkty2.csv'];
-        let allProducts = [];
-
-        for (const file of files) {
-            const filePath = path.join(__dirname, 'client', file);
-            const csvFile = fs.readFileSync(filePath, 'utf8');
-
-            // Konwersja z Windows-1250 na UTF-8
-            const iconv = require('iconv-lite');
-            const buf = fs.readFileSync(filePath);
-            const utf8String = iconv.decode(buf, 'Windows-1250');
-
-            const parsed = Papa.parse(utf8String, { header: true, skipEmptyLines: true });
-
-            const products = parsed.data.map(p => ({
-                kod_kreskowy: String(p.kod_kreskowy || "").trim(),
-                nazwa_produktu: String(p.nazwa_produktu || "").trim(),
-                cena: parseFloat(String(p.opis || "0").replace(',', '.')) || 0,
-                opis: String(p.cena || "").trim()
-            }));
-            allProducts = allProducts.concat(products);
-            console.log(`Przetworzono ${products.length} produktów z pliku ${file}.`);
-        }
-
-        // Wstaw produkty do bazy danych
-        await Product.insertMany(allProducts, { ordered: false }).catch(err => {
-            // Ignoruj błędy duplikatów, jeśli wystąpią
-            if (err.code !== 11000) {
-                console.error('Błąd wstawiania danych:', err);
-            }
-        });
-
-        console.log(`Zakończono import. Łącznie zaimportowano ${await Product.countDocuments()} unikalnych produktów.`);
-
-    } catch (error) {
-        console.error('Krytyczny błąd importu:', error);
-    } finally {
-        await mongoose.disconnect();
-        console.log('Rozłączono z MongoDB.');
-    }
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('MongoDB connected');
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
 };
 
-// Aby uniknąć problemów z 'iconv-lite', zainstaluj go: npm install iconv-lite
+const importCSV = async (filePath, model) => {
+  const csvFilePath = path.join(__dirname, filePath);
+  if (!fs.existsSync(csvFilePath)) {
+    console.log(`File not found: ${csvFilePath}. Skipping.`);
+    return 0;
+  }
+  const csvData = fs.readFileSync(csvFilePath, 'utf8');
+  let count = 0;
+
+  return new Promise((resolve, reject) => {
+    Papa.parse(csvData, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        if (results.errors.length) {
+          console.error('Parsing errors:', results.errors);
+          return reject(new Error('CSV parsing error'));
+        }
+        
+        console.log(`Found ${results.data.length} rows in ${filePath}`);
+        if (results.data.length > 0) {
+          try {
+            await model.insertMany(results.data, { ordered: false });
+            count = results.data.length;
+            console.log(`${count} records successfully imported from ${filePath}.`);
+          } catch (err) {
+            if (err.writeErrors) {
+                console.error(` Encountered ${err.writeErrors.length} errors during insertion from ${filePath}.`);
+            } else {
+                console.error(`Error inserting data from ${filePath}:`, err);
+            }
+          }
+        }
+        resolve(count);
+      },
+      error: (error) => {
+        console.error(`Error parsing ${filePath}:`, error);
+        reject(error);
+      }
+    });
+  });
+};
+
+const importData = async () => {
+  await connectDB();
+  try {
+    console.log('Clearing existing data...');
+    await ProductList.deleteMany({});
+    await Inventory.deleteMany({});
+    console.log('Data cleared.');
+
+    let totalImported = 0;
+    totalImported += await importCSV('public/produkty.csv', ProductList);
+    totalImported += await importCSV('public/produkty2.csv', ProductList);
+    
+    console.log(`Total products imported: ${totalImported}`);
+
+  } catch (err) {
+    console.error('An error occurred during the data import process:', err);
+  } finally {
+    mongoose.disconnect();
+    console.log('MongoDB disconnected.');
+  }
+};
+
 importData();
