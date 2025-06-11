@@ -36,63 +36,55 @@ document.addEventListener('DOMContentLoaded', () => {
     const sunClass = "fa-sun";
 
     const elements = {
-        statusP: document.getElementById('status'),
-        tabLookupBtn: document.getElementById('tabLookupBtn'),
-        tabListBuilderBtn: document.getElementById('tabListBuilderBtn'),
-        lookupMode: document.getElementById('lookupMode'),
-        listBuilderMode: document.getElementById('listBuilderMode'),
-        startCameraBtn: document.getElementById('startCameraBtn'),
-        cameraScannerSection: document.getElementById('cameraScannerSection'),
-        cameraReader: document.getElementById('camera-reader'),
-        stopCameraBtn: document.getElementById('stopCameraBtn'),
-        lookupBarcodeInput: document.getElementById('lookupBarcode_Input'),
-        lookupResultDiv: document.getElementById('lookupResult'),
-        listBarcodeInput: document.getElementById('listBarcode_Input'),
-        listBuilderSearchResults: document.getElementById('listBuilderSearchResults'),
-        quantityInput: document.getElementById('quantityInput'),
-        addToListBtn: document.getElementById('addToListBtn'),
-        scannedListBody: document.getElementById('scannedListBody'),
-        exportCsvBtn: document.getElementById('exportCsvBtn'),
-        exportExcelBtn: document.getElementById('exportExcelBtn'),
-        printListBtn: document.getElementById('printListBtn'),
-        clearListBtn: document.getElementById('clearListBtn'),
-        sendEmailBtn: document.getElementById('sendEmailBtn'),
-        clientNameInput: document.getElementById('clientNameInput'),
-        additionalInfoInput: document.getElementById('additionalInfoInput'),
-        totalOrderValue: document.getElementById('totalOrderValue'),
-        inventoryModule: document.getElementById('inventoryModule'),
-        closeInventoryModalBtn: document.getElementById('closeInventoryModalBtn'),
-        closeInventoryModalBtnBottom: document.getElementById('closeInventoryModalBtnBottom'),
-        inventoryEanInput: document.getElementById('inventoryEanInput'),
-        inventoryQuantityInput: document.getElementById('inventoryQuantityInput'),
-        inventoryAddBtn: document.getElementById('inventoryAddBtn'),
-        inventoryListBody: document.getElementById('inventoryListBody'),
-        inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
-        inventorySearchResults: document.getElementById('inventorySearchResults'),
-        // NOWE ELEMENTY DLA PANELU ADMINA
-        tabAdminBtn: document.getElementById('tabAdminBtn'),
-        adminPanel: document.getElementById('adminPanel'),
-        pendingUsersList: document.getElementById('pendingUsersList'),
-        // NOWE ELEMENTY
-        logoutBtn: document.getElementById('logoutBtn'),
-        fabScrollTopBtn: document.getElementById('fabScrollTopBtn'),
-        scrollToBottomBtn: document.getElementById('scrollToBottomBtn'),
-        scannedListTable: document.querySelector('#listBuilderMode table') // Dodajemy dla przewijania
-    };
+    statusP: document.getElementById('status'),
+    tabLookupBtn: document.getElementById('tabLookupBtn'),
+    tabListBuilderBtn: document.getElementById('tabListBuilderBtn'),
+    lookupMode: document.getElementById('lookupMode'),
+    listBuilderMode: document.getElementById('listBuilderMode'),
+    startCameraBtn: document.getElementById('startCameraBtn'),
+    cameraScannerSection: document.getElementById('cameraScannerSection'),
+    cameraReader: document.getElementById('camera-reader'),
+    stopCameraBtn: document.getElementById('stopCameraBtn'),
+    lookupBarcodeInput: document.getElementById('lookupBarcode_Input'),
+    lookupResultDiv: document.getElementById('lookupResult'),
+    listBarcodeInput: document.getElementById('listBarcode_Input'),
+    listBuilderSearchResults: document.getElementById('listBuilderSearchResults'),
+    quantityInput: document.getElementById('quantityInput'),
+    addToListBtn: document.getElementById('addToListBtn'),
+    scannedListBody: document.getElementById('scannedListBody'),
+    exportCsvBtn: document.getElementById('exportCsvBtn'),
+    exportExcelBtn: document.getElementById('exportExcelBtn'),
+    printListBtn: document.getElementById('printListBtn'),
+    clearListBtn: document.getElementById('clearListBtn'),
+    sendEmailBtn: document.getElementById('sendEmailBtn'),
+    clientNameInput: document.getElementById('clientNameInput'),
+    additionalInfoInput: document.getElementById('additionalInfoInput'),
+    totalOrderValue: document.getElementById('totalOrderValue'),
+    inventoryModule: document.getElementById('inventoryModule'),
+    closeInventoryModalBtn: document.getElementById('closeInventoryModalBtn'),
+    closeInventoryModalBtnBottom: document.getElementById('closeInventoryModalBtnBottom'),
+    inventoryEanInput: document.getElementById('inventoryEanInput'),
+    inventoryQuantityInput: document.getElementById('inventoryQuantityInput'),
+    inventoryAddBtn: document.getElementById('inventoryAddBtn'),
+    inventoryListBody: document.getElementById('inventoryListBody'),
+    inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
+    inventorySearchResults: document.getElementById('inventorySearchResults'),
+    // UPEWNIJ SIĘ, ŻE TE 3 LINIE SĄ OBECNE
+    tabAdminBtn: document.getElementById('tabAdminBtn'),
+    adminPanel: document.getElementById('adminPanel'),
+    pendingUsersList: document.getElementById('pendingUsersList')
+};
 
     // =================================================================
-    // NOWA SEKCJA - SPRAWDZENIE LOGOWANIA PRZY STARCIE
+    // SPRAWDZENIE LOGOWANIA PRZY STARCIE APLIKACJI
     // =================================================================
     const checkLoginStatus = async () => {
         const token = localStorage.getItem('token');
         if (!token) {
-            // Jeśli nie ma tokenu, nic nie robimy, użytkownik musi się zalogować.
             return;
         }
 
         try {
-            // Ten endpoint /api/auth/verify musisz stworzyć na swoim serwerze.
-            // Powinien on zweryfikować token i zwrócić dane użytkownika, np. { username: 'admin', role: 'admin' }
             const response = await fetch('/api/auth/verify', {
                 method: 'GET',
                 headers: { 'x-auth-token': token }
@@ -100,42 +92,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 const userData = await response.json();
-                console.log('Automatyczne logowanie pomyślne dla:', userData.username);
-                // Ukrywamy ekran logowania i pokazujemy aplikację
                 loginOverlay.style.display = 'none';
                 appContainer.style.display = 'block';
                 if (fabInventoryBtn) fabInventoryBtn.style.display = 'flex';
-                
-                // Inicjalizacja aplikacji po zalogowaniu
                 initializeApp(userData);
             } else {
-                // Token jest nieprawidłowy lub wygasł
                 localStorage.removeItem('token');
-                loginError.textContent = 'Sesja wygasła, zaloguj się ponownie.';
             }
         } catch (error) {
             console.error('Błąd weryfikacji tokenu:', error);
-            loginError.textContent = 'Błąd połączenia. Nie można zweryfikować sesji.';
         }
     };
-    
+
     // =================================================================
-    // NOWA SEKCJA - INICJALIZACJA APLIKACJI
+    // INICJALIZACJA APLIKACJI PO ZALOGOWANIU
     // =================================================================
-    let initializeApp = (userData) => { // Zmieniamy na let, żeby móc ją nadpisać
-        // Ta funkcja jest teraz wywoływana po udanym logowaniu (ręcznym lub automatycznym)
-        loadDataFromServer(); // Ładuje bazę produktów
-        loadUserDataFromServer(); // Ładuje listy i inwentaryzacje użytkownika
-        
-        // Sprawdzamy, czy użytkownik jest adminem
+    const initializeApp = (userData) => {
+        loadDataFromServer();
+        loadUserDataFromServer();
         if (userData && userData.role === 'admin') {
             if(elements.tabAdminBtn) elements.tabAdminBtn.style.display = 'block';
         }
     };
 
-
     // === SEKCJA LOGOWANIA I REJESTRACJI ===
-    // MODYFIKACJA - Przełączanie formularzy
     if (showRegister) {
         showRegister.addEventListener('click', (e) => {
             e.preventDefault();
@@ -156,7 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // MODYFIKACJA - Logika rejestracji
     async function handleRegistration() {
         const username = registerUsernameInput.value.trim();
         const password = registerPasswordInput.value.trim();
@@ -177,11 +156,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) {
                 registerError.textContent = data.msg || 'Wystąpił błąd serwera.';
             } else {
-                // MODYFIKACJA: Informujemy o konieczności akceptacji przez admina
                 alert('Rejestracja pomyślna! Twoje konto musi zostać aktywowane przez administratora.');
                 showLogin.click();
                 loginUsernameInput.value = username;
                 loginPasswordInput.value = '';
+                loginPasswordInput.focus();
             }
         } catch (error) {
             console.error('Błąd rejestracji:', error);
@@ -189,7 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // MODYFIKACJA - Logika logowania
     async function attemptLogin() {
         const username = loginUsernameInput.value;
         const password = loginPasswordInput.value;
@@ -203,21 +181,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             if (!response.ok) {
-                // MODYFIKACJA: Obsługa błędu "konto niezatwierdzone"
                 loginError.textContent = data.msg || 'Wystąpił błąd';
                 return;
             }
-            
-            // Zapisujemy token
+
             localStorage.setItem('token', data.token);
 
-            // Ukrywamy overlay i pokazujemy apkę
             loginOverlay.style.display = 'none';
             appContainer.style.display = 'block';
             if (fabInventoryBtn) fabInventoryBtn.style.display = 'flex';
             
-            // Wywołujemy nową funkcję inicjalizującą
-            initializeApp(data.user); // Zakładamy, że serwer zwraca { token: '...', user: { username: '...', role: '...' } }
+            initializeApp(data.user);
 
         } catch (error) {
             console.error('Błąd logowania:', error);
@@ -229,6 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loginBtn) loginBtn.addEventListener('click', attemptLogin);
     if (loginPasswordInput) loginPasswordInput.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
     if (loginUsernameInput) loginUsernameInput.addEventListener('keydown', (event) => { if (event.key === 'Enter' && loginPasswordInput) loginPasswordInput.focus(); });
+
 
     // === TRYB CIEMNY ===
     function setDarkMode(isDark) { const iconElement = darkModeToggle ? darkModeToggle.querySelector('i') : null; if (iconElement) { if (isDark) { document.body.classList.add('dark-mode'); iconElement.classList.remove(moonClass); iconElement.classList.add(sunClass); localStorage.setItem('theme', 'dark'); } else { document.body.classList.remove('dark-mode'); iconElement.classList.remove(sunClass); iconElement.classList.add(moonClass); localStorage.setItem('theme', 'light'); } } try { const pColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim(); if (pColor) { const rgb = pColor.startsWith('#') ? hexToRgb(pColor) : parseRgb(pColor); if (rgb) document.documentElement.style.setProperty('--primary-color-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`); } } catch (e) {} }
@@ -244,7 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let html5QrCode = null;
     let activeTab = 'lookup';
 
-    // FUNKCJE DO OBSŁUGI DANYCH Z SERWERA
     async function loadUserDataFromServer() {
         const token = localStorage.getItem('token');
         if (!token) {
@@ -299,13 +273,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // MODYFIKACJA: Ta funkcja powinna w przyszłości pobierać dane z API, a nie z CSV
+    // Ta funkcja w przyszłości powinna pobierać dane z API, a nie z CSV
     function loadDataFromServer() {
         if (!elements.statusP) { console.error("Element #status nie istnieje!"); return; }
         elements.statusP.textContent = 'Ładowanie bazy produktów...'; elements.statusP.style.color = 'var(--warning-color)'; elements.statusP.style.display = 'block';
-        
-        // DOCELOWO: Zamiast poniższego kodu, powinno być zapytanie do API serwera
-        // np. fetch('/api/products').then(res => res.json()).then(data => { ... })
         function fetchAndParseCsv(filename) { return fetch(filename).then(r => { if (!r.ok) throw new Error(`Błąd sieci dla ${filename}: ${r.status} ${r.statusText}`); return r.arrayBuffer(); }).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: err => rej(new Error(`Błąd parsowania ${filename}`)) }))); }
         Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')])
             .then(([data1, data2]) => {
@@ -323,7 +294,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
-    // MODYFIKACJA - Przełączanie zakładek
     function switchTab(newTab) {
         activeTab = newTab;
         // Ukryj wszystkie zakładki
@@ -343,10 +313,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (newTab === 'admin') {
             elements.adminPanel.classList.add('active');
             elements.tabAdminBtn.classList.add('active');
-            loadPendingUsers(); // Funkcja do załadowania użytkowników
+            loadPendingUsers();
         }
 
-        // Czyszczenie wyników wyszukiwania przy zmianie zakładki
         if (elements.listBuilderSearchResults) elements.listBuilderSearchResults.innerHTML = '';
         if (elements.lookupResultDiv) { elements.lookupResultDiv.innerHTML = ''; elements.lookupResultDiv.style.display = 'none'; }
     }
@@ -355,11 +324,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if(elements.tabAdminBtn) elements.tabAdminBtn.addEventListener('click', () => switchTab('admin'));
 
     
-    // =================================================================
-    // NOWA SEKCJA - LOGIKA PANELU ADMINISTRATORA
-    // =================================================================
+    // === LOGIKA PANELU ADMINISTRATORA ===
     async function loadPendingUsers() {
-        if(!elements.pendingUsersList) return;
+        console.log('--- FRONTEND: Rozpoczynam wczytywanie użytkowników do panelu admina ---');
+
+        if(!elements.pendingUsersList) {
+            console.error('Błąd krytyczny: element #pendingUsersList nie istnieje na stronie!');
+            return;
+        }
         elements.pendingUsersList.innerHTML = '<p>Ładowanie użytkowników...</p>';
         
         try {
@@ -368,18 +340,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'x-auth-token': token }
             });
 
+            console.log('--- FRONTEND: Otrzymano odpowiedź z serwera ---');
+            console.log('Status odpowiedzi:', response.status);
+
             if(!response.ok) {
-                throw new Error('Nie udało się pobrać użytkowników.');
+                throw new Error('Serwer odpowiedział błędem: ' + response.statusText);
             }
 
             const users = await response.json();
+            
+            console.log('--- FRONTEND: Przetworzono odpowiedź JSON. Otrzymane dane: ---');
+            console.log(users);
+            console.log(`--- FRONTEND: Sprawdzam warunek users.length > 0. Długość tablicy: ${users.length} ---`);
+
             elements.pendingUsersList.innerHTML = '';
 
             if(users.length === 0) {
+                console.log('--- FRONTEND: Tablica jest pusta, wyświetlam komunikat.');
                 elements.pendingUsersList.innerHTML = '<p>Brak użytkowników oczekujących na akceptację.</p>';
                 return;
             }
 
+            console.log('--- FRONTEND: Rozpoczynam renderowanie listy użytkowników... ---');
             users.forEach(user => {
                 const userDiv = document.createElement('div');
                 userDiv.innerHTML = `
@@ -389,8 +371,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 elements.pendingUsersList.appendChild(userDiv);
             });
+            console.log('--- FRONTEND: Zakończono renderowanie. ---');
 
         } catch (error) {
+            console.error('--- FRONTEND: Wystąpił błąd w funkcji loadPendingUsers ---');
+            console.error(error);
             elements.pendingUsersList.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`;
         }
     }
@@ -405,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if(response.ok) {
                 alert(`Użytkownik został ${action === 'approve' ? 'zaakceptowany' : 'odrzucony'}.`);
-                loadPendingUsers(); // Odśwież listę
+                loadPendingUsers();
             } else {
                 const data = await response.json();
                 throw new Error(data.msg || 'Wystąpił błąd.');
@@ -425,9 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Reszta kodu bez większych zmian ---
-    // (funkcje skanera, wyszukiwania, list, inwentaryzacji itp.)
-    
+    // === Pozostała logika aplikacji ===
     function onScanSuccess(decodedText) { let processedCode = decodedText; if (processedCode.length === 13 && processedCode.startsWith('0')) processedCode = processedCode.substring(1); if (elements.inventoryModule && elements.inventoryModule.style.display === 'flex') { if(elements.inventoryEanInput) elements.inventoryEanInput.value = processedCode; handleInventorySearch(true); } else if (activeTab === 'lookup') { if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.value = processedCode; handleLookupSearch(); } else { if(elements.listBarcodeInput) elements.listBarcodeInput.value = processedCode; handleListBuilderSearch(); } stopCamera(); }
     function startCamera() { if (!html5QrCode) { if (typeof Html5Qrcode !== 'undefined') html5QrCode = new Html5Qrcode("camera-reader"); else { alert("Brak biblioteki skanera."); return; }} if(elements.cameraScannerSection) elements.cameraScannerSection.style.display = 'block'; else return; const config = { fps: 10, qrbox: { width: 300, height: 150 }, formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13 ]}; html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, () => {}).catch((err) => alert("Błąd kamery. Sprawdź pozwolenia i HTTPS.")); }
     function stopCamera() { if (html5QrCode && html5QrCode.isScanning) { html5QrCode.stop().catch(err => console.error("Błąd kamery:", err)); } if (elements.cameraScannerSection) elements.cameraScannerSection.style.display = 'none'; }
@@ -448,26 +431,11 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Podaj EAN i ilość.");
             return;
         }
-
-        let productFromDb = productDatabase.find(p => p.kod_kreskowy === ean);
-
-        // MODYFIKACJA: Jeśli produkt nie istnieje w bazie, utwórz tymczasowy obiekt
+        const productFromDb = productDatabase.find(p => p.kod_kreskowy === ean);
         if (!productFromDb) {
-            // Sprawdzamy, czy EAN to poprawny numer, aby uniknąć dodawania śmieci
-            if (!/^\d+$/.test(ean) || ean.length < 5) { 
-                 alert(`"${ean}" to niepoprawny kod produktu lub EAN.`);
-                 elements.listBarcodeInput.value = '';
-                 elements.listBarcodeInput.focus();
-                 return;
-            }
-            productFromDb = {
-                kod_kreskowy: ean,
-                nazwa_produktu: `PRODUKT NIEZNANY`,
-                opis: '---', // Opis będzie pusty
-                cena: "0" // Cena będzie 0
-            };
+            alert(`Produkt o EAN ${ean} nie znaleziony.`);
+            return;
         }
-
         const existingItem = scannedItems.find(item => item.ean === ean);
         if (existingItem) {
             existingItem.quantity += quantity;
@@ -686,90 +654,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function exportInventoryToCsv(){if(inventoryItems.length===0){alert("Lista pusta.");return;}const e=inventoryItems.map(e=>`${e.ean};${e.quantity}`);const t=e.join('\n');try{const e=new Blob([t],{type:'text/csv;charset=utf-8;'});const n=document.createElement("a");const o=URL.createObjectURL(e);const r=`inwentaryzacja_prosta_${new Date().toLocaleDateString('pl-PL').replace(/\./g,'-')}`;n.setAttribute("href",o);n.setAttribute("download",`${r}.csv`);document.body.appendChild(n);n.click();document.body.removeChild(n);URL.revokeObjectURL(o);}catch(e){console.error("Błąd eksportu CSV Inwentaryzacji:",e);alert("Błąd eksportu CSV Inwentaryzacji.");}}
     if(elements.inventoryExportCsvBtn)elements.inventoryExportCsvBtn.addEventListener('click',exportInventoryToCsv);
 
-    // =================================================================
-    // NOWA SEKCJA - LOGIKA WYLOGOWANIA I PRZEWIJANIA
-    // =================================================================
-
-    // --- Logika wylogowania ---
-    function handleLogout() {
-        localStorage.removeItem('token');
-        location.reload(); // Najprostszy sposób na powrót do ekranu logowania
-    }
-    if (elements.logoutBtn) {
-        elements.logoutBtn.addEventListener('click', handleLogout);
-    }
-    
-    // Pokaż przycisk wylogowania po inicjalizacji aplikacji
-    const originalInitializeApp = initializeApp;
-    initializeApp = (userData) => {
-        originalInitializeApp(userData);
-        if (elements.logoutBtn) {
-            elements.logoutBtn.style.display = 'block';
-        }
-    };
-
-
-    // --- Logika przycisków przewijania ---
-    if (elements.fabScrollTopBtn) {
-        // Pokaż/ukryj przycisk "do góry" w zależności od pozycji przewinięcia
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 200) {
-                elements.fabScrollTopBtn.style.display = 'flex';
-            } else {
-                elements.fabScrollTopBtn.style.display = 'none';
-            }
-        });
-        // Obsługa kliknięcia
-        elements.fabScrollTopBtn.addEventListener('click', () => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-    }
-
-    if (elements.scrollToBottomBtn && elements.scannedListTable) {
-        elements.scrollToBottomBtn.addEventListener('click', () => {
-            elements.scannedListTable.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        });
-    }
-
-    // =================================================================
-    // NOWA SEKCJA - USPRAWNIENIE PÓL "ILOŚĆ"
-    // =================================================================
-    
-    // Zaznaczanie zawartości pola po kliknięciu
-    const handleQuantityFocus = (event) => {
-        event.target.select();
-    };
-
-    if (elements.quantityInput) {
-        elements.quantityInput.addEventListener('focus', handleQuantityFocus);
-        // Dodawanie produktu enterem z pola ilości
-        elements.quantityInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault(); // Zapobiega domyślnej akcji
-                addProductToList();
-            }
-        });
-    }
-    
-    if (elements.scannedListBody) {
-        // Delegacja zdarzeń dla pól ilości w tabeli
-        elements.scannedListBody.addEventListener('focusin', (e) => {
-            if (e.target.classList.contains('quantity-in-table')) {
-                handleQuantityFocus(e);
-            }
-        });
-        // Zatwierdzanie zmiany ilości w tabeli enterem
-        elements.scannedListBody.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && e.target.classList.contains('quantity-in-table')) {
-                e.preventDefault();
-                e.target.blur(); // Usunięcie focusa zatwierdzi zmianę
-            }
-        });
-    }
-
-    // =================================================================
-    // OSTATECZNE WYWOŁANIE PRZY STARCIE
-    // =================================================================
+    // Uruchomienie sprawdzania sesji przy starcie
     checkLoginStatus();
 
 });

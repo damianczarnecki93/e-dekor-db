@@ -41,7 +41,7 @@
             filter: invert(1);
         }
         body { font-family: 'Montserrat', sans-serif; background-color: var(--page-bg); color: var(--text-color); margin: 0; padding: 10px; font-size: 15px; transition: background-color 0.3s, color 0.3s; }
-        .app-header { text-align: center; margin-bottom: 20px; position: relative; }
+        .app-header { text-align: center; margin-bottom: 20px; }
         #appLogo { max-height: 70px; margin-bottom: 10px; }
         .container { width: 100%; max-width: 900px; margin: 10px auto; background: var(--container-bg); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); transition: background-color 0.3s, box-shadow 0.3s; }
         h1 { text-align: center; color: var(--primary-color); margin-top:0; margin-bottom: 15px; font-size: 1.8em; }
@@ -123,7 +123,7 @@
         #darkModeToggle { position: fixed; top: 15px; right: 15px; background-color: var(--container-bg); color: var(--text-color); border: 1px solid var(--border-color); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.2em; box-shadow: var(--shadow); z-index: 1001;}
         #darkModeToggle:hover { background-color: var(--page-bg); }
 
-        .fab { position: fixed; bottom: 25px; background-color: var(--primary-color); color: white; width: 60px; height: 60px; border-radius: 50%; display: none; justify-content: center; align-items: center; font-size: 1.8em; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 999; }
+        .fab { position: fixed; bottom: 25px; right: 25px; background-color: var(--primary-color); color: white; width: 60px; height: 60px; border-radius: 50%; display: none; justify-content: center; align-items: center; font-size: 1.8em; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 999; }
         .fab:hover { background-color: var(--primary-hover); }
 
         footer { text-align: center; margin-top: 30px; color: var(--text-muted-color); font-size: 0.85em; }
@@ -144,6 +144,7 @@
         .form-switcher a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
         .form-switcher a:hover { text-decoration: underline; }
 
+        /* NOWY STYL DLA PANELU ADMINA */
         #adminPanelBtn {
             background-color: var(--info-color);
             color: white;
@@ -158,56 +159,6 @@
         #adminPanel h3 {
              color: var(--warning-color);
         }
-        
-        /* Style dla nowych przycisków */
-        #logoutBtn {
-            position: absolute;
-            top: 15px;
-            right: 70px; /* Odsunięcie od przycisku dark mode */
-            background-color: var(--danger-color);
-            color: white;
-            padding: 8px 12px;
-            font-size: 0.9em;
-            display: none; /* Ukryty, pokażemy go po zalogowaniu */
-        }
-        #logoutBtn:hover {
-            background-color: var(--danger-hover);
-        }
-        .section-header {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            position: relative;
-        }
-        #scrollToBottomBtn {
-            background: none;
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            font-size: 1em;
-            padding: 5px 8px;
-            border-radius: 5px;
-            line-height: 1;
-        }
-        #scrollToBottomBtn:hover {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        /* Poprawki dla przycisków FAB, aby się nie nakładały */
-        #fabInventoryBtn {
-            right: 25px;
-            display: none; /* Domyślnie ukryty */
-        }
-        #fabScrollTopBtn {
-            right: 95px; /* Odsunięcie od przycisku inwentaryzacji */
-            background-color: var(--info-color);
-            display: none; /* Domyślnie ukryty, pokażemy po przewinięciu */
-        }
-        #fabScrollTopBtn:hover {
-            background-color: #138496;
-        }
-
 
         @media (max-width: 768px) {
             body { padding: 5px; font-size: 14px; }
@@ -237,9 +188,6 @@
             .inventory-modal-content .input-group input[type="number"] { width: 100% !important; margin-top: 10px; }
             .inventory-modal-content .input-group button { width: 100%; margin-top: 10px; }
             .action-buttons-group button { width: 100%; }
-            #logoutBtn { top: 10px; right: 60px; padding: 6px 10px; }
-            #fabInventoryBtn { bottom: 15px; right: 15px; }
-            #fabScrollTopBtn { bottom: 15px; right: 75px; }
         }
 
          @media (min-width: 769px) {
@@ -296,7 +244,6 @@
         <div class="app-header">
             <img src="logo.jpg" alt="Logo Firmy" id="appLogo">
             <h1><i class="fa-solid fa-boxes-stacked"></i> Panel sprzedaży</h1>
-            <button id="logoutBtn" title="Wyloguj się"><i class="fa-solid fa-right-from-bracket"></i> Wyloguj</button>
         </div>
         <p id="status"></p>
 
@@ -323,10 +270,7 @@
         </div>
 
         <div id="listBuilderMode" class="tab-content">
-            <div class="section-header">
-                <h2>Zamówienie</h2>
-                <button id="scrollToBottomBtn" title="Przewiń na koniec listy"><i class="fa-solid fa-arrow-down"></i></button>
-            </div>
+            <h2>Zamówienie</h2>
             <div class="order-info-fields">
                 <input type="text" id="clientNameInput" placeholder="Wprowadź nazwę klienta..." disabled>
                 <input type="text" id="additionalInfoInput" placeholder="Informacje dodatkowe...">
@@ -370,7 +314,6 @@
 
     </div>
 
-    <button id="fabScrollTopBtn" class="fab" title="Przewiń do góry"><i class="fa-solid fa-arrow-up"></i></button>
     <button id="fabInventoryBtn" class="fab" title="Moduł Inwentaryzacji"><i class="fa-solid fa-clipboard-list"></i></button>
 
     <div id="inventoryModule">
