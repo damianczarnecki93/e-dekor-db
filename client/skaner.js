@@ -72,7 +72,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // NOWE ELEMENTY DLA PANELU ADMINA
         tabAdminBtn: document.getElementById('tabAdminBtn'),
         adminPanel: document.getElementById('adminPanel'),
-        pendingUsersList: document.getElementById('pendingUsersList')
+        pendingUsersList: document.getElementById('pendingUsersList'),
+        // NOWE ELEMENTY
+        logoutBtn: document.getElementById('logoutBtn'),
+        fabScrollTopBtn: document.getElementById('fabScrollTopBtn'),
+        scrollToBottomBtn: document.getElementById('scrollToBottomBtn'),
+        scannedListTable: document.querySelector('#listBuilderMode table') // Dodajemy dla przewijania
     };
 
     // =================================================================
@@ -117,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // NOWA SEKCJA - INICJALIZACJA APLIKACJI
     // =================================================================
-    const initializeApp = (userData) => {
+    let initializeApp = (userData) => { // Zmieniamy na let, żeby móc ją nadpisać
         // Ta funkcja jest teraz wywoływana po udanym logowaniu (ręcznym lub automatycznym)
         loadDataFromServer(); // Ładuje bazę produktów
         loadUserDataFromServer(); // Ładuje listy i inwentaryzacje użytkownika
@@ -443,11 +448,26 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("Podaj EAN i ilość.");
             return;
         }
-        const productFromDb = productDatabase.find(p => p.kod_kreskowy === ean);
+
+        let productFromDb = productDatabase.find(p => p.kod_kreskowy === ean);
+
+        // MODYFIKACJA: Jeśli produkt nie istnieje w bazie, utwórz tymczasowy obiekt
         if (!productFromDb) {
-            alert(`Produkt o EAN ${ean} nie znaleziony.`);
-            return;
+            // Sprawdzamy, czy EAN to poprawny numer, aby uniknąć dodawania śmieci
+            if (!/^\d+$/.test(ean) || ean.length < 5) { 
+                 alert(`"${ean}" to niepoprawny kod produktu lub EAN.`);
+                 elements.listBarcodeInput.value = '';
+                 elements.listBarcodeInput.focus();
+                 return;
+            }
+            productFromDb = {
+                kod_kreskowy: ean,
+                nazwa_produktu: `PRODUKT NIEZNANY`,
+                opis: '---', // Opis będzie pusty
+                cena: "0" // Cena będzie 0
+            };
         }
+
         const existingItem = scannedItems.find(item => item.ean === ean);
         if (existingItem) {
             existingItem.quantity += quantity;
@@ -665,6 +685,87 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function exportInventoryToCsv(){if(inventoryItems.length===0){alert("Lista pusta.");return;}const e=inventoryItems.map(e=>`${e.ean};${e.quantity}`);const t=e.join('\n');try{const e=new Blob([t],{type:'text/csv;charset=utf-8;'});const n=document.createElement("a");const o=URL.createObjectURL(e);const r=`inwentaryzacja_prosta_${new Date().toLocaleDateString('pl-PL').replace(/\./g,'-')}`;n.setAttribute("href",o);n.setAttribute("download",`${r}.csv`);document.body.appendChild(n);n.click();document.body.removeChild(n);URL.revokeObjectURL(o);}catch(e){console.error("Błąd eksportu CSV Inwentaryzacji:",e);alert("Błąd eksportu CSV Inwentaryzacji.");}}
     if(elements.inventoryExportCsvBtn)elements.inventoryExportCsvBtn.addEventListener('click',exportInventoryToCsv);
+
+    // =================================================================
+    // NOWA SEKCJA - LOGIKA WYLOGOWANIA I PRZEWIJANIA
+    // =================================================================
+
+    // --- Logika wylogowania ---
+    function handleLogout() {
+        localStorage.removeItem('token');
+        location.reload(); // Najprostszy sposób na powrót do ekranu logowania
+    }
+    if (elements.logoutBtn) {
+        elements.logoutBtn.addEventListener('click', handleLogout);
+    }
+    
+    // Pokaż przycisk wylogowania po inicjalizacji aplikacji
+    const originalInitializeApp = initializeApp;
+    initializeApp = (userData) => {
+        originalInitializeApp(userData);
+        if (elements.logoutBtn) {
+            elements.logoutBtn.style.display = 'block';
+        }
+    };
+
+
+    // --- Logika przycisków przewijania ---
+    if (elements.fabScrollTopBtn) {
+        // Pokaż/ukryj przycisk "do góry" w zależności od pozycji przewinięcia
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 200) {
+                elements.fabScrollTopBtn.style.display = 'flex';
+            } else {
+                elements.fabScrollTopBtn.style.display = 'none';
+            }
+        });
+        // Obsługa kliknięcia
+        elements.fabScrollTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    if (elements.scrollToBottomBtn && elements.scannedListTable) {
+        elements.scrollToBottomBtn.addEventListener('click', () => {
+            elements.scannedListTable.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        });
+    }
+
+    // =================================================================
+    // NOWA SEKCJA - USPRAWNIENIE PÓL "ILOŚĆ"
+    // =================================================================
+    
+    // Zaznaczanie zawartości pola po kliknięciu
+    const handleQuantityFocus = (event) => {
+        event.target.select();
+    };
+
+    if (elements.quantityInput) {
+        elements.quantityInput.addEventListener('focus', handleQuantityFocus);
+        // Dodawanie produktu enterem z pola ilości
+        elements.quantityInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Zapobiega domyślnej akcji
+                addProductToList();
+            }
+        });
+    }
+    
+    if (elements.scannedListBody) {
+        // Delegacja zdarzeń dla pól ilości w tabeli
+        elements.scannedListBody.addEventListener('focusin', (e) => {
+            if (e.target.classList.contains('quantity-in-table')) {
+                handleQuantityFocus(e);
+            }
+        });
+        // Zatwierdzanie zmiany ilości w tabeli enterem
+        elements.scannedListBody.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.target.classList.contains('quantity-in-table')) {
+                e.preventDefault();
+                e.target.blur(); // Usunięcie focusa zatwierdzi zmianę
+            }
+        });
+    }
 
     // =================================================================
     // OSTATECZNE WYWOŁANIE PRZY STARCIE
