@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (results.length === 1) { addProductToList(results[0].kod_kreskowy); } 
         else if (results.length > 1) {
             let listHtml = '<ul>';
-            results.forEach(p => { listHtml += `<li data-ean="<span class="math-inline">\{p\.kod\_kreskowy\}"\></span>{p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
             listHtml += '</ul>';
             elements.listBuilderSearchResults.innerHTML = listHtml;
             elements.listBuilderSearchResults.style.display = 'block';
@@ -234,4 +234,208 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function displaySingleProductInLookup(product) {
-        let html = `<div class="lookup-result-item"><h2><span class="math-inline">\{product\.opis\}</h2\><div\><strong\>Kod produktu\:</strong\> <span\></span>{product.nazwa_produktu}</span></div><div><strong>Kod EAN:
+        let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
+        elements.lookupResultSingle.innerHTML = html;
+        elements.lookupResultSingle.style.display = 'block';
+        elements.lookupResultList.style.display = 'none';
+    }
+
+    function displayProductListInLookup(products) {
+        let listHtml = '';
+        products.forEach(p => { listHtml += `<li data-product-json='${JSON.stringify(p)}'>${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+        elements.lookupResultList.innerHTML = listHtml;
+        elements.lookupResultList.style.display = 'block';
+    }
+
+    if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('keydown', e => { if(e.key === 'Enter') handleLookupSearch(); });
+    if(elements.lookupResultList) elements.lookupResultList.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
+    
+    function renderScannedList() {
+        elements.scannedListBody.innerHTML = '';
+        const canOperate = scannedItems.length > 0;
+        [elements.exportCsvBtn, elements.exportExcelBtn, elements.printListBtn, elements.clearListBtn, elements.saveListBtn].forEach(btn => { if(btn) btn.disabled = !canOperate; });
+        scannedItems.forEach((item, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td class="col-code">${item.name}</td><td class="col-desc">${item.description}</td><td class="col-ean">${item.ean}</td><td><input type="number" class="quantity-in-table" value="${item.quantity}" min="1" data-index="${index}"></td><td><button class="delete-btn btn-icon" data-index="${index}"><i class="fa-solid fa-trash-can"></i></button></td>`;
+            elements.scannedListBody.appendChild(row);
+        });
+        const totalValue = scannedItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);
+        elements.totalOrderValue.textContent = `Total: ${totalValue.toFixed(2)} PLN`;
+    }
+    
+    const handleQuantityFocus = (event) => { event.target.select(); };
+    if(elements.quantityInput) elements.quantityInput.addEventListener('focus', handleQuantityFocus);
+    if(elements.scannedListBody) {
+        elements.scannedListBody.addEventListener('focusin', e => { if (e.target.classList.contains('quantity-in-table')) handleQuantityFocus(e); });
+        elements.scannedListBody.addEventListener('change', e => { if (e.target.classList.contains('quantity-in-table')) { const index = e.target.dataset.index; const newQuantity = parseInt(e.target.value, 10); if (newQuantity > 0) { scannedItems[index].quantity = newQuantity; renderScannedList(); } else { e.target.value = scannedItems[index].quantity; } } });
+        elements.scannedListBody.addEventListener('click', e => { const deleteButton = e.target.closest('.delete-btn'); if (deleteButton) { scannedItems.splice(deleteButton.dataset.index, 1); renderScannedList(); } });
+    }
+
+    function getSafeFilename() { const clientName = elements.clientNameInput.value.trim().replace(/[<>:"/\\|?* ]+/g, '_') || 'zamowienie'; const date = new Date().toISOString().slice(0, 10); return `${clientName}_${date}`; }
+    function exportToCsvOptima() { if (scannedItems.length === 0) return; const csvContent = scannedItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`); }
+    if(elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCsvOptima);
+    function exportToExcelDetailed() { if (scannedItems.length === 0) return; const headers = '"Kod produktu";"Nazwa";"EAN";"Ilość";"Cena Jednostkowa"'; const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${item.name || ''}";"${(item.description || '').replace(/"/g, '""')}";"${item.ean || ''}";"${item.quantity || 0}";"${priceFormatted}"`; }); const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`; downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`); }
+    if(elements.exportExcelBtn) elements.exportExcelBtn.addEventListener('click', exportToExcelDetailed);
+    function downloadFile(content, mimeType, filename) { const blob = new Blob([content], { type: mimeType }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+    
+    function prepareForPrint() {
+        elements.printClientName.textContent = `Klient: ${elements.clientNameInput.value.trim() || 'Nie podano'}`;
+        elements.printAdditionalInfo.textContent = `Info: ${elements.additionalInfoInput.value.trim() || 'Brak'}`;
+        let content = '';
+        if (scannedItems.length > 0) {
+            content = scannedItems.map(item => {
+                const code = (item.name || '').padEnd(20);
+                const name = (item.description || '').padEnd(40);
+                return `Kod: ${code} | Nazwa: ${name} | Ilość: ${item.quantity}`;
+            }).join('\n');
+        }
+        elements.printContent.textContent = content;
+    }
+
+    if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
+    
+    function clearCurrentList() {
+        scannedItems = [];
+        elements.clientNameInput.value = '';
+        elements.additionalInfoInput.value = '';
+        localStorage.removeItem('activeListId');
+        renderScannedList();
+        showToast("Utworzono nową, czystą listę.");
+    }
+    
+    if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => { if (scannedItems.length === 0 || confirm('Czy na pewno chcesz wyczyścić zamówienie?')) clearCurrentList(); });
+    
+    async function saveCurrentList() {
+        const listName = prompt("Podaj nazwę dla zapisywanego zamówienia:", elements.clientNameInput.value || `Zamówienie ${getSafeFilename()}`);
+        if (!listName) return null;
+        try {
+            const response = await fetch('/api/data/savelist', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ listName, items: scannedItems, clientName: elements.clientNameInput.value }) });
+            const savedList = await response.json();
+            if (!response.ok) throw new Error(savedList.msg || "Błąd zapisu");
+            showToast(`Zamówienie "${listName}" zostało zapisane.`);
+            localStorage.setItem('activeListId', savedList._id);
+            return savedList;
+        } catch (error) { alert(`Błąd: ${error.message}`); return null; }
+    }
+
+    if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
+    if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => {
+        if (scannedItems.length > 0) {
+            if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) {
+                await saveCurrentList();
+            }
+        }
+        clearCurrentList();
+    });
+    
+    async function loadListById(listId) {
+        try {
+            const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if (!response.ok) throw new Error("Błąd wczytywania listy");
+            const data = await response.json();
+            scannedItems = data.items;
+            elements.clientNameInput.value = data.clientName || data.listName;
+            renderScannedList();
+            localStorage.setItem('activeListId', listId);
+            return data;
+        } catch (error) {
+            alert(error.message);
+            localStorage.removeItem('activeListId');
+            return null;
+        }
+    }
+    
+    async function loadActiveList() {
+        const activeListId = localStorage.getItem('activeListId');
+        if (activeListId) {
+            showToast("Wczytuję ostatnio aktywną listę...");
+            await loadListById(activeListId);
+        }
+    }
+
+    async function showSavedLists() {
+        elements.savedListsModal.style.display = 'flex';
+        elements.savedListsContainer.innerHTML = '<p>Ładowanie...</p>';
+        try {
+            const response = await fetch('/api/data/lists', { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if (!response.ok) throw new Error("Błąd wczytywania list");
+            const lists = await response.json();
+            elements.savedListsContainer.innerHTML = '';
+            if (lists.length === 0) { elements.savedListsContainer.innerHTML = '<p>Brak zapisanych zamówień.</p>'; return; }
+            const listContainer = document.createElement('ul');
+            listContainer.style.listStyle = 'none';
+            listContainer.style.padding = '0';
+            lists.forEach(list => {
+                const li = document.createElement('li');
+                li.style.display = 'flex'; li.style.justifyContent = 'space-between'; li.style.alignItems = 'center'; li.style.padding = '10px'; li.style.borderBottom = '1px solid var(--border-color)';
+                li.innerHTML = `<span>${list.listName} <small>(${new Date(list.updatedAt).toLocaleString()})</small></span><div><button class="btn-primary load-list-btn" data-id="${list._id}">Wczytaj</button><button class="btn-danger delete-list-btn" data-id="${list._id}" style="margin-left:5px;">Usuń</button></div>`;
+                listContainer.appendChild(li);
+            });
+            elements.savedListsContainer.appendChild(listContainer);
+        } catch (error) { elements.savedListsContainer.innerHTML = `<p style="color:var(--danger-color)">${error.message}</p>`; }
+    }
+    if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
+    if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', async (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+        const listId = target.dataset.id;
+        if (target.classList.contains('load-list-btn')) {
+            if (!confirm("Czy na pewno wczytać listę? Obecne zamówienie zostanie nadpisane.")) return;
+            const loadedList = await loadListById(listId);
+            if (loadedList) {
+                elements.savedListsModal.style.display = 'none';
+                showToast(`Wczytano listę: ${loadedList.listName}`);
+            }
+        } else if (target.classList.contains('delete-list-btn')) {
+            if (!confirm("Czy na pewno usunąć tę listę?")) return;
+            try {
+                const response = await fetch(`/api/data/list/${listId}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } });
+                if (!response.ok) throw new Error("Błąd usuwania listy");
+                showToast("Lista usunięta.");
+                showSavedLists();
+            } catch (error) { alert(error.message); }
+        }
+    });
+
+    async function loadAllUsers() {
+        const userListDiv = elements.allUsersList;
+        if(!userListDiv) return;
+        userListDiv.innerHTML = '<p>Ładowanie...</p>';
+        try {
+            const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if(!response.ok) throw new Error('Nie udało się pobrać użytkowników.');
+            const users = await response.json();
+            userListDiv.innerHTML = users.length === 0 ? '<p>Brak użytkowników.</p>' : '';
+            users.forEach(user => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                let actions = `<button class="btn-primary edit-user-btn" data-userid="${user._id}" data-username="${user.username}">Zmień hasło</button>`;
+                const newRole = user.role === 'admin' ? 'user' : 'admin';
+                actions += `<button class="change-role-btn" data-userid="${user._id}" data-username="${user.username}" data-role="${newRole}">Zmień na ${newRole}</button>`;
+                if (user.status === 'pending') actions = `<button class="approve-user-btn" data-userid="${user._id}">Akceptuj</button>` + actions;
+                if (user.role !== 'admin') actions += `<button class="delete-user-btn" data-userid="${user._id}" data-username="${user.username}"><i class="fa-solid fa-trash"></i></button>`;
+                userDiv.innerHTML = `<div class="user-info"><strong>${user.username}</strong><span class="status">Status: ${user.status} | Rola: ${user.role}</span></div><div class="user-actions">${actions}</div>`;
+                userListDiv.appendChild(userDiv);
+            });
+        } catch (error) { userListDiv.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`; }
+    }
+    
+    async function handleUserAction(url, options, successMsg) { try { const response = await fetch(url, options); const data = await response.json(); if(!response.ok) throw new Error(data.msg || 'Wystąpił błąd.'); alert(successMsg || data.msg); loadAllUsers(); } catch (error) { alert(`Błąd: ${error.message}`); } }
+    async function handleChangePassword() { const oldPassword = prompt("Wprowadź swoje stare hasło:"); if (!oldPassword) return; const newPassword = prompt("Wprowadź nowe hasło (min. 4 znaki):"); if (!newPassword) return; await handleUserAction('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ oldPassword, newPassword }) }); }
+    if(elements.allUsersList) elements.allUsersList.addEventListener('click', e => { 
+        const target = e.target.closest('button'); 
+        if (!target) return;
+        const { userid, username, role } = target.dataset;
+        if (target.classList.contains('approve-user-btn')) handleUserAction(`/api/admin/approve-user/${userid}`, { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') } });
+        else if (target.classList.contains('edit-user-btn')) { const p = prompt(`Nowe hasło dla ${username}:`); if (p) handleUserAction(`/api/admin/edit-password/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newPassword: p }) }); }
+        else if (target.classList.contains('delete-user-btn')) { if (confirm(`Na pewno usunąć ${username}?`)) handleUserAction(`/api/admin/delete-user/${userid}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); }
+        else if (target.classList.contains('change-role-btn')) { if (confirm(`Zmienić rolę ${username} na ${role}?`)) handleUserAction(`/api/admin/change-role/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newRole: role }) }); }
+    });
+
+    if (elements.closeInventoryModalBtn) elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
+    if(elements.inventoryAddBtn) elements.inventoryAddBtn.addEventListener('click', () => { const ean = elements.inventoryEanInput.value.trim(); const quantity = parseInt(elements.inventoryQuantityInput.value, 10); if (!ean || !quantity) return; inventoryItems.push({ ean, name: 'Inwentaryzacja', quantity }); renderInventoryList(); });
+    function renderInventoryList() { if (elements.inventoryListBody) elements.inventoryListBody.innerHTML = inventoryItems.map((item, i) => `<tr><td>${item.name}</td><td>${item.ean}</td><td>${item.quantity}</td><td><button class="delete-inv-item-btn" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); }
+    if(elements.inventoryListBody) elements.inventoryListBody.addEventListener('click', e => { const btn = e.target.closest('.delete-inv-item-btn'); if (btn) { inventoryItems.splice(btn.dataset.index, 1); renderInventoryList(); } });
+    
+    checkLoginStatus();
+});
