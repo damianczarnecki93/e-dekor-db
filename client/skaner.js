@@ -245,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: quantity, price: productData.cena });
         renderScannedList();
         saveDataToServer();
-        showToast(`DODANO: ${productData.opis || productData.nazwa_produktu} (Ilość: ${quantity})`);
+        showToast(`Dodano: ${productData.opis || productData.nazwa_produktu} (Ilość: ${quantity})`);
         elements.listBarcodeInput.value = '';
         elements.quantityInput.value = '1';
         elements.listBuilderSearchResults.style.display = 'none';
@@ -274,7 +274,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) addProductToList(targetLi.dataset.ean); });
     if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
 
-    // POPRAWKA: Prawidłowa obsługa listy wyboru dla wyszukiwarki
     function handleLookupSearch() {
         const searchTerm = elements.lookupBarcodeInput.value.trim();
         elements.lookupResultDiv.innerHTML = '';
@@ -292,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function displaySingleProductInLookup(product) {
-        let html = `<div style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px;"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
+        let html = `<div style="padding-bottom: 15px; margin-bottom: 15px;"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
         elements.lookupResultDiv.innerHTML = html;
         elements.lookupResultDiv.style.display = 'block';
     }
@@ -306,10 +305,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('keydown', e => { if(e.key === 'Enter') handleLookupSearch(); });
-    if(elements.lookupResultDiv) elements.lookupResultDiv.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); });
+    if(elements.lookupResultDiv) elements.lookupResultDiv.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { elements.lookupResultDiv.style.display = 'none'; displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
     
     // =================================================================
-    // RENDEROWANIE LISTY I EKSPORT
+    // RENDEROWANIE LISTY, EKSPORT, WYDRUK
     // =================================================================
     function renderScannedList() {
         elements.scannedListBody.innerHTML = '';
@@ -341,17 +340,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function exportToCsvOptima() { if (scannedItems.length === 0) return; const csvContent = scannedItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`); }
     if(elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCsvOptima);
 
-    function exportToExcelDetailed() { if (scannedItems.length === 0) return; const headers = '"Nazwa";"Kod Produktu";"EAN";"Ilość";"Cena Jednostkowa"'; const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${(item.description || '').replace(/"/g, '""')}";"${(item.name || '').replace(/"/g, '""')}";"${item.ean || ''}";"${item.quantity || 0}";"${priceFormatted}"`; }); const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`; downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`); }
+    function exportToExcelDetailed() { if (scannedItems.length === 0) return; const headers = '"Nazwa";"Kod Produktu";"EAN";"Ilość";"Cena Jednostkowa"'; const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${item.description || ''}";"${item.name || ''}";"${item.ean || ''}";"${item.quantity || 0}";"${priceFormatted}"`; }); const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`; downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`); }
     if(elements.exportExcelBtn) elements.exportExcelBtn.addEventListener('click', exportToExcelDetailed);
     
     function downloadFile(content, mimeType, filename) { const blob = new Blob([content], { type: mimeType }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
     
-    // POPRAWKA: Całkowicie przepisany moduł wydruku dla niezawodności
     function prepareForPrint() {
         if (!elements.printTableBody) return;
         elements.printTableBody.innerHTML = '';
         if (scannedItems.length === 0) return;
-        
         scannedItems.forEach(item => {
             const row = elements.printTableBody.insertRow();
             row.insertCell().textContent = item.description || '';
