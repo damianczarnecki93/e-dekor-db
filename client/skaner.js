@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const STATUS_MESSAGE_TIMEOUT = 5000;
 
+    // POPRAWKA: Usunięto odwołania do nieistniejących już elementów (statusP, startCameraBtn)
     const elements = {
         loginOverlay: document.getElementById('loginOverlay'),
         appContainer: document.getElementById('appContainer'),
@@ -18,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
         showRegister: document.getElementById('showRegister'),
         showLogin: document.getElementById('showLogin'),
         
-        statusP: document.getElementById('status'),
         tabLookupBtn: document.getElementById('tabLookupBtn'),
         tabListBuilderBtn: document.getElementById('tabListBuilderBtn'),
         lookupMode: document.getElementById('lookupMode'),
@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         toastContainer: document.getElementById('toast-container'),
         printTableBody: document.getElementById('print-table-body'),
+        printTable: document.getElementById('print-table'),
     };
 
     let productDatabase = [], scannedItems = [], inventoryItems = [], activeTab = 'lookup';
@@ -173,16 +174,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function loadDataFromServer() {
-        elements.statusP.textContent = 'Ładowanie bazy produktów...';
+        // POPRAWKA: Usunięto odwołania do nieistniejącego elementu #status
+        console.log('Ładowanie bazy produktów...');
         function fetchAndParseCsv(filename) { return fetch(filename).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); }
         Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')])
             .then(([data1, data2]) => {
                 const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() });
                 productDatabase = [...data1.map(mapData), ...data2.map(mapData)];
-                elements.statusP.textContent = `Baza danych załadowana (${productDatabase.length} pozycji).`;
-                setTimeout(() => { if (elements.statusP) elements.statusP.textContent = '' }, STATUS_MESSAGE_TIMEOUT);
-                [...document.querySelectorAll('input:not(#loginForm input, #registerForm input), button:not(#loginForm button, #registerForm button)')].forEach(el => el.disabled = false);
-            }).catch(error => { elements.statusP.textContent = `BŁĄD ładowania bazy danych. Sprawdź pliki CSV.`; console.error('Krytyczny błąd ładowania danych:', error); });
+                console.log(`Baza danych załadowana (${productDatabase.length} pozycji).`);
+                
+                // Odblokowanie wszystkich inputów i przycisków po załadowaniu danych (oprócz tych w formularzu logowania)
+                [...document.querySelectorAll('input, button')].forEach(el => {
+                    if (!el.closest('#loginOverlay')) {
+                        el.disabled = false;
+                    }
+                });
+
+            }).catch(error => { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów. Sprawdź pliki CSV i połączenie.'); });
     }
 
     // =================================================================
@@ -256,7 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.listBarcodeInput.focus();
     }
     
-    // POPRAWKA: Prawidłowa obsługa listy wyboru
     function handleListBuilderSearch() {
         const searchTerm = elements.listBarcodeInput.value.trim();
         elements.listBuilderSearchResults.style.display = 'none';
@@ -267,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
             addProductToList(results[0].kod_kreskowy);
         } else if (results.length > 1) {
             let listHtml = '<ul>';
-            results.forEach(p => { listHtml += `<li data-ean="<span class="math-inline">\{p\.kod\_kreskowy\}"\></span>{p.nazwa_produktu} <small>(EAN: ${p.kod_kreskowy})</small></li>`; });
+            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.nazwa_produktu} <small>(EAN: ${p.kod_kreskowy})</small></li>`; });
             listHtml += '</ul>';
             elements.listBuilderSearchResults.innerHTML = listHtml;
             elements.listBuilderSearchResults.style.display = 'block';
@@ -286,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!searchTerm) return;
         const results = performSearch(searchTerm);
         if (results.length > 0) {
-            let html = results.map(p => `<div style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px;"><h2><span class="math-inline">\{p\.nazwa\_produktu\}</h2\><div\><strong\>Kod EAN\:</strong\> <span\></span>{p.kod_kreskowy}</span></div><div><strong>Opis:</strong> <span><span class="math-inline">\{p\.opis\}</span\></div\><div\><strong\>Cena\:</strong\> <span\></span>{parseFloat(p.cena).toFixed(2)} PLN</span></div></div>`).join('');
+            let html = results.map(p => `<div style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px;"><h2>${p.nazwa_produktu}</h2><div><strong>Kod EAN:</strong> <span>${p.kod_kreskowy}</span></div><div><strong>Opis:</strong> <span>${p.opis}</span></div><div><strong>Cena:</strong> <span>${parseFloat(p.cena).toFixed(2)} PLN</span></div></div>`).join('');
             elements.lookupResultDiv.innerHTML = html;
             elements.lookupResultDiv.style.display = 'block';
         } else {
@@ -305,4 +312,106 @@ document.addEventListener('DOMContentLoaded', () => {
         [elements.exportCsvBtn, elements.exportExcelBtn, elements.printListBtn, elements.clearListBtn].forEach(btn => { if(btn) btn.disabled = !canOperate; });
         scannedItems.forEach((item, index) => {
             const row = document.createElement('tr');
-            row.innerHTML = `<td><span class="math-inline">\{item\.name\}</td\><td\></span>{item.description}</td><td>${item.ean}</td><td><input type="number" class="quantity-in-table
+            row.innerHTML = `<td>${item.name}</td><td>${item.description}</td><td>${item.ean}</td><td><input type="number" class="quantity-in-table" value="${item.quantity}" min="1" data-index="${index}"></td><td><button class="delete-btn" data-index="${index}"><i class="fa-solid fa-trash-can"></i></button></td>`;
+            elements.scannedListBody.appendChild(row);
+        });
+        const totalValue = scannedItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);
+        elements.totalOrderValue.textContent = `Wartość sumaryczna: ${totalValue.toFixed(2)} PLN`;
+    }
+    
+    if(elements.scannedListBody) {
+        elements.scannedListBody.addEventListener('input', e => { if (e.target.classList.contains('quantity-in-table')) { const index = e.target.dataset.index; const newQuantity = parseInt(e.target.value, 10); if (newQuantity > 0) { scannedItems[index].quantity = newQuantity; renderScannedList(); saveDataToServer(); } } });
+        elements.scannedListBody.addEventListener('click', e => { const deleteButton = e.target.closest('.delete-btn'); if (deleteButton) { scannedItems.splice(deleteButton.dataset.index, 1); renderScannedList(); saveDataToServer(); } });
+    }
+
+    function getSafeFilename() {
+        const clientName = elements.clientNameInput.value.trim().replace(/[<>:"/\\|?* ]+/g, '_') || 'zamowienie';
+        const date = new Date().toISOString().slice(0, 10);
+        return `${clientName}_${date}`;
+    }
+
+    function exportToCsvOptima() {
+        if (scannedItems.length === 0) return;
+        const csvContent = scannedItems.map(item => `${item.ean};${item.quantity}`).join('\n');
+        downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`);
+    }
+    if(elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCsvOptima);
+
+    function exportToExcelDetailed() {
+        if (scannedItems.length === 0) return;
+        const headers = '"EAN";"Kod Produktu";"Nazwa Produktu";"Ilość";"Cena Jednostkowa"';
+        const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${item.ean || ''}";"${(item.name || '').replace(/"/g, '""')}";"${(item.description || '').replace(/"/g, '""')}";"${item.quantity || 0}";"${priceFormatted}"`; });
+        const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`;
+        downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`);
+    }
+    if(elements.exportExcelBtn) elements.exportExcelBtn.addEventListener('click', exportToExcelDetailed);
+    
+    function downloadFile(content, mimeType, filename) { const blob = new Blob([content], { type: mimeType }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+    
+    function prepareForPrint() {
+        if (!elements.printTableBody) return;
+        elements.printTableBody.innerHTML = '';
+        if (scannedItems.length === 0) return;
+        let content = '';
+        scannedItems.forEach(item => {
+            content += `<tr>
+                <td>${item.name || ''}</td>
+                <td>${item.description || ''}</td>
+                <td>${item.ean || ''}</td>
+                <td>${item.quantity}</td>
+            </tr>`;
+        });
+        elements.printTableBody.innerHTML = content;
+    }
+
+    if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
+    if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => { if (scannedItems.length > 0 && confirm('Czy na pewno chcesz wyczyścić zamówienie?')) { scannedItems = []; elements.clientNameInput.value = ''; elements.additionalInfoInput.value = ''; renderScannedList(); saveDataToServer(); } });
+    
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+        elements.toastContainer.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 3000);
+        }, 10);
+    }
+
+    // =================================================================
+    // PANEL ADMINA I INWENTARYZACJA
+    // =================================================================
+    async function loadPendingUsers() {
+        if(!elements.pendingUsersList) return;
+        elements.pendingUsersList.innerHTML = '<p>Ładowanie...</p>';
+        try {
+            const response = await fetch('/api/admin/pending-users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if(!response.ok) throw new Error('Nie udało się pobrać użytkowników.');
+            const users = await response.json();
+            elements.pendingUsersList.innerHTML = users.length === 0 ? '<p>Brak użytkowników do akceptacji.</p>' : '';
+            users.forEach(user => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                userDiv.innerHTML = `<span>${user.username}</span><div class="user-actions"><button class="btn-primary approve-user-btn" data-userid="${user._id}">Akceptuj</button><button class="btn-danger reject-user-btn" data-userid="${user._id}">Odrzuć</button></div>`;
+                elements.pendingUsersList.appendChild(userDiv);
+            });
+        } catch (error) { elements.pendingUsersList.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`; }
+    }
+    
+    async function handleUserApproval(userId, action) {
+        try {
+            const response = await fetch(`/api/admin/${action}-user/${userId}`, { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if(!response.ok) { const data = await response.json(); throw new Error(data.msg || 'Wystąpił błąd.'); }
+            alert(`Użytkownik został ${action === 'approve' ? 'zaakceptowany' : 'odrzucony'}.`);
+            loadPendingUsers();
+        } catch (error) { alert(`Błąd: ${error.message}`); }
+    }
+    if(elements.pendingUsersList) elements.pendingUsersList.addEventListener('click', e => { const target = e.target.closest('button'); if (target?.classList.contains('approve-user-btn')) handleUserApproval(target.dataset.userid, 'approve'); else if (target?.classList.contains('reject-user-btn')) handleUserApproval(target.dataset.userid, 'reject'); });
+
+    if (elements.closeInventoryModalBtn) elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
+    
+    checkLoginStatus();
+});
