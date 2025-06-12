@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const STATUS_MESSAGE_TIMEOUT = 5000;
 
-    // POPRAWKA: Usunięto odwołania do nieistniejących już elementów (statusP, startCameraBtn)
     const elements = {
         loginOverlay: document.getElementById('loginOverlay'),
         appContainer: document.getElementById('appContainer'),
@@ -19,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showRegister: document.getElementById('showRegister'),
         showLogin: document.getElementById('showLogin'),
         
+        statusP: document.getElementById('status'),
         tabLookupBtn: document.getElementById('tabLookupBtn'),
         tabListBuilderBtn: document.getElementById('tabListBuilderBtn'),
         lookupMode: document.getElementById('lookupMode'),
@@ -66,7 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         toastContainer: document.getElementById('toast-container'),
         printTableBody: document.getElementById('print-table-body'),
-        printTable: document.getElementById('print-table'),
     };
 
     let productDatabase = [], scannedItems = [], inventoryItems = [], activeTab = 'lookup';
@@ -174,7 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function loadDataFromServer() {
-        // POPRAWKA: Usunięto odwołania do nieistniejącego elementu #status
         console.log('Ładowanie bazy produktów...');
         function fetchAndParseCsv(filename) { return fetch(filename).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); }
         Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')])
@@ -182,15 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() });
                 productDatabase = [...data1.map(mapData), ...data2.map(mapData)];
                 console.log(`Baza danych załadowana (${productDatabase.length} pozycji).`);
-                
-                // Odblokowanie wszystkich inputów i przycisków po załadowaniu danych (oprócz tych w formularzu logowania)
-                [...document.querySelectorAll('input, button')].forEach(el => {
-                    if (!el.closest('#loginOverlay')) {
-                        el.disabled = false;
-                    }
-                });
-
-            }).catch(error => { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów. Sprawdź pliki CSV i połączenie.'); });
+                [...document.querySelectorAll('input:not(#loginForm input, #registerForm input), button:not(#loginForm button, #registerForm button)')].forEach(el => el.disabled = false);
+            }).catch(error => { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); });
     }
 
     // =================================================================
@@ -264,10 +255,13 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.listBarcodeInput.focus();
     }
     
+    // POPRAWKA: Prawidłowa obsługa listy wyboru dla wielu wyników
     function handleListBuilderSearch() {
         const searchTerm = elements.listBarcodeInput.value.trim();
+        elements.listBuilderSearchResults.innerHTML = '';
         elements.listBuilderSearchResults.style.display = 'none';
         if (!searchTerm) return;
+        
         const results = performSearch(searchTerm);
 
         if (results.length === 1) {
@@ -304,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('keydown', e => { if(e.key === 'Enter') handleLookupSearch(); });
 
     // =================================================================
-    // RENDEROWANIE LISTY I EKSPORT
+    // RENDEROWANIE LISTY, EKSPORT, WYDRUK
     // =================================================================
     function renderScannedList() {
         elements.scannedListBody.innerHTML = '';
@@ -319,7 +313,11 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.totalOrderValue.textContent = `Wartość sumaryczna: ${totalValue.toFixed(2)} PLN`;
     }
     
+    // POPRAWKA: Zaznaczanie wartości w polach ilości
+    const handleQuantityFocus = (event) => { event.target.select(); };
+    if(elements.quantityInput) elements.quantityInput.addEventListener('focus', handleQuantityFocus);
     if(elements.scannedListBody) {
+        elements.scannedListBody.addEventListener('focusin', e => { if (e.target.classList.contains('quantity-in-table')) handleQuantityFocus(e); });
         elements.scannedListBody.addEventListener('input', e => { if (e.target.classList.contains('quantity-in-table')) { const index = e.target.dataset.index; const newQuantity = parseInt(e.target.value, 10); if (newQuantity > 0) { scannedItems[index].quantity = newQuantity; renderScannedList(); saveDataToServer(); } } });
         elements.scannedListBody.addEventListener('click', e => { const deleteButton = e.target.closest('.delete-btn'); if (deleteButton) { scannedItems.splice(deleteButton.dataset.index, 1); renderScannedList(); saveDataToServer(); } });
     }
@@ -330,38 +328,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${clientName}_${date}`;
     }
 
-    function exportToCsvOptima() {
-        if (scannedItems.length === 0) return;
-        const csvContent = scannedItems.map(item => `${item.ean};${item.quantity}`).join('\n');
-        downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`);
-    }
+    function exportToCsvOptima() { if (scannedItems.length === 0) return; const csvContent = scannedItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`); }
     if(elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCsvOptima);
 
-    function exportToExcelDetailed() {
-        if (scannedItems.length === 0) return;
-        const headers = '"EAN";"Kod Produktu";"Nazwa Produktu";"Ilość";"Cena Jednostkowa"';
-        const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${item.ean || ''}";"${(item.name || '').replace(/"/g, '""')}";"${(item.description || '').replace(/"/g, '""')}";"${item.quantity || 0}";"${priceFormatted}"`; });
-        const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`;
-        downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`);
-    }
+    function exportToExcelDetailed() { if (scannedItems.length === 0) return; const headers = '"EAN";"Kod Produktu";"Nazwa Produktu";"Ilość";"Cena Jednostkowa"'; const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${item.ean || ''}";"${(item.name || '').replace(/"/g, '""')}";"${(item.description || '').replace(/"/g, '""')}";"${item.quantity || 0}";"${priceFormatted}"`; }); const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`; downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`); }
     if(elements.exportExcelBtn) elements.exportExcelBtn.addEventListener('click', exportToExcelDetailed);
     
     function downloadFile(content, mimeType, filename) { const blob = new Blob([content], { type: mimeType }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
     
+    // POPRAWKA: Całkowicie przepisany moduł wydruku dla niezawodności
     function prepareForPrint() {
         if (!elements.printTableBody) return;
-        elements.printTableBody.innerHTML = '';
+        elements.printTableBody.innerHTML = ''; // Wyczyść poprzednią zawartość
         if (scannedItems.length === 0) return;
-        let content = '';
+        
         scannedItems.forEach(item => {
-            content += `<tr>
-                <td>${item.name || ''}</td>
-                <td>${item.description || ''}</td>
-                <td>${item.ean || ''}</td>
-                <td>${item.quantity}</td>
-            </tr>`;
+            const row = elements.printTableBody.insertRow();
+            row.insertCell().textContent = item.name || '';
+            row.insertCell().textContent = item.description || '';
+            row.insertCell().textContent = item.ean || '';
+            row.insertCell().textContent = item.quantity;
         });
-        elements.printTableBody.innerHTML = content;
     }
 
     if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
