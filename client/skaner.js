@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
         exportExcelBtn: document.getElementById('exportExcelBtn'),
         printListBtn: document.getElementById('printListBtn'),
         clearListBtn: document.getElementById('clearListBtn'),
+        importCsvInput: document.getElementById('importCsvInput'),
         adminPanel: document.getElementById('adminPanel'),
         allUsersList: document.getElementById('allUsersList'),
         inventoryModule: document.getElementById('inventoryModule'),
@@ -66,11 +67,16 @@ document.addEventListener('DOMContentLoaded', () => {
         closePickingModalBtn: document.getElementById('closePickingModalBtn'),
         pickingOrderName: document.getElementById('picking-order-name'),
         pickingEanInput: document.getElementById('picking-ean-input'),
+        pickingSearchResults: document.getElementById('picking-search-results'),
         pickingStatusMsg: document.getElementById('picking-status-msg'),
         pickingTargetList: document.getElementById('picking-target-list'),
         pickingScannedList: document.getElementById('picking-scanned-list'),
         pickingVerifyBtn: document.getElementById('picking-verify-btn'),
-        pickingShowMissingBtn: document.getElementById('picking-show-missing-btn'),
+        pickingSummaryModal: document.getElementById('pickingSummaryModal'),
+        closePickingSummaryModalBtn: document.getElementById('closePickingSummaryModalBtn'),
+        pickingSummaryBody: document.getElementById('pickingSummaryBody'),
+        pickingAcceptBtn: document.getElementById('picking-accept-btn'),
+        pickingExportCsvBtn: document.getElementById('picking-export-csv-btn'),
         toastContainer: document.getElementById('toast-container'),
         printClientName: document.getElementById('print-client-name'),
         printAdditionalInfo: document.getElementById('print-additional-info'),
@@ -202,15 +208,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchTerm = elements.listBarcodeInput.value.trim();
         elements.listBuilderSearchResults.style.display = 'none';
         if (!searchTerm) return;
-        
         const results = performSearch(searchTerm);
-        if (isMobile) {
-            addProductToList(searchTerm, 1);
-            return;
-        }
-
-        if (results.length === 1) { addProductToList(results[0].kod_kreskowy); } 
-        else if (results.length > 1) {
+        if (results.length > 0) {
             let listHtml = '<ul>';
             results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
             listHtml += `<li class="add-unknown-item" data-ean="${searchTerm}"><i class="fa fa-plus"></i> Dodaj "${searchTerm}" jako nową pozycję</li>`;
@@ -224,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     if(elements.listBarcodeInput) elements.listBarcodeInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); handleListBuilderSearch();} });
-    if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) { addProductToList(targetLi.dataset.ean); } });
+    if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) addProductToList(targetLi.dataset.ean); });
     if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
 
     function handleLookupSearch() {
@@ -367,8 +366,13 @@ document.addEventListener('DOMContentLoaded', () => {
             listContainer.style.listStyle = 'none'; listContainer.style.padding = '0';
             lists.forEach(list => {
                 const li = document.createElement('li');
-                li.style.display = 'flex'; li.style.justifyContent = 'space-between'; li.style.alignItems = 'center'; li.style.padding = '10px'; li.style.borderBottom = '1px solid var(--border-color)';
-                li.innerHTML = `<span>${list.listName} <small>(autor: ${list.user?.username || 'usunięty'}, ost. zapis: ${new Date(list.updatedAt).toLocaleDateString()})</small></span><div><button class="btn-primary load-list-btn" data-id="${list._id}">Wczytaj</button><button class="pick-order-btn" data-id="${list._id}" data-name="${list.listName}" style="margin-left:5px; background-color: var(--warning-color);">Kompletuj</button><button class="btn-danger delete-list-btn" data-id="${list._id}" style="margin-left:5px;">Usuń</button></div>`;
+                li.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border-color); flex-wrap: wrap; gap: 10px;';
+                li.innerHTML = `<span>${list.listName} <small>(autor: ${list.user?.username || 'usunięty'}, ost. zapis: ${new Date(list.updatedAt).toLocaleDateString()})</small></span>
+                                <div style="display: flex; gap: 5px;">
+                                    <button class="btn-primary load-list-btn" data-id="${list._id}">Wczytaj</button>
+                                    <button class="pick-order-btn" data-id="${list._id}" data-name="${list.listName}" style="background-color: var(--warning-color);">Kompletuj</button>
+                                    <button class="btn-danger delete-list-btn" data-id="${list._id}">Usuń</button>
+                                </div>`;
                 listContainer.appendChild(li);
             });
             elements.savedListsContainer.appendChild(listContainer);
@@ -390,13 +394,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.msg || "Błąd usuwania listy");
                 showToast("Lista usunięta.");
-                showSavedLists();
+                await showSavedLists();
             } catch (error) { alert(error.message); }
         } else if (target.classList.contains('pick-order-btn')) {
              elements.savedListsModal.style.display = 'none';
-             startPicking(listId, target.dataset.name);
+             await startPicking(listId, target.dataset.name);
         }
     });
+    
+    // ... (reszta kodu, w tym Panel Admina i Inwentaryzacja)
 
     async function loadAllUsers() {
         const userListDiv = elements.allUsersList;
@@ -421,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { userListDiv.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`; }
     }
     
-    async function handleUserAction(url, options, successMsg) { try { const response = await fetch(url, options); const data = await response.json(); if(!response.ok) throw new Error(data.msg || 'Wystąpił błąd.'); alert(successMsg || data.msg); loadAllUsers(); } catch (error) { alert(`Błąd: ${error.message}`); } }
+    async function handleUserAction(url, options, successMsg) { try { const response = await fetch(url, options); const data = await response.json(); if(!response.ok) throw new Error(data.msg || 'Wystąpił błąd.'); alert(successMsg || data.msg); await loadAllUsers(); } catch (error) { alert(`Błąd: ${error.message}`); } }
     async function handleChangePassword() { const oldPassword = prompt("Wprowadź swoje stare hasło:"); if (!oldPassword) return; const newPassword = prompt("Wprowadź nowe hasło (min. 4 znaki):"); if (!newPassword) return; await handleUserAction('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ oldPassword, newPassword }) }); }
     if(elements.allUsersList) elements.allUsersList.addEventListener('click', e => { 
         const target = e.target.closest('button'); 
@@ -438,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderInventoryList() { if (elements.inventoryListBody) elements.inventoryListBody.innerHTML = inventoryItems.map((item, i) => `<tr><td>${item.name}</td><td>${item.ean}</td><td>${item.quantity}</td><td><button class="delete-inv-item-btn btn-icon btn-danger" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); }
     if(elements.inventoryListBody) elements.inventoryListBody.addEventListener('click', e => { const btn = e.target.closest('.delete-inv-item-btn'); if (btn) { inventoryItems.splice(btn.dataset.index, 1); renderInventoryList(); } });
     
-    // MODUŁ KOMPLETACJI
+    // POPRAWKA: Przepisany i naprawiony moduł kompletacji
     async function startPicking(listId, listName) {
         try {
             const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
@@ -453,12 +459,11 @@ document.addEventListener('DOMContentLoaded', () => {
             renderPickingView();
             elements.pickingModule.style.display = 'flex';
             elements.pickingEanInput.focus();
-        } catch (error) {
-            alert(error.message);
-        }
+        } catch (error) { alert(error.message); }
     }
 
     function renderPickingView() {
+        if(!currentPickingOrder) return;
         elements.pickingTargetList.innerHTML = currentPickingOrder.items.map(item => {
             const pickedQty = pickedOrderItems.get(item.ean) || 0;
             const isCompleted = pickedQty >= item.quantity;
@@ -472,54 +477,74 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    function handlePickingScan() {
-        const ean = elements.pickingEanInput.value.trim();
-        if (!ean) return;
-        const targetItem = currentPickingOrder.items.find(item => item.ean === ean || item.name === ean);
-        if (!targetItem) { showToast("BŁĄD: Produkt spoza zamówienia!"); elements.pickingEanInput.value = ''; return; }
-        let quantity = 1;
-        if (targetItem.quantity > 1) {
-            const enteredQty = prompt(`Produkt "${targetItem.description}" występuje w większej ilości (${targetItem.quantity} szt.). Podaj skanowaną ilość:`, "1");
-            quantity = parseInt(enteredQty);
-            if (isNaN(quantity) || quantity < 1) { showToast("Anulowano lub wprowadzono nieprawidłową ilość."); elements.pickingEanInput.value = ''; return; }
-        }
-        const currentPickedQty = pickedOrderItems.get(targetItem.ean) || 0;
-        if (currentPickedQty + quantity > targetItem.quantity) { showToast(`BŁĄD: Przekroczono wymaganą ilość dla produktu ${targetItem.name}!`); } 
-        else { pickedOrderItems.set(targetItem.ean, currentPickedQty + quantity); showToast(`Skompletowano: ${targetItem.name} (${quantity} szt.)`); }
-        elements.pickingEanInput.value = '';
+    function addPickedItem(code, quantity = 1) {
+        const pickedQty = pickedOrderItems.get(code) || 0;
+        pickedOrderItems.set(code, pickedQty + quantity);
+        const product = productDatabase.find(p => p.kod_kreskowy === code || p.nazwa_produktu === code) || { nazwa_produktu: code };
+        showToast(`Skompletowano: ${product.nazwa_produktu} (${quantity} szt.)`);
         renderPickingView();
+        elements.pickingEanInput.value = '';
+        elements.pickingSearchResults.innerHTML = '';
+        elements.pickingSearchResults.style.display = 'none';
+    }
+
+    function handlePickingSearch() {
+        const searchTerm = elements.pickingEanInput.value.trim();
+        if (!searchTerm) return;
+        const results = performSearch(searchTerm);
+        if (results.length === 1) {
+            addPickedItem(results[0].kod_kreskowy, 1);
+        } else if (results.length > 1) {
+            let listHtml = '<ul>';
+            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+            listHtml += '</ul>';
+            elements.pickingSearchResults.innerHTML = listHtml;
+            elements.pickingSearchResults.style.display = 'block';
+        } else {
+            addPickedItem(searchTerm, 1); // Akceptuj różnice - dodaj jako nieznany
+        }
     }
     
     function verifyPicking() {
-        let isComplete = true;
-        let missingItems = [];
-        currentPickingOrder.items.forEach(item => {
-            const pickedQty = pickedOrderItems.get(item.ean) || 0;
-            if (pickedQty < item.quantity) { isComplete = false; missingItems.push(`${item.name} - brakuje ${item.quantity - pickedQty} szt.`); }
+        let shortages = []; let surpluses = [];
+        const allEans = new Set([...currentPickingOrder.items.map(i => i.ean), ...pickedOrderItems.keys()]);
+
+        allEans.forEach(ean => {
+            const targetItem = currentPickingOrder.items.find(i => i.ean === ean);
+            const pickedQty = pickedOrderItems.get(ean) || 0;
+            const targetQty = targetItem ? targetItem.quantity : 0;
+            const name = targetItem ? `${targetItem.name} (${targetItem.description})` : `Produkt spoza listy (${ean})`;
+
+            if (pickedQty < targetQty) shortages.push(`${name}: brakuje ${targetQty - pickedQty}`);
+            else if (pickedQty > targetQty) surpluses.push(`${name}: nadwyżka ${pickedQty - targetQty}`);
         });
-        
-        if (isComplete) {
-            elements.pickingStatusMsg.textContent = "Zamówienie skompletowane prawidłowo!";
-            elements.pickingStatusMsg.style.backgroundColor = 'var(--success-color)';
-            elements.pickingStatusMsg.style.color = 'white';
+
+        let summaryHtml = '<h3>Podsumowanie</h3>';
+        if (shortages.length === 0 && surpluses.length === 0) {
+            summaryHtml += '<p style="color: var(--success-color);">Zamówienie jest kompletne i zgodne.</p>';
         } else {
-            elements.pickingStatusMsg.textContent = "BŁĄD: Zamówienie nie jest kompletne!";
-            elements.pickingStatusMsg.style.backgroundColor = 'var(--danger-color)';
-            elements.pickingStatusMsg.style.color = 'white';
-            alert("Brakuje następujących pozycji:\n" + missingItems.join('\n'));
+            if (shortages.length > 0) summaryHtml += `<p style="color: var(--danger-color);">Niedobory:</p><ul>${shortages.map(s => `<li>${s}</li>`).join('')}</ul>`;
+            if (surpluses.length > 0) summaryHtml += `<p style="color: var(--warning-color);">Nadwyżki:</p><ul>${surpluses.map(s => `<li>${s}</li>`).join('')}</ul>`;
+            if (!confirm("Wykryto rozbieżności w zamówieniu. Czy chcesz je zaakceptować i kontynuować?")) return;
         }
+        
+        elements.pickingSummaryBody.innerHTML = summaryHtml;
+        elements.pickingSummaryModal.style.display = 'flex';
     }
     
-    function showMissingItems() {
-        const missing = currentPickingOrder.items.filter(item => (pickedOrderItems.get(item.ean) || 0) < item.quantity).map(item => `${item.name} (${item.description}) - brakuje ${item.quantity - (pickedOrderItems.get(item.ean) || 0)} szt.`);
-        if (missing.length > 0) { alert("Nieskompletowane pozycje:\n\n" + missing.join('\n')); } 
-        else { alert("Wszystkie pozycje zostały skompletowane!"); }
+    function exportPickedToCsv() {
+        if (pickedOrderItems.size === 0) return;
+        const csvContent = Array.from(pickedOrderItems.entries()).map(([ean, quantity]) => `${ean};${quantity}`).join('\n');
+        downloadFile(csvContent, 'text/csv;charset=utf-8;', `${currentPickingOrder.listName}_skompletowane.csv`);
     }
 
     if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
-    if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('keydown', e => { if (e.key === 'Enter') handlePickingScan(); });
+    if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('keydown', e => { if (e.key === 'Enter') handlePickingSearch(); });
+    if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.ean) addPickedItem(li.dataset.ean); });
     if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
-    if (elements.pickingShowMissingBtn) elements.pickingShowMissingBtn.addEventListener('click', showMissingItems);
+    if (elements.closePickingSummaryModalBtn) elements.closePickingSummaryModalBtn.addEventListener('click', () => elements.pickingSummaryModal.style.display = 'none');
+    if (elements.pickingAcceptBtn) elements.pickingAcceptBtn.addEventListener('click', () => { elements.pickingSummaryModal.style.display = 'none'; showToast('Zmiany zaakceptowane.'); });
+    if (elements.pickingExportCsvBtn) elements.pickingExportCsvBtn.addEventListener('click', exportPickedToCsv);
     
     checkLoginStatus();
 });
