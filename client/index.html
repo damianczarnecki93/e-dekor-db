@@ -76,7 +76,8 @@
         .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1000; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
         .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
-        .lookup-result-item { padding: 15px; border-bottom: 1px solid var(--border-color); max-height: 40vh; overflow-y: auto; }
+        #lookupResult { max-height: 40vh; overflow-y: auto; }
+        .lookup-result-item { padding: 15px; border-bottom: 1px solid var(--border-color); }
         #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 2000; }
         .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .toast.show { opacity: 1; transform: translateY(0); }
@@ -96,9 +97,10 @@
             body > *:not(#print-area) { display: none !important; }
             #print-area, #print-area * { display: block !important; visibility: visible !important; }
             @page { margin: 1.5cm; size: A4; }
-            #print-table { width: 100%; border-collapse: collapse; font-size: 10pt; font-family: Arial, sans-serif; }
-            #print-table th, #print-table td { border: 1px solid #000; padding: 8px; text-align: left; }
-            #print-table th { background-color: #eee !important; font-weight: bold; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            #print-header { margin-bottom: 20px; }
+            #print-header h2 { font-size: 14pt; font-weight: bold; }
+            #print-header p { font-size: 11pt; }
+            #print-content { font-family: 'Courier New', Courier, monospace; font-size: 10pt; white-space: pre-wrap; }
         }
     </style>
 </head>
@@ -230,17 +232,11 @@
     <div id="toast-container"></div>
 
     <div id="print-area" style="display: none !important;">
-        <table id="print-table">
-            <thead>
-                <tr>
-                    <th class="col-code">Kod produktu</th>
-                    <th class="col-desc">Nazwa</th>
-                    <th class="col-ean">EAN</th>
-                    <th>Ilość</th>
-                </tr>
-            </thead>
-            <tbody id="print-table-body"></tbody>
-        </table>
+        <div id="print-header">
+            <h2 id="print-client-name"></h2>
+            <p id="print-additional-info"></p>
+        </div>
+        <pre id="print-content"></pre>
     </div>
     
     <footer style="text-align: center; margin-top: 40px; color: var(--text-secondary-color); font-size: 0.9em;">
