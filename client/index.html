@@ -67,6 +67,11 @@
         thead th:last-child { border-top-right-radius: 12px; }
         tbody td { padding: 15px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         #totalOrderValue { text-align: right; font-size: 1.2em; font-weight: 600; margin-top: 20px; padding: 12px 20px; border-radius: 12px; color: var(--success-color); border: 1px solid var(--success-color); background-color: rgba(52, 199, 89, 0.05); }
+        .admin-user-list .user-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color); }
+        .admin-user-list .user-info { display: flex; flex-direction: column; }
+        .admin-user-list .user-info .status { font-size: 0.8em; opacity: 0.7; }
+        .admin-user-list .user-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .admin-user-list .user-actions button { padding: 5px 10px; font-size: 0.8em; }
         .search-container { position: relative; width: 100%; }
         .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1000; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
         .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
@@ -86,7 +91,7 @@
             body { padding: 80px 5px 80px 5px; }
             .container { padding: 20px 15px; }
             .controls-grid > * { flex-basis: 100%; }
-            .col-desc, .col-ean { display: none; }
+            .col-code, .col-ean { display: none; }
             .export-controls { grid-template-columns: 1fr; }
             #totalOrderValue { font-size: 1rem; padding: 10px; }
             .bottom-scroll-bar button, .top-right-menu .btn-icon { width: 40px; height: 40px; }
@@ -94,6 +99,7 @@
         }
         
         @media print {
+            body { padding: 0; margin: 0; }
             body > *:not(#print-area) { display: none !important; }
             #print-area, #print-area * { display: block !important; visibility: visible !important; }
             @page { margin: 1.5cm; size: A4; }
@@ -262,7 +268,7 @@
                 <button id="closePickingModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
             </div>
             <div class="modal-body">
-                 <div id="picking-status-msg" style="text-align: center; font-weight: 600; margin-bottom: 15px; padding: 10px; border-radius: 8px;"></div>
+                <div id="picking-status-msg" style="text-align: center; font-weight: 600; margin-bottom: 15px; padding: 10px; border-radius: 8px;"></div>
                 <div style="display: flex; gap: 20px; flex-grow: 1; min-height: 300px;">
                     <div style="width: 50%; display: flex; flex-direction: column;">
                         <h3>Do zebrania:</h3>
