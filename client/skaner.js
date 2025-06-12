@@ -82,9 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let pickedOrderItems = new Map();
     const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
-    // =================================================================
-    // INICJALIZACJA I LOGOWANIE
-    // =================================================================
     const showApp = (userData) => {
         elements.loginOverlay.style.display = 'none';
         elements.appContainer.style.display = 'block';
@@ -102,17 +99,13 @@ document.addEventListener('DOMContentLoaded', () => {
         await loadActiveList();
     };
     
-    // POPRAWKA: Przywrócono brakującą funkcję, która uniemożliwiała logowanie
     const checkLoginStatus = async () => {
         const token = localStorage.getItem('token');
         if (!token) return;
         try {
             const response = await fetch('/api/auth/verify', { method: 'GET', headers: { 'x-auth-token': token } });
-            if (response.ok) {
-                showApp(await response.json());
-            } else {
-                localStorage.removeItem('token');
-            }
+            if (response.ok) showApp(await response.json());
+            else localStorage.removeItem('token');
         } catch (error) { console.error('Błąd weryfikacji tokenu:', error); }
     };
     
@@ -153,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() });
                 productDatabase = [...data1.map(mapData), ...data2.map(mapData)];
                 console.log(`Baza danych załadowana (${productDatabase.length} pozycji).`);
-                [...document.querySelectorAll('input:not(#loginForm input, #registerForm input), button:not(#loginForm button, #registerForm button)')].forEach(el => el.disabled = false);
+                [...document.querySelectorAll('input:not(#loginForm input, #registerForm input), button:not(#loginForm button, #registerForm button)')].forEach(el => { if (el) el.disabled = false; });
             }).catch(error => { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); });
     }
 
@@ -211,15 +204,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!searchTerm) return;
         
         const results = performSearch(searchTerm);
-        const exactMatch = results.find(p => p.nazwa_produktu.toLowerCase() === searchTerm.toLowerCase() || p.kod_kreskowy === searchTerm);
+        if (isMobile) {
+            addProductToList(searchTerm, 1);
+            return;
+        }
 
-        if (exactMatch) {
-            addProductToList(exactMatch.kod_kreskowy);
-        } else if (results.length > 0) {
+        if (results.length === 1) { addProductToList(results[0].kod_kreskowy); } 
+        else if (results.length > 1) {
             let listHtml = '<ul>';
             results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
-            // POPRAWKA: Dodanie opcji dla pozycji spoza bazy
-            listHtml += `<li class="add-unknown-item" data-ean="${searchTerm}">Dodaj "${searchTerm}" jako nową pozycję <i class="fa fa-plus"></i></li>`;
+            listHtml += `<li class="add-unknown-item" data-ean="${searchTerm}"><i class="fa fa-plus"></i> Dodaj "${searchTerm}" jako nową pozycję</li>`;
             listHtml += '</ul>';
             elements.listBuilderSearchResults.innerHTML = listHtml;
             elements.listBuilderSearchResults.style.display = 'block';
@@ -230,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     if(elements.listBarcodeInput) elements.listBarcodeInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); handleListBuilderSearch();} });
-    if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) addProductToList(targetLi.dataset.ean); });
+    if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) { addProductToList(targetLi.dataset.ean); } });
     if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
 
     function handleLookupSearch() {
@@ -306,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
             content = scannedItems.map(item => {
                 const code = (item.name || '').padEnd(20);
                 const name = (item.description || '').padEnd(40);
-                return `Kod: ${code} | Nazwa: ${name} | Ilość: ${item.quantity}`;
+                return `Kod produktu: ${code} | Nazwa: ${name} | Ilość: ${item.quantity}`;
             }).join('\n');
         }
         elements.printContent.textContent = content;
@@ -445,8 +439,87 @@ document.addEventListener('DOMContentLoaded', () => {
     if(elements.inventoryListBody) elements.inventoryListBody.addEventListener('click', e => { const btn = e.target.closest('.delete-inv-item-btn'); if (btn) { inventoryItems.splice(btn.dataset.index, 1); renderInventoryList(); } });
     
     // MODUŁ KOMPLETACJI
-    function startPicking(listId, listName) { /* ... implementacja kompletacji ... */ }
+    async function startPicking(listId, listName) {
+        try {
+            const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if (!response.ok) throw new Error("Błąd wczytywania zamówienia do kompletacji");
+            currentPickingOrder = await response.json();
+            pickedOrderItems.clear();
+            
+            elements.pickingOrderName.textContent = `Kompletacja: ${listName}`;
+            elements.pickingStatusMsg.textContent = '';
+            elements.pickingStatusMsg.style.backgroundColor = 'transparent';
+            
+            renderPickingView();
+            elements.pickingModule.style.display = 'flex';
+            elements.pickingEanInput.focus();
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    function renderPickingView() {
+        elements.pickingTargetList.innerHTML = currentPickingOrder.items.map(item => {
+            const pickedQty = pickedOrderItems.get(item.ean) || 0;
+            const isCompleted = pickedQty >= item.quantity;
+            return `<div style="padding: 5px; ${isCompleted ? 'text-decoration: line-through; color: var(--success-color);' : ''}">${item.name} | ${item.description} ( ${pickedQty} / ${item.quantity} )</div>`;
+        }).join('');
+
+        elements.pickingScannedList.innerHTML = Array.from(pickedOrderItems.entries()).map(([ean, qty]) => {
+            const targetItem = currentPickingOrder.items.find(it => it.ean === ean);
+            const name = targetItem ? targetItem.name : "Produkt spoza listy";
+            return `<div>${name}: ${qty} szt.</div>`;
+        }).join('');
+    }
+
+    function handlePickingScan() {
+        const ean = elements.pickingEanInput.value.trim();
+        if (!ean) return;
+        const targetItem = currentPickingOrder.items.find(item => item.ean === ean || item.name === ean);
+        if (!targetItem) { showToast("BŁĄD: Produkt spoza zamówienia!"); elements.pickingEanInput.value = ''; return; }
+        let quantity = 1;
+        if (targetItem.quantity > 1) {
+            const enteredQty = prompt(`Produkt "${targetItem.description}" występuje w większej ilości (${targetItem.quantity} szt.). Podaj skanowaną ilość:`, "1");
+            quantity = parseInt(enteredQty);
+            if (isNaN(quantity) || quantity < 1) { showToast("Anulowano lub wprowadzono nieprawidłową ilość."); elements.pickingEanInput.value = ''; return; }
+        }
+        const currentPickedQty = pickedOrderItems.get(targetItem.ean) || 0;
+        if (currentPickedQty + quantity > targetItem.quantity) { showToast(`BŁĄD: Przekroczono wymaganą ilość dla produktu ${targetItem.name}!`); } 
+        else { pickedOrderItems.set(targetItem.ean, currentPickedQty + quantity); showToast(`Skompletowano: ${targetItem.name} (${quantity} szt.)`); }
+        elements.pickingEanInput.value = '';
+        renderPickingView();
+    }
+    
+    function verifyPicking() {
+        let isComplete = true;
+        let missingItems = [];
+        currentPickingOrder.items.forEach(item => {
+            const pickedQty = pickedOrderItems.get(item.ean) || 0;
+            if (pickedQty < item.quantity) { isComplete = false; missingItems.push(`${item.name} - brakuje ${item.quantity - pickedQty} szt.`); }
+        });
+        
+        if (isComplete) {
+            elements.pickingStatusMsg.textContent = "Zamówienie skompletowane prawidłowo!";
+            elements.pickingStatusMsg.style.backgroundColor = 'var(--success-color)';
+            elements.pickingStatusMsg.style.color = 'white';
+        } else {
+            elements.pickingStatusMsg.textContent = "BŁĄD: Zamówienie nie jest kompletne!";
+            elements.pickingStatusMsg.style.backgroundColor = 'var(--danger-color)';
+            elements.pickingStatusMsg.style.color = 'white';
+            alert("Brakuje następujących pozycji:\n" + missingItems.join('\n'));
+        }
+    }
+    
+    function showMissingItems() {
+        const missing = currentPickingOrder.items.filter(item => (pickedOrderItems.get(item.ean) || 0) < item.quantity).map(item => `${item.name} (${item.description}) - brakuje ${item.quantity - (pickedOrderItems.get(item.ean) || 0)} szt.`);
+        if (missing.length > 0) { alert("Nieskompletowane pozycje:\n\n" + missing.join('\n')); } 
+        else { alert("Wszystkie pozycje zostały skompletowane!"); }
+    }
+
     if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
+    if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('keydown', e => { if (e.key === 'Enter') handlePickingScan(); });
+    if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
+    if (elements.pickingShowMissingBtn) elements.pickingShowMissingBtn.addEventListener('click', showMissingItems);
     
     checkLoginStatus();
 });
