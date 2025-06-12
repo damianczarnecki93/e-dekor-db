@@ -1,7 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const STATUS_MESSAGE_TIMEOUT = 5000;
-
     const elements = {
         loginOverlay: document.getElementById('loginOverlay'),
         appContainer: document.getElementById('appContainer'),
@@ -18,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
         showRegister: document.getElementById('showRegister'),
         showLogin: document.getElementById('showLogin'),
         
-        statusP: document.getElementById('status'),
         tabLookupBtn: document.getElementById('tabLookupBtn'),
         tabListBuilderBtn: document.getElementById('tabListBuilderBtn'),
         lookupMode: document.getElementById('lookupMode'),
@@ -248,27 +245,24 @@ document.addEventListener('DOMContentLoaded', () => {
         else scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: quantity, price: productData.cena });
         renderScannedList();
         saveDataToServer();
-        showToast(`DODANO: ${productData.nazwa_produktu} (Ilość: ${quantity})`);
+        showToast(`DODANO: ${productData.opis || productData.nazwa_produktu} (Ilość: ${quantity})`);
         elements.listBarcodeInput.value = '';
         elements.quantityInput.value = '1';
         elements.listBuilderSearchResults.style.display = 'none';
         elements.listBarcodeInput.focus();
     }
     
-    // POPRAWKA: Prawidłowa obsługa listy wyboru dla wielu wyników
     function handleListBuilderSearch() {
         const searchTerm = elements.listBarcodeInput.value.trim();
-        elements.listBuilderSearchResults.innerHTML = '';
         elements.listBuilderSearchResults.style.display = 'none';
         if (!searchTerm) return;
-        
         const results = performSearch(searchTerm);
 
         if (results.length === 1) {
             addProductToList(results[0].kod_kreskowy);
         } else if (results.length > 1) {
             let listHtml = '<ul>';
-            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.nazwa_produktu} <small>(EAN: ${p.kod_kreskowy})</small></li>`; });
+            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
             listHtml += '</ul>';
             elements.listBuilderSearchResults.innerHTML = listHtml;
             elements.listBuilderSearchResults.style.display = 'block';
@@ -280,25 +274,42 @@ document.addEventListener('DOMContentLoaded', () => {
     if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) addProductToList(targetLi.dataset.ean); });
     if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
 
+    // POPRAWKA: Prawidłowa obsługa listy wyboru dla wyszukiwarki
     function handleLookupSearch() {
         const searchTerm = elements.lookupBarcodeInput.value.trim();
         elements.lookupResultDiv.innerHTML = '';
         elements.lookupResultDiv.style.display = 'none';
         if (!searchTerm) return;
         const results = performSearch(searchTerm);
-        if (results.length > 0) {
-            let html = results.map(p => `<div style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px;"><h2>${p.nazwa_produktu}</h2><div><strong>Kod EAN:</strong> <span>${p.kod_kreskowy}</span></div><div><strong>Opis:</strong> <span>${p.opis}</span></div><div><strong>Cena:</strong> <span>${parseFloat(p.cena).toFixed(2)} PLN</span></div></div>`).join('');
-            elements.lookupResultDiv.innerHTML = html;
-            elements.lookupResultDiv.style.display = 'block';
+        if (results.length === 1) {
+            displaySingleProductInLookup(results[0]);
+        } else if (results.length > 1) {
+            displayProductListInLookup(results);
         } else {
             elements.lookupResultDiv.innerHTML = '<p>Nie znaleziono produktu.</p>';
             elements.lookupResultDiv.style.display = 'block';
         }
     }
-    if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('keydown', e => { if(e.key === 'Enter') handleLookupSearch(); });
+    
+    function displaySingleProductInLookup(product) {
+        let html = `<div style="border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px;"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
+        elements.lookupResultDiv.innerHTML = html;
+        elements.lookupResultDiv.style.display = 'block';
+    }
 
+    function displayProductListInLookup(products) {
+        let listHtml = '<ul>';
+        products.forEach(p => { listHtml += `<li data-product-json='${JSON.stringify(p)}'>${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+        listHtml += '</ul>';
+        elements.lookupResultDiv.innerHTML = listHtml;
+        elements.lookupResultDiv.style.display = 'block';
+    }
+
+    if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('keydown', e => { if(e.key === 'Enter') handleLookupSearch(); });
+    if(elements.lookupResultDiv) elements.lookupResultDiv.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); });
+    
     // =================================================================
-    // RENDEROWANIE LISTY, EKSPORT, WYDRUK
+    // RENDEROWANIE LISTY I EKSPORT
     // =================================================================
     function renderScannedList() {
         elements.scannedListBody.innerHTML = '';
@@ -306,14 +317,13 @@ document.addEventListener('DOMContentLoaded', () => {
         [elements.exportCsvBtn, elements.exportExcelBtn, elements.printListBtn, elements.clearListBtn].forEach(btn => { if(btn) btn.disabled = !canOperate; });
         scannedItems.forEach((item, index) => {
             const row = document.createElement('tr');
-            row.innerHTML = `<td>${item.name}</td><td>${item.description}</td><td>${item.ean}</td><td><input type="number" class="quantity-in-table" value="${item.quantity}" min="1" data-index="${index}"></td><td><button class="delete-btn" data-index="${index}"><i class="fa-solid fa-trash-can"></i></button></td>`;
+            row.innerHTML = `<td class="col-name">${item.description}</td><td class="col-code">${item.name}</td><td class="col-ean">${item.ean}</td><td><input type="number" class="quantity-in-table" value="${item.quantity}" min="1" data-index="${index}"></td><td><button class="delete-btn btn-icon" data-index="${index}"><i class="fa-solid fa-trash-can"></i></button></td>`;
             elements.scannedListBody.appendChild(row);
         });
         const totalValue = scannedItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);
-        elements.totalOrderValue.textContent = `Wartość sumaryczna: ${totalValue.toFixed(2)} PLN`;
+        elements.totalOrderValue.textContent = `Total: ${totalValue.toFixed(2)} PLN`;
     }
     
-    // POPRAWKA: Zaznaczanie wartości w polach ilości
     const handleQuantityFocus = (event) => { event.target.select(); };
     if(elements.quantityInput) elements.quantityInput.addEventListener('focus', handleQuantityFocus);
     if(elements.scannedListBody) {
@@ -331,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function exportToCsvOptima() { if (scannedItems.length === 0) return; const csvContent = scannedItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`); }
     if(elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCsvOptima);
 
-    function exportToExcelDetailed() { if (scannedItems.length === 0) return; const headers = '"EAN";"Kod Produktu";"Nazwa Produktu";"Ilość";"Cena Jednostkowa"'; const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${item.ean || ''}";"${(item.name || '').replace(/"/g, '""')}";"${(item.description || '').replace(/"/g, '""')}";"${item.quantity || 0}";"${priceFormatted}"`; }); const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`; downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`); }
+    function exportToExcelDetailed() { if (scannedItems.length === 0) return; const headers = '"Nazwa";"Kod Produktu";"EAN";"Ilość";"Cena Jednostkowa"'; const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${(item.description || '').replace(/"/g, '""')}";"${(item.name || '').replace(/"/g, '""')}";"${item.ean || ''}";"${item.quantity || 0}";"${priceFormatted}"`; }); const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`; downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`); }
     if(elements.exportExcelBtn) elements.exportExcelBtn.addEventListener('click', exportToExcelDetailed);
     
     function downloadFile(content, mimeType, filename) { const blob = new Blob([content], { type: mimeType }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
@@ -339,13 +349,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // POPRAWKA: Całkowicie przepisany moduł wydruku dla niezawodności
     function prepareForPrint() {
         if (!elements.printTableBody) return;
-        elements.printTableBody.innerHTML = ''; // Wyczyść poprzednią zawartość
+        elements.printTableBody.innerHTML = '';
         if (scannedItems.length === 0) return;
         
         scannedItems.forEach(item => {
             const row = elements.printTableBody.insertRow();
-            row.insertCell().textContent = item.name || '';
             row.insertCell().textContent = item.description || '';
+            row.insertCell().textContent = item.name || '';
             row.insertCell().textContent = item.ean || '';
             row.insertCell().textContent = item.quantity;
         });
