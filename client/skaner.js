@@ -1,29 +1,30 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // === Konfiguracja ===
     const STATUS_MESSAGE_TIMEOUT = 5000;
 
-    // === ELEMENTY HTML ===
     const elements = {
-        // Logowanie i rejestracja
         loginOverlay: document.getElementById('loginOverlay'),
         appContainer: document.getElementById('appContainer'),
         loginUsername: document.getElementById('loginUsername'),
         loginPassword: document.getElementById('loginPassword'),
         loginBtn: document.getElementById('loginBtn'),
         loginError: document.getElementById('loginError'),
+        loginForm: document.getElementById('loginForm'),
+        // POPRAWKA: Dodano brakujące elementy rejestracji
         registerForm: document.getElementById('registerForm'),
+        registerUsername: document.getElementById('registerUsername'),
+        registerPassword: document.getElementById('registerPassword'),
+        registerBtn: document.getElementById('registerBtn'),
+        registerError: document.getElementById('registerError'),
         showRegister: document.getElementById('showRegister'),
         showLogin: document.getElementById('showLogin'),
         
-        // Główne UI
         statusP: document.getElementById('status'),
         tabLookupBtn: document.getElementById('tabLookupBtn'),
         tabListBuilderBtn: document.getElementById('tabListBuilderBtn'),
         lookupMode: document.getElementById('lookupMode'),
         listBuilderMode: document.getElementById('listBuilderMode'),
         
-        // ZMIANA: Nowe menu i paski
         topBar: document.getElementById('topBar'),
         bottomBar: document.getElementById('bottomBar'),
         menuToggleBtn: document.getElementById('menuToggleBtn'),
@@ -33,17 +34,14 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollTopBtn: document.getElementById('scrollTopBtn'),
         scrollBottomBtn: document.getElementById('scrollBottomBtn'),
         
-        // Skaner
         startCameraBtn: document.getElementById('startCameraBtn'),
         cameraScannerSection: document.getElementById('cameraScannerSection'),
         cameraReader: document.getElementById('camera-reader'),
         stopCameraBtn: document.getElementById('stopCameraBtn'),
         
-        // Wyszukiwarka
         lookupBarcodeInput: document.getElementById('lookupBarcode_Input'),
         lookupResultDiv: document.getElementById('lookupResult'),
         
-        // Lista zamówień
         listBarcodeInput: document.getElementById('listBarcode_Input'),
         listBuilderSearchResults: document.getElementById('listBuilderSearchResults'),
         quantityInput: document.getElementById('quantityInput'),
@@ -54,18 +52,15 @@ document.addEventListener('DOMContentLoaded', () => {
         totalOrderValue: document.getElementById('totalOrderValue'),
         scannedListTable: document.querySelector('#listBuilderMode table'),
         
-        // Eksport
         exportCsvBtn: document.getElementById('exportCsvBtn'),
         exportExcelBtn: document.getElementById('exportExcelBtn'),
         printListBtn: document.getElementById('printListBtn'),
         clearListBtn: document.getElementById('clearListBtn'),
         
-        // Admin
         tabAdminBtn: document.getElementById('tabAdminBtn'),
         adminPanel: document.getElementById('adminPanel'),
         pendingUsersList: document.getElementById('pendingUsersList'),
         
-        // Inwentaryzacja
         inventoryModule: document.getElementById('inventoryModule'),
         closeInventoryModalBtn: document.getElementById('closeInventoryModalBtn'),
         inventoryEanInput: document.getElementById('inventoryEanInput'),
@@ -75,16 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
         inventorySearchResults: document.getElementById('inventorySearchResults'),
 
-        // Wydruk
         printTableBody: document.getElementById('print-table-body'),
     };
 
-    // === GŁÓWNA LOGIKA APLIKACJI ===
-    let productDatabase = [];
-    let scannedItems = [];
-    let inventoryItems = [];
-    let html5QrCode = null;
-    let activeTab = 'lookup';
+    let productDatabase = [], scannedItems = [], inventoryItems = [], html5QrCode = null, activeTab = 'lookup';
 
     // =================================================================
     // INICJALIZACJA I LOGOWANIE
@@ -116,9 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 localStorage.removeItem('token');
             }
-        } catch (error) {
-            console.error('Błąd weryfikacji tokenu:', error);
-        }
+        } catch (error) { console.error('Błąd weryfikacji tokenu:', error); }
     };
     
     async function attemptLogin() {
@@ -135,15 +122,35 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             localStorage.setItem('token', data.token);
             showApp(data.user);
-        } catch (error) {
-            elements.loginError.textContent = 'Nie można połączyć się z serwerem.';
+        } catch (error) { elements.loginError.textContent = 'Nie można połączyć się z serwerem.'; }
+    }
+
+    async function handleRegistration() {
+        const { registerUsername, registerPassword, registerError } = elements;
+        const username = registerUsername.value.trim();
+        const password = registerPassword.value.trim();
+        if (!username || !password) {
+            registerError.textContent = 'Login i hasło są wymagane.';
+            return;
         }
+        try {
+            const response = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+            const data = await response.json();
+            if (!response.ok) {
+                registerError.textContent = data.msg || 'Wystąpił błąd serwera.';
+            } else {
+                alert('Rejestracja pomyślna! Twoje konto musi zostać aktywowane przez administratora.');
+                elements.showLogin.click();
+                elements.loginUsername.value = username;
+                elements.loginPassword.value = '';
+            }
+        } catch (error) { registerError.textContent = 'Nie można połączyć się z serwerem.'; }
     }
 
     if (elements.loginBtn) elements.loginBtn.addEventListener('click', attemptLogin);
     if (elements.loginPassword) elements.loginPassword.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
-    
-    // === PRZEŁĄCZANIE FORMULARZY LOGOWANIA/REJESTRACJI ===
+    // POPRAWKA: Przywrócono event listener dla przycisku rejestracji
+    if (elements.registerBtn) elements.registerBtn.addEventListener('click', handleRegistration);
     if (elements.showRegister) elements.showRegister.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'none'; elements.registerForm.style.display = 'block'; });
     if (elements.showLogin) elements.showLogin.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'block'; elements.registerForm.style.display = 'none'; });
 
@@ -155,10 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!token) return;
         try {
             const headers = { 'x-auth-token': token };
-            const [productListResponse, inventoryResponse] = await Promise.all([
-                fetch('/api/data/productlist', { headers }),
-                fetch('/api/data/inventory', { headers })
-            ]);
+            const [productListResponse, inventoryResponse] = await Promise.all([ fetch('/api/data/productlist', { headers }), fetch('/api/data/inventory', { headers }) ]);
             const productListData = await productListResponse.json();
             scannedItems = productListData.items || [];
             if (elements.clientNameInput) elements.clientNameInput.value = productListData.clientName || '';
@@ -166,9 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const inventoryData = await inventoryResponse.json();
             inventoryItems = inventoryData.items || [];
             renderInventoryList();
-        } catch (error) {
-            console.error('Nie udało się wczytać danych użytkownika:', error);
-        }
+        } catch (error) { console.error('Nie udało się wczytać danych użytkownika:', error); }
     }
 
     async function saveDataToServer() {
@@ -176,33 +178,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!token) return;
         try {
             const headers = { 'Content-Type': 'application/json', 'x-auth-token': token };
-            await Promise.all([
-                fetch('/api/data/productlist', { method: 'POST', headers, body: JSON.stringify({ clientName: elements.clientNameInput.value, items: scannedItems }) }),
-                fetch('/api/data/inventory', { method: 'POST', headers, body: JSON.stringify({ items: inventoryItems }) })
-            ]);
-        } catch (error) {
-            console.error('Błąd zapisu danych na serwerze:', error);
-        }
+            await Promise.all([ fetch('/api/data/productlist', { method: 'POST', headers, body: JSON.stringify({ clientName: elements.clientNameInput.value, items: scannedItems }) }), fetch('/api/data/inventory', { method: 'POST', headers, body: JSON.stringify({ items: inventoryItems }) }) ]);
+        } catch (error) { console.error('Błąd zapisu danych na serwerze:', error); }
     }
     
     function loadDataFromServer() {
         elements.statusP.textContent = 'Ładowanie bazy produktów...';
         elements.statusP.style.display = 'block';
-        
         function fetchAndParseCsv(filename) { return fetch(filename).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); }
-        
         Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')])
             .then(([data1, data2]) => {
                 const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() });
                 productDatabase = [...data1.map(mapData), ...data2.map(mapData)];
                 elements.statusP.textContent = `Baza danych załadowana (${productDatabase.length} pozycji).`;
                 setTimeout(() => { if (elements.statusP) elements.statusP.style.display = 'none'; }, STATUS_MESSAGE_TIMEOUT);
-                [elements.lookupBarcodeInput, elements.listBarcodeInput, elements.quantityInput, elements.addToListBtn, elements.startCameraBtn, elements.clientNameInput, elements.additionalInfoInput, elements.inventoryEanInput, elements.inventoryQuantityInput, elements.inventoryAddBtn].forEach(el => { if (el) el.disabled = false; });
-                if (elements.lookupBarcodeInput) elements.lookupBarcodeInput.focus();
-            }).catch(error => {
-                elements.statusP.textContent = `BŁĄD ładowania bazy danych. Sprawdź pliki CSV.`;
-                console.error('Krytyczny błąd ładowania danych:', error);
-            });
+                [...document.querySelectorAll('input, button')].forEach(el => el.disabled = false);
+            }).catch(error => { elements.statusP.textContent = `BŁĄD ładowania bazy danych. Sprawdź pliki CSV.`; console.error('Krytyczny błąd ładowania danych:', error); });
     }
 
     // =================================================================
@@ -210,16 +201,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     function switchTab(newTab) {
         activeTab = newTab;
-        [elements.lookupMode, elements.listBuilderMode, elements.adminPanel].forEach(el => el.style.display = 'none');
+        [elements.lookupMode, elements.listBuilderMode, elements.adminPanel].forEach(el => el.classList.remove('active'));
         [elements.tabLookupBtn, elements.tabListBuilderBtn, elements.tabAdminBtn].forEach(el => el.classList.remove('active'));
         if (newTab === 'lookup') {
-            elements.lookupMode.style.display = 'block';
+            elements.lookupMode.classList.add('active');
             elements.tabLookupBtn.classList.add('active');
         } else if (newTab === 'listBuilder') {
-            elements.listBuilderMode.style.display = 'block';
+            elements.listBuilderMode.classList.add('active');
             elements.tabListBuilderBtn.classList.add('active');
         } else if (newTab === 'admin') {
-            elements.adminPanel.style.display = 'block';
+            elements.adminPanel.classList.add('active');
             elements.tabAdminBtn.classList.add('active');
         }
     }
@@ -227,19 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if(elements.tabListBuilderBtn) elements.tabListBuilderBtn.addEventListener('click', () => switchTab('listBuilder'));
     if(elements.tabAdminBtn) elements.tabAdminBtn.addEventListener('click', () => switchTab('admin'));
 
-    // ZMIANA: Logika rozwijanego menu
-    if (elements.menuToggleBtn) {
-        elements.menuToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            elements.dropdownMenu.classList.toggle('show');
-        });
-    }
-    window.addEventListener('click', (e) => {
-        if (elements.dropdownMenu.classList.contains('show') && !e.target.closest('.dropdown')) {
-            elements.dropdownMenu.classList.remove('show');
-        }
-    });
-
+    if (elements.menuToggleBtn) elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
+    window.addEventListener('click', (e) => { if (elements.dropdownMenu.classList.contains('show') && !e.target.closest('.dropdown')) elements.dropdownMenu.classList.remove('show'); });
     if (elements.menuInventoryBtn) elements.menuInventoryBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'flex'; });
     if (elements.menuLogoutBtn) elements.menuLogoutBtn.addEventListener('click', () => { localStorage.removeItem('token'); location.reload(); });
     if (elements.scrollTopBtn) elements.scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
@@ -251,11 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function performSearch(searchTerm) {
         if (!searchTerm) return [];
         const term = searchTerm.toLowerCase();
-        return productDatabase.filter(p =>
-            (p.kod_kreskowy && p.kod_kreskowy.toLowerCase().includes(term)) ||
-            (p.nazwa_produktu && p.nazwa_produktu.toLowerCase().includes(term)) ||
-            (p.opis && p.opis.toLowerCase().includes(term))
-        );
+        return productDatabase.filter(p => (p.kod_kreskowy?.toLowerCase().includes(term)) || (p.nazwa_produktu?.toLowerCase().includes(term)) || (p.opis?.toLowerCase().includes(term)));
     }
     
     function addProductToList(eanCode = null) {
@@ -266,7 +242,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         let productData = productDatabase.find(p => p.kod_kreskowy === ean || p.nazwa_produktu === ean);
-        // ZMIANA: Uproszczone dodawanie nieznanego produktu
         if (!productData) {
             productData = { kod_kreskowy: ean, nazwa_produktu: `PRODUKT NIEZNANY`, opis: '---', cena: "0" };
         }
@@ -288,7 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchTerm = elements.listBarcodeInput.value.trim();
         elements.listBuilderSearchResults.style.display = 'none';
         if (!searchTerm) return;
-        
         const results = performSearch(searchTerm);
         if (results.length > 0) {
             let listHtml = '<ul>';
@@ -297,11 +271,10 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.listBuilderSearchResults.innerHTML = listHtml;
             elements.listBuilderSearchResults.style.display = 'block';
         } else {
-             // ZMIANA: Automatyczne dodawanie nieznanego produktu po naciśnięciu Enter
              addProductToList(searchTerm);
         }
     }
-    if(elements.listBarcodeInput) elements.listBarcodeInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); handleListBuilderSearch(); } });
+    if(elements.listBarcodeInput) elements.listBarcodeInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); handleListBuilderSearch();} });
     if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi && targetLi.dataset.ean) addProductToList(targetLi.dataset.ean); });
     if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
 
@@ -327,21 +300,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getSafeFilename() {
-        const clientName = elements.clientNameInput.value.trim().replace(/[^a-z0-9]/gi, '_') || 'zamowienie';
-        const date = new Date().toLocaleDateString('sv').slice(0, 10); // Format YYYY-MM-DD
+        const clientName = elements.clientNameInput.value.trim().replace(/[<>:"/\\|?* ]+/g, '_') || 'zamowienie';
+        const date = new Date().toISOString().slice(0, 10);
         return `${clientName}_${date}`;
     }
 
-    // ZMIANA: Usunięto nagłówki, dynamiczna nazwa pliku
     function exportToCsvOptima() {
         if (scannedItems.length === 0) return;
         const rows = scannedItems.map(item => `${item.ean};${item.quantity}`);
-        const csvContent = rows.join('\n');
+        const csvContent = rows.join('\n'); // POPRAWKA: Usunięto nagłówki
         downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`);
     }
     if(elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCsvOptima);
 
-    // ZMIANA: Dynamiczna nazwa pliku
     function exportToExcelDetailed() {
         if (scannedItems.length === 0) return;
         const headers = '"EAN";"Kod Produktu";"Nazwa Produktu";"Ilość";"Cena Jednostkowa"';
@@ -361,9 +332,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(link);
     }
     
-    // ZMIANA: Uproszczona funkcja przygotowania do druku
     function prepareForPrint() {
         elements.printTableBody.innerHTML = '';
+        const a=document.querySelector("#print-table thead tr").cloneNode(!0);elements.printTableBody.before(a);
         scannedItems.forEach(item => {
             const row = document.createElement('tr');
             row.innerHTML = `<td>${item.name}</td><td>${item.description}</td><td>${item.ean}</td><td>${item.quantity}</td>`;
@@ -373,6 +344,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
     if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => { if (scannedItems.length > 0 && confirm('Czy na pewno chcesz wyczyścić zamówienie?')) { scannedItems = []; elements.clientNameInput.value = ''; elements.additionalInfoInput.value = ''; renderScannedList(); saveDataToServer(); } });
+    
+    // Inne funkcje (inwentaryzacja, admin, etc. pozostają bez zmian)
+    // ...
     
     // Inicjalizacja
     checkLoginStatus();
