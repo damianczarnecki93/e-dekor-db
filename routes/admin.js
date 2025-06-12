@@ -7,20 +7,16 @@ const adminMiddleware = require('../middleware/adminMiddleware');
 
 // GET /api/admin/pending-users
 router.get('/pending-users', [authMiddleware, adminMiddleware], async (req, res) => {
-    console.log('--- OTRZYMANO ZAPYTANIE DO /api/admin/pending-users ---'); // <--- NOWY LOG
     try {
         const pendingUsers = await User.find({ status: 'pending' }).select('-password');
-        console.log('Znaleziono następujących użytkowników ze statusem "pending":'); // <--- NOWY LOG
-        console.log(pendingUsers); // <--- NOWY LOG
         res.json(pendingUsers);
     } catch (err) {
-        console.error('--- BŁĄD W /api/admin/pending-users ---'); // <--- NOWY LOG
-        console.error(err.message); // <--- NOWY LOG
+        console.error(err.message);
         res.status(500).send('Błąd serwera');
     }
 });
 
-// ... reszta pliku (approve/reject) pozostaje bez zmian ...
+// POST /api/admin/approve-user/:userId
 router.post('/approve-user/:userId', [authMiddleware, adminMiddleware], async (req, res) => {
     try {
         const user = await User.findByIdAndUpdate(req.params.userId, { status: 'approved' }, { new: true });
@@ -31,6 +27,8 @@ router.post('/approve-user/:userId', [authMiddleware, adminMiddleware], async (r
         res.status(500).send('Błąd serwera');
     }
 });
+
+// POST /api/admin/reject-user/:userId
 router.post('/reject-user/:userId', [authMiddleware, adminMiddleware], async (req, res) => {
     try {
         const user = await User.findByIdAndUpdate(req.params.userId, { status: 'rejected' }, { new: true });
@@ -41,5 +39,21 @@ router.post('/reject-user/:userId', [authMiddleware, adminMiddleware], async (re
         res.status(500).send('Błąd serwera');
     }
 });
+
+// NOWA TRASA: Usuwanie użytkownika
+// DELETE /api/admin/delete-user/:userId
+router.delete('/delete-user/:userId', [authMiddleware, adminMiddleware], async (req, res) => {
+    try {
+        const user = await User.findByIdAndDelete(req.params.userId);
+        if (!user) {
+            return res.status(404).json({ msg: 'Nie znaleziono użytkownika.' });
+        }
+        res.json({ msg: 'Użytkownik został usunięty.' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Błąd serwera');
+    }
+});
+
 
 module.exports = router;
