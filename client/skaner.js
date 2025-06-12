@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         printListBtn: document.getElementById('printListBtn'),
         clearListBtn: document.getElementById('clearListBtn'),
         adminPanel: document.getElementById('adminPanel'),
-        pendingUsersList: document.getElementById('pendingUsersList'),
+        allUsersList: document.getElementById('allUsersList'),
         inventoryModule: document.getElementById('inventoryModule'),
         closeInventoryModalBtn: document.getElementById('closeInventoryModalBtn'),
         inventoryEanInput: document.getElementById('inventoryEanInput'),
@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const quantity = parseInt(elements.quantityInput.value, 10);
         if (!ean || isNaN(quantity) || quantity < 1) return alert("Podaj kod/EAN i prawidłową ilość.");
         let productData = productDatabase.find(p => p.kod_kreskowy === ean || p.nazwa_produktu === ean);
-        if (!productData) productData = { kod_kreskowy: ean, nazwa_produktu: 'Produkt spoza bazy', opis: ean, cena: "0" };
+        if (!productData) productData = { kod_kreskowy: ean, nazwa_produktu: ean, opis: ean, cena: "0" };
         const existingItem = scannedItems.find(item => item.ean === productData.kod_kreskowy);
         if (existingItem) existingItem.quantity += quantity;
         else scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: quantity, price: productData.cena });
@@ -195,6 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Dodano: ${productData.opis || productData.nazwa_produktu} (Ilość: ${quantity})`);
         elements.listBarcodeInput.value = '';
         elements.quantityInput.value = '1';
+        elements.listBuilderSearchResults.innerHTML = '';
         elements.listBuilderSearchResults.style.display = 'none';
         elements.listBarcodeInput.focus();
     }
@@ -206,9 +207,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const results = performSearch(searchTerm);
         const exactMatch = results.find(p => p.nazwa_produktu === searchTerm || p.kod_kreskowy === searchTerm);
 
-        if (exactMatch) {
-            addProductToList(exactMatch.kod_kreskowy);
-        } else if (results.length > 0) {
+        if (exactMatch) { addProductToList(exactMatch.kod_kreskowy); } 
+        else if (results.length > 0) {
             let listHtml = '<ul>';
             results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
             listHtml += '</ul>';
@@ -243,6 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function displaySingleProductInLookup(product) {
         let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
         elements.lookupResultDiv.innerHTML = html;
+        elements.lookupResultDiv.style.display = 'block';
     }
 
     function displayProductListInLookup(products) {
@@ -253,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('keydown', e => { if(e.key === 'Enter') handleLookupSearch(); });
-    if(elements.lookupResultDiv) elements.lookupResultDiv.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { elements.lookupResultDiv.style.display = 'none'; displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
+    if(elements.lookupResultDiv) elements.lookupResultDiv.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
     
     function renderScannedList() {
         elements.scannedListBody.innerHTML = '';
@@ -313,34 +314,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 10);
     }
 
-    // =================================================================
-    // PANEL ADMINA I INWENTARYZACJA
-    // =================================================================
     async function loadAllUsers() {
-        if(!elements.pendingUsersList) return;
-        elements.pendingUsersList.innerHTML = '<p>Ładowanie...</p>';
+        const userListDiv = elements.allUsersList;
+        if(!userListDiv) return;
+        userListDiv.innerHTML = '<p>Ładowanie...</p>';
         try {
             const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
             if(!response.ok) throw new Error('Nie udało się pobrać użytkowników.');
             const users = await response.json();
-            elements.pendingUsersList.innerHTML = users.length === 0 ? '<p>Brak użytkowników.</p>' : '';
+            userListDiv.innerHTML = users.length === 0 ? '<p>Brak użytkowników.</p>' : '';
             users.forEach(user => {
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item';
                 let actions = `<button class="btn-primary edit-user-btn" data-userid="${user._id}" data-username="${user.username}">Zmień hasło</button>`;
-                if (user.role !== 'admin') {
-                    actions += `<button class="change-role-btn" data-userid="${user._id}" data-username="${user.username}" data-role="admin">Nadaj admina</button>`;
-                    actions += `<button class="delete-user-btn" data-userid="${user._id}" data-username="${user.username}">Usuń</button>`;
-                } else {
-                     actions += `<button class="change-role-btn" data-userid="${user._id}" data-username="${user.username}" data-role="user">Odbierz admina</button>`;
-                }
-                if (user.status === 'pending') {
-                    actions = `<button class="approve-user-btn" data-userid="${user._id}">Akceptuj</button>` + actions;
-                }
+                const newRole = user.role === 'admin' ? 'user' : 'admin';
+                actions += `<button class="change-role-btn" data-userid="${user._id}" data-username="${user.username}" data-role="${newRole}">Zmień na ${newRole}</button>`;
+                if (user.status === 'pending') actions = `<button class="approve-user-btn" data-userid="${user._id}">Akceptuj</button>` + actions;
+                if (user.role !== 'admin') actions += `<button class="delete-user-btn" data-userid="${user._id}" data-username="${user.username}">Usuń</button>`;
+                
                 userDiv.innerHTML = `<div class="user-info"><strong>${user.username}</strong><span class="status">Status: ${user.status} | Rola: ${user.role}</span></div><div class="user-actions">${actions}</div>`;
-                elements.pendingUsersList.appendChild(userDiv);
+                userListDiv.appendChild(userDiv);
             });
-        } catch (error) { elements.pendingUsersList.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`; }
+        } catch (error) { userListDiv.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`; }
     }
     
     async function handleUserAction(url, options, successMsg) {
@@ -358,14 +353,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!oldPassword) return;
         const newPassword = prompt("Wprowadź nowe hasło (min. 4 znaki):");
         if (!newPassword) return;
-        await handleUserAction('/api/auth/change-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') },
-            body: JSON.stringify({ oldPassword, newPassword })
-        });
+        await handleUserAction('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ oldPassword, newPassword }) });
     }
 
-    if(elements.pendingUsersList) elements.pendingUsersList.addEventListener('click', e => { 
+    if(elements.allUsersList) elements.allUsersList.addEventListener('click', e => { 
         const target = e.target.closest('button'); 
         if (!target) return;
         const { userid, username, role } = target.dataset;
