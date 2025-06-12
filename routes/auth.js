@@ -74,5 +74,42 @@ router.get('/verify', authMiddleware, async (req, res) => {
         res.status(500).send('Błąd serwera');
     }
 });
+// routes/auth.js
+
+// ... (istniejący kod dla /register, /login, /verify) ...
+
+// NOWA TRASA: Zmiana hasła przez zalogowanego użytkownika
+router.post('/change-password', authMiddleware, async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+        return res.status(400).json({ msg: 'Proszę podać wszystkie dane.' });
+    }
+     if (newPassword.length < 4) {
+        return res.status(400).json({ msg: 'Nowe hasło musi mieć co najmniej 4 znaki.' });
+    }
+
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ msg: 'Użytkownik nie znaleziony.' });
+        }
+
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ msg: 'Stare hasło jest nieprawidłowe.' });
+        }
+
+        user.password = newPassword;
+        await user.save();
+
+        res.json({ msg: 'Hasło zostało pomyślnie zmienione.' });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Błąd serwera');
+    }
+});
+
 
 module.exports = router;
