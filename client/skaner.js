@@ -26,9 +26,11 @@ document.addEventListener('DOMContentLoaded', () => {
         darkModeToggle: document.getElementById('darkModeToggle'),
         menuToggleBtn: document.getElementById('menuToggleBtn'),
         dropdownMenu: document.getElementById('dropdownMenu'),
+        menuUsername: document.getElementById('menuUsername'),
         menuAdminBtn: document.getElementById('menuAdminBtn'),
         menuInventoryBtn: document.getElementById('menuInventoryBtn'),
         menuLogoutBtn: document.getElementById('menuLogoutBtn'),
+        menuChangePassword: document.getElementById('menuChangePassword'),
         scrollTopBtn: document.getElementById('scrollTopBtn'),
         scrollBottomBtn: document.getElementById('scrollBottomBtn'),
         
@@ -79,9 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const initializeApp = (userData) => {
+        if(elements.menuUsername) elements.menuUsername.textContent = userData.username;
         loadDataFromServer();
         loadUserDataFromServer();
-        if (userData && userData.role === 'admin') {
+        if (userData.role === 'admin') {
             if (elements.menuAdminBtn) elements.menuAdminBtn.style.display = 'flex';
         }
     };
@@ -204,9 +207,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elements.menuToggleBtn) elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
     window.addEventListener('click', () => { if (elements.dropdownMenu.classList.contains('show')) elements.dropdownMenu.classList.remove('show'); });
     
-    if (elements.menuAdminBtn) elements.menuAdminBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('admin'); loadPendingUsers(); });
+    if (elements.menuAdminBtn) elements.menuAdminBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('admin'); loadAllUsers(); });
     if (elements.menuInventoryBtn) elements.menuInventoryBtn.addEventListener('click', (e) => { e.preventDefault(); elements.inventoryModule.style.display = 'flex'; });
     if (elements.menuLogoutBtn) elements.menuLogoutBtn.addEventListener('click', (e) => { e.preventDefault(); localStorage.removeItem('token'); location.reload(); });
+    if (elements.menuChangePassword) elements.menuChangePassword.addEventListener('click', (e) => { e.preventDefault(); handleChangePassword(); });
     if (elements.scrollTopBtn) elements.scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0 }));
     if (elements.scrollBottomBtn) elements.scrollBottomBtn.addEventListener('click', () => window.scrollTo({ top: document.body.scrollHeight }));
     
@@ -239,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const quantity = parseInt(elements.quantityInput.value, 10);
         if (!ean || isNaN(quantity) || quantity < 1) return alert("Podaj kod/EAN i prawidłową ilość.");
         let productData = productDatabase.find(p => p.kod_kreskowy === ean || p.nazwa_produktu === ean);
-        if (!productData) productData = { kod_kreskowy: ean, nazwa_produktu: `PRODUKT NIEZNANY`, opis: '---', cena: "0" };
+        if (!productData) productData = { kod_kreskowy: ean, nazwa_produktu: 'Produkt spoza bazy', opis: ean, cena: "0" };
         const existingItem = scannedItems.find(item => item.ean === productData.kod_kreskowy);
         if (existingItem) existingItem.quantity += quantity;
         else scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: quantity, price: productData.cena });
@@ -267,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.listBuilderSearchResults.innerHTML = listHtml;
             elements.listBuilderSearchResults.style.display = 'block';
         } else {
-             if (window.confirm(`Produkt "${searchTerm}" nie został znaleziony. Czy chcesz dodać go jako pozycję spoza bazy?`)) {
+             if (window.confirm(`Produkt "${searchTerm}" nie został znaleziony. Czy chcesz dodać go jako nową pozycję?`)) {
                 addProductToList(searchTerm);
              }
         }
@@ -276,7 +280,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) addProductToList(targetLi.dataset.ean); });
     if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
 
-    // POPRAWKA: Prawidłowa obsługa listy wyboru dla wyszukiwarki
     function handleLookupSearch() {
         const searchTerm = elements.lookupBarcodeInput.value.trim();
         elements.lookupResultDiv.innerHTML = '';
@@ -307,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('keydown', e => { if(e.key === 'Enter') handleLookupSearch(); });
-    if(elements.lookupResultDiv) elements.lookupResultDiv.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); });
+    if(elements.lookupResultDiv) elements.lookupResultDiv.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { elements.lookupResultDiv.style.display = 'none'; displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
     
     // =================================================================
     // RENDEROWANIE LISTY, EKSPORT, WYDRUK
@@ -329,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(elements.quantityInput) elements.quantityInput.addEventListener('focus', handleQuantityFocus);
     if(elements.scannedListBody) {
         elements.scannedListBody.addEventListener('focusin', e => { if (e.target.classList.contains('quantity-in-table')) handleQuantityFocus(e); });
-        elements.scannedListBody.addEventListener('input', e => { if (e.target.classList.contains('quantity-in-table')) { const index = e.target.dataset.index; const newQuantity = parseInt(e.target.value, 10); if (newQuantity > 0) { scannedItems[index].quantity = newQuantity; renderScannedList(); saveDataToServer(); } } });
+        elements.scannedListBody.addEventListener('change', e => { if (e.target.classList.contains('quantity-in-table')) { const index = e.target.dataset.index; const newQuantity = parseInt(e.target.value, 10); if (newQuantity > 0) { scannedItems[index].quantity = newQuantity; renderScannedList(); saveDataToServer(); } else { e.target.value = scannedItems[index].quantity; } } });
         elements.scannedListBody.addEventListener('click', e => { const deleteButton = e.target.closest('.delete-btn'); if (deleteButton) { scannedItems.splice(deleteButton.dataset.index, 1); renderScannedList(); saveDataToServer(); } });
     }
 
@@ -380,50 +383,67 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // PANEL ADMINA I INWENTARYZACJA
     // =================================================================
-    async function loadPendingUsers() {
+    async function loadAllUsers() {
         if(!elements.pendingUsersList) return;
         elements.pendingUsersList.innerHTML = '<p>Ładowanie...</p>';
         try {
-            const response = await fetch('/api/admin/pending-users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
             if(!response.ok) throw new Error('Nie udało się pobrać użytkowników.');
             const users = await response.json();
-            elements.pendingUsersList.innerHTML = users.length === 0 ? '<p>Brak użytkowników do akceptacji.</p>' : '';
+            elements.pendingUsersList.innerHTML = users.length === 0 ? '<p>Brak użytkowników.</p>' : '';
             users.forEach(user => {
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item';
-                userDiv.innerHTML = `<span>${user.username}</span><div class="user-actions"><button class="btn-primary approve-user-btn" data-userid="${user._id}">Akceptuj</button><button class="btn-danger reject-user-btn" data-userid="${user._id}">Odrzuć</button><button class="delete-user-btn" data-userid="${user._id}"><i class="fa-solid fa-trash"></i></button></div>`;
+                userDiv.innerHTML = `<div class="user-info"><strong>${user.username}</strong><span class="status">Status: ${user.status} | Rola: ${user.role}</span></div><div class="user-actions"><button class="btn-primary edit-user-btn" data-userid="${user._id}" data-username="${user.username}">Edytuj hasło</button>${user.role !== 'admin' ? `<button class="btn-danger delete-user-btn" data-userid="${user._id}" data-username="${user.username}">Usuń</button>` : ''}</div>`;
                 elements.pendingUsersList.appendChild(userDiv);
             });
         } catch (error) { elements.pendingUsersList.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`; }
     }
     
-    async function handleUserApproval(userId, action) {
+    async function handleUserEdit(userId, username) {
+        const newPassword = prompt(`Wprowadź nowe hasło dla użytkownika "${username}":`);
+        if (!newPassword) return;
         try {
-            const response = await fetch(`/api/admin/${action}-user/${userId}`, { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') } });
-            if(!response.ok) { const data = await response.json(); throw new Error(data.msg || 'Wystąpił błąd.'); }
-            alert(`Użytkownik został ${action === 'approve' ? 'zaakceptowany' : 'odrzucony'}.`);
-            loadPendingUsers();
+            const response = await fetch(`/api/admin/edit-password/${userId}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newPassword }) });
+            const data = await response.json();
+            if(!response.ok) throw new Error(data.msg || 'Wystąpił błąd.');
+            alert(data.msg);
         } catch (error) { alert(`Błąd: ${error.message}`); }
     }
-    
+
     async function handleUserDelete(userId, username) {
         if (!confirm(`Czy na pewno chcesz trwale usunąć użytkownika "${username}"? Tej operacji nie można cofnąć.`)) return;
         try {
             const response = await fetch(`/api/admin/delete-user/${userId}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } });
             if(!response.ok) { const data = await response.json(); throw new Error(data.msg || 'Wystąpił błąd.'); }
             alert(`Użytkownik "${username}" został usunięty.`);
-            loadPendingUsers();
+            loadAllUsers();
         } catch (error) { alert(`Błąd: ${error.message}`); }
+    }
+    
+    async function handleChangePassword() {
+        const oldPassword = prompt("Wprowadź swoje stare hasło:");
+        if (!oldPassword) return;
+        const newPassword = prompt("Wprowadź nowe hasło:");
+        if (!newPassword) return;
+        
+        try {
+            const response = await fetch('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ oldPassword, newPassword }) });
+            const data = await response.json();
+            if(!response.ok) throw new Error(data.msg || 'Wystąpił błąd.');
+            alert(data.msg);
+        } catch (error) {
+            alert(`Błąd: ${error.message}`);
+        }
     }
 
     if(elements.pendingUsersList) elements.pendingUsersList.addEventListener('click', e => { 
         const target = e.target.closest('button'); 
         if (!target) return;
         const userId = target.dataset.userid;
-        const username = target.parentElement.previousElementSibling.textContent;
+        const username = target.dataset.username;
 
-        if (target.classList.contains('approve-user-btn')) handleUserApproval(userId, 'approve'); 
-        else if (target.classList.contains('reject-user-btn')) handleUserApproval(userId, 'reject');
+        if (target.classList.contains('edit-user-btn')) handleUserEdit(userId, username);
         else if (target.classList.contains('delete-user-btn')) handleUserDelete(userId, username);
     });
 
