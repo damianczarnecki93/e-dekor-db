@@ -76,7 +76,8 @@
         .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 100; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
         .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
-        .lookup-result-item { padding: 15px; border-bottom: 1px solid var(--border-color); max-height: 300px; overflow-y: auto; }
+        #lookupResult { max-height: 40vh; overflow-y: auto; }
+        .lookup-result-item { padding: 15px; border-bottom: 1px solid var(--border-color); }
         #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 2000; }
         .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .toast.show { opacity: 1; transform: translateY(0); }
@@ -86,9 +87,10 @@
             .container { padding: 20px 15px; }
             .controls-grid > * { flex-basis: 100%; }
             .col-ean, .col-desc { display: none; }
-            button, .btn { padding: 10px 15px; font-size: 0.9em; }
-            #totalOrderValue { font-size: 1em; padding: 10px; }
+            .export-controls { grid-template-columns: 1fr; }
+            #totalOrderValue { font-size: 1rem; padding: 10px; }
             .bottom-scroll-bar button, .top-right-menu .btn-icon { width: 40px; height: 40px; }
+            button, .btn { padding: 10px 15px; font-size: 0.9em; }
         }
         
         @media print {
@@ -157,7 +159,7 @@
         <div id="lookupMode" class="tab-content active">
             <div class="search-container">
                 <input type="text" id="lookupBarcode_Input" placeholder="Wpisz EAN, kod lub nazwę produktu..." disabled>
-                <div id="lookupResult" style="display: none;"></div>
+                <div id="lookupResult" class="search-results-list" style="display: none;"></div>
             </div>
         </div>
 
