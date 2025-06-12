@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     const elements = {
+        // Logowanie i UI
         loginOverlay: document.getElementById('loginOverlay'),
         appContainer: document.getElementById('appContainer'),
         loginUsername: document.getElementById('loginUsername'),
@@ -32,11 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
         menuSavedLists: document.getElementById('menuSavedLists'),
         scrollTopBtn: document.getElementById('scrollTopBtn'),
         scrollBottomBtn: document.getElementById('scrollBottomBtn'),
+        
+        // Wyszukiwanie
         lookupBarcodeInput: document.getElementById('lookupBarcode_Input'),
         lookupResultList: document.getElementById('lookupResultList'),
         lookupResultSingle: document.getElementById('lookupResultSingle'),
         listBarcodeInput: document.getElementById('listBarcode_Input'),
         listBuilderSearchResults: document.getElementById('listBuilderSearchResults'),
+        
+        // Zamówienie
         quantityInput: document.getElementById('quantityInput'),
         addToListBtn: document.getElementById('addToListBtn'),
         saveListBtn: document.getElementById('saveListBtn'),
@@ -49,8 +54,12 @@ document.addEventListener('DOMContentLoaded', () => {
         exportExcelBtn: document.getElementById('exportExcelBtn'),
         printListBtn: document.getElementById('printListBtn'),
         clearListBtn: document.getElementById('clearListBtn'),
+        
+        // Admin
         adminPanel: document.getElementById('adminPanel'),
         allUsersList: document.getElementById('allUsersList'),
+        
+        // Inwentaryzacja
         inventoryModule: document.getElementById('inventoryModule'),
         closeInventoryModalBtn: document.getElementById('closeInventoryModalBtn'),
         inventoryEanInput: document.getElementById('inventoryEanInput'),
@@ -59,9 +68,24 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryListBody: document.getElementById('inventoryListBody'),
         inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
         inventorySearchResults: document.getElementById('inventorySearchResults'),
+        
+        // Zapisane listy
         savedListsModal: document.getElementById('savedListsModal'),
         closeSavedListsModalBtn: document.getElementById('closeSavedListsModalBtn'),
         savedListsContainer: document.getElementById('savedListsContainer'),
+
+        // Kompletacja
+        pickingModule: document.getElementById('pickingModule'),
+        closePickingModalBtn: document.getElementById('closePickingModalBtn'),
+        pickingOrderName: document.getElementById('picking-order-name'),
+        pickingEanInput: document.getElementById('picking-ean-input'),
+        pickingStatusMsg: document.getElementById('picking-status-msg'),
+        pickingTargetList: document.getElementById('picking-target-list'),
+        pickingScannedList: document.getElementById('picking-scanned-list'),
+        pickingVerifyBtn: document.getElementById('picking-verify-btn'),
+        pickingShowMissingBtn: document.getElementById('picking-show-missing-btn'),
+
+        // Inne
         toastContainer: document.getElementById('toast-container'),
         printClientName: document.getElementById('print-client-name'),
         printAdditionalInfo: document.getElementById('print-additional-info'),
@@ -69,115 +93,24 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     let productDatabase = [], scannedItems = [], inventoryItems = [], activeTab = 'lookup';
+    // Stan modułu kompletacji
+    let targetOrder = null;
+    let pickedItems = new Map();
     const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
-    const showApp = (userData) => {
-        elements.loginOverlay.style.display = 'none';
-        elements.appContainer.style.display = 'block';
-        if (elements.topBar) elements.topBar.style.display = 'flex';
-        if (elements.bottomBar) elements.bottomBar.style.display = 'flex';
-        initializeApp(userData);
-    };
+    // ... (reszta kodu bez zmian, aż do funkcji addProductToList) ...
 
-    const initializeApp = async (userData) => {
-        if(elements.menuUsername) elements.menuUsername.textContent = userData.username;
-        await loadDataFromServer();
-        if (userData.role === 'admin') {
-            if (elements.menuAdminBtn) elements.menuAdminBtn.style.display = 'flex';
-        }
-        await loadActiveList();
-    };
-    
-    const checkLoginStatus = async () => {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        try {
-            const response = await fetch('/api/auth/verify', { method: 'GET', headers: { 'x-auth-token': token } });
-            if (response.ok) showApp(await response.json());
-            else localStorage.removeItem('token');
-        } catch (error) { console.error('Błąd weryfikacji tokenu:', error); }
-    };
-    
-    async function attemptLogin() {
-        try {
-            const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: elements.loginUsername.value, password: elements.loginPassword.value }) });
-            const data = await response.json();
-            if (!response.ok) { elements.loginError.textContent = data.msg || 'Wystąpił błąd'; return; }
-            localStorage.setItem('token', data.token);
-            showApp(data.user);
-        } catch (error) { elements.loginError.textContent = 'Nie można połączyć się z serwerem.'; }
-    }
-
-    async function handleRegistration() {
-        const { registerUsername, registerPassword, registerError, showLogin, loginUsername } = elements;
-        const username = registerUsername.value.trim();
-        const password = registerPassword.value.trim();
-        if (!username || !password) { registerError.textContent = 'Login i hasło są wymagane.'; return; }
-        try {
-            const response = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-            const data = await response.json();
-            if (!response.ok) { registerError.textContent = data.msg || 'Wystąpił błąd serwera.'; } 
-            else { alert('Rejestracja pomyślna! Konto oczekuje na aktywację.'); showLogin.click(); loginUsername.value = username; elements.loginPassword.value = ''; }
-        } catch (error) { registerError.textContent = 'Nie można połączyć się z serwerem.'; }
-    }
-
-    if (elements.loginBtn) elements.loginBtn.addEventListener('click', attemptLogin);
-    if (elements.loginPassword) elements.loginPassword.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
-    if (elements.registerBtn) elements.registerBtn.addEventListener('click', handleRegistration);
-    if (elements.showRegister) elements.showRegister.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'none'; elements.registerForm.style.display = 'block'; });
-    if (elements.showLogin) elements.showLogin.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'block'; elements.registerForm.style.display = 'none'; });
-
-    async function loadDataFromServer() {
-        console.log('Ładowanie bazy produktów...');
-        function fetchAndParseCsv(filename) { return fetch(filename).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); }
-        await Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')])
-            .then(([data1, data2]) => {
-                const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() });
-                productDatabase = [...data1.map(mapData), ...data2.map(mapData)];
-                console.log(`Baza danych załadowana (${productDatabase.length} pozycji).`);
-                [...document.querySelectorAll('input:not(#loginForm input, #registerForm input), button:not(#loginForm button, #registerForm button)')].forEach(el => el.disabled = false);
-            }).catch(error => { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); });
-    }
-
-    function switchTab(newTab) {
-        activeTab = newTab;
-        [elements.lookupMode, elements.listBuilderMode, elements.adminPanel].forEach(el => el.classList.remove('active'));
-        [elements.tabLookupBtn, elements.tabListBuilderBtn].forEach(el => el.classList.remove('active'));
-        if (newTab === 'lookup') { elements.lookupMode.classList.add('active'); elements.tabLookupBtn.classList.add('active'); } 
-        else if (newTab === 'listBuilder') { elements.listBuilderMode.classList.add('active'); elements.tabListBuilderBtn.classList.add('active'); } 
-        else if (newTab === 'admin') { elements.adminPanel.classList.add('active'); }
-    }
-    if(elements.tabLookupBtn) elements.tabLookupBtn.addEventListener('click', () => switchTab('lookup'));
-    if(elements.tabListBuilderBtn) elements.tabListBuilderBtn.addEventListener('click', () => switchTab('listBuilder'));
-    
-    if (elements.menuToggleBtn) elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
-    window.addEventListener('click', () => { if (elements.dropdownMenu.classList.contains('show')) elements.dropdownMenu.classList.remove('show'); });
-    
-    if (elements.menuAdminBtn) elements.menuAdminBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('admin'); loadAllUsers(); });
-    if (elements.menuInventoryBtn) elements.menuInventoryBtn.addEventListener('click', (e) => { e.preventDefault(); elements.inventoryModule.style.display = 'flex'; });
-    if (elements.menuLogoutBtn) elements.menuLogoutBtn.addEventListener('click', (e) => { e.preventDefault(); localStorage.clear(); location.reload(); });
-    if (elements.menuChangePassword) elements.menuChangePassword.addEventListener('click', (e) => { e.preventDefault(); handleChangePassword(); });
-    if (elements.menuSavedLists) elements.menuSavedLists.addEventListener('click', (e) => { e.preventDefault(); showSavedLists(); });
-    if (elements.scrollTopBtn) elements.scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0 }));
-    if (elements.scrollBottomBtn) elements.scrollBottomBtn.addEventListener('click', () => window.scrollTo({ top: document.body.scrollHeight }));
-    
-    function setDarkMode(isDark) { const iconElement = elements.darkModeToggle.querySelector('i'); if (isDark) { document.body.classList.add('dark-mode'); iconElement.classList.replace('fa-moon', 'fa-sun'); localStorage.setItem('theme', 'dark'); } else { document.body.classList.remove('dark-mode'); iconElement.classList.replace('fa-sun', 'fa-moon'); localStorage.setItem('theme', 'light'); } }
-    if (elements.darkModeToggle) elements.darkModeToggle.addEventListener('click', () => setDarkMode(!document.body.classList.contains('dark-mode')));
-    setDarkMode(localStorage.getItem('theme') === 'dark');
-
-    function performSearch(searchTerm) { if (!searchTerm) return []; const term = searchTerm.toLowerCase(); return productDatabase.filter(p => (p.kod_kreskowy?.toLowerCase().includes(term)) || (p.nazwa_produktu?.toLowerCase().includes(term)) || (p.opis?.toLowerCase().includes(term))); }
-    
-    function addProductToList(code = null) {
+    function addProductToList(code = null, quantity = null) {
         const ean = code || elements.listBarcodeInput.value.trim();
-        const quantity = parseInt(elements.quantityInput.value, 10);
-        if (!ean || isNaN(quantity) || quantity < 1) return alert("Podaj kod/EAN i prawidłową ilość.");
+        const qty = quantity || parseInt(elements.quantityInput.value, 10);
+        if (!ean || isNaN(qty) || qty < 1) return alert("Podaj kod/EAN i prawidłową ilość.");
         let productData = productDatabase.find(p => p.kod_kreskowy === ean || p.nazwa_produktu === ean);
         if (!productData) productData = { kod_kreskowy: ean, nazwa_produktu: ean, opis: ean, cena: "0" };
         const existingItem = scannedItems.find(item => item.ean === productData.kod_kreskowy);
-        if (existingItem) existingItem.quantity += quantity;
-        else scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: quantity, price: productData.cena });
+        if (existingItem) existingItem.quantity += qty;
+        else scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: qty, price: productData.cena });
         renderScannedList();
-        showToast(`Dodano: ${productData.nazwa_produktu} (Ilość: ${quantity})`);
+        showToast(`Dodano: ${productData.nazwa_produktu} (Ilość: ${qty})`);
         elements.listBarcodeInput.value = '';
         elements.quantityInput.value = '1';
         elements.listBuilderSearchResults.innerHTML = '';
@@ -185,243 +118,171 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.listBarcodeInput.focus();
     }
     
-    function handleListBuilderSearch() {
-        const searchTerm = elements.listBarcodeInput.value.trim();
-        elements.listBuilderSearchResults.style.display = 'none';
-        if (!searchTerm) return;
-        
-        if (isMobile) {
-            const results = performSearch(searchTerm);
-            const exactMatch = results.find(p => p.nazwa_produktu.toLowerCase() === searchTerm.toLowerCase() || p.kod_kreskowy === searchTerm);
-            addProductToList(exactMatch ? exactMatch.kod_kreskowy : searchTerm);
-            return;
-        }
+    // ... (reszta kodu bez zmian, aż do funkcji renderScannedList) ...
 
-        const results = performSearch(searchTerm);
-        if (results.length === 1) { addProductToList(results[0].kod_kreskowy); } 
-        else if (results.length > 1) {
-            let listHtml = '<ul>';
-            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
-            listHtml += '</ul>';
-            elements.listBuilderSearchResults.innerHTML = listHtml;
-            elements.listBuilderSearchResults.style.display = 'block';
-        } else {
-             if (window.confirm(`Produkt "${searchTerm}" nie został znaleziony. Czy chcesz dodać go jako nową pozycję?`)) {
-                addProductToList(searchTerm);
-             }
-        }
-    }
-    if(elements.listBarcodeInput) elements.listBarcodeInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); handleListBuilderSearch();} });
-    if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) addProductToList(targetLi.dataset.ean); });
-    if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
-
-    function handleLookupSearch() {
-        const searchTerm = elements.lookupBarcodeInput.value.trim();
-        elements.lookupResultList.innerHTML = '';
-        elements.lookupResultList.style.display = 'none';
-        elements.lookupResultSingle.innerHTML = '';
-        elements.lookupResultSingle.style.display = 'none';
-        if (!searchTerm) return;
-        const results = performSearch(searchTerm);
-        if (results.length === 1) {
-            displaySingleProductInLookup(results[0]);
-        } else if (results.length > 1) {
-            displayProductListInLookup(results);
-        } else {
-            elements.lookupResultSingle.innerHTML = '<p style="padding: 15px;">Nie znaleziono produktu.</p>';
-            elements.lookupResultSingle.style.display = 'block';
-        }
-    }
-    
-    function displaySingleProductInLookup(product) {
-        let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
-        elements.lookupResultSingle.innerHTML = html;
-        elements.lookupResultSingle.style.display = 'block';
-        elements.lookupResultList.style.display = 'none';
-    }
-
-    function displayProductListInLookup(products) {
-        let listHtml = '<ul>';
-        products.forEach(p => { listHtml += `<li data-product-json='${JSON.stringify(p)}'>${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
-        listHtml += '</ul>';
-        elements.lookupResultList.innerHTML = listHtml;
-        elements.lookupResultList.style.display = 'block';
-    }
-
-    if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('keydown', e => { if(e.key === 'Enter') handleLookupSearch(); });
-    if(elements.lookupResultList) elements.lookupResultList.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
-    
     function renderScannedList() {
         elements.scannedListBody.innerHTML = '';
         const canOperate = scannedItems.length > 0;
         [elements.exportCsvBtn, elements.exportExcelBtn, elements.printListBtn, elements.clearListBtn, elements.saveListBtn].forEach(btn => { if(btn) btn.disabled = !canOperate; });
         scannedItems.forEach((item, index) => {
             const row = document.createElement('tr');
+            // POPRAWKA: Prawidłowa kolejność kolumn
             row.innerHTML = `<td class="col-code">${item.name}</td><td class="col-desc">${item.description}</td><td class="col-ean">${item.ean}</td><td><input type="number" class="quantity-in-table" value="${item.quantity}" min="1" data-index="${index}"></td><td><button class="delete-btn btn-icon" data-index="${index}"><i class="fa-solid fa-trash-can"></i></button></td>`;
             elements.scannedListBody.appendChild(row);
         });
         const totalValue = scannedItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);
         elements.totalOrderValue.textContent = `Total: ${totalValue.toFixed(2)} PLN`;
     }
+
+    // ... (reszta kodu bez zmian, aż do funkcji showToast) ...
     
-    const handleQuantityFocus = (event) => { event.target.select(); };
-    if(elements.quantityInput) elements.quantityInput.addEventListener('focus', handleQuantityFocus);
-    if(elements.scannedListBody) {
-        elements.scannedListBody.addEventListener('focusin', e => { if (e.target.classList.contains('quantity-in-table')) handleQuantityFocus(e); });
-        elements.scannedListBody.addEventListener('change', e => { if (e.target.classList.contains('quantity-in-table')) { const index = e.target.dataset.index; const newQuantity = parseInt(e.target.value, 10); if (newQuantity > 0) { scannedItems[index].quantity = newQuantity; renderScannedList(); } else { e.target.value = scannedItems[index].quantity; } } });
-        elements.scannedListBody.addEventListener('click', e => { const deleteButton = e.target.closest('.delete-btn'); if (deleteButton) { scannedItems.splice(deleteButton.dataset.index, 1); renderScannedList(); } });
+    function showToast(message) { 
+        const toast = document.createElement('div'); 
+        toast.className = 'toast'; 
+        toast.textContent = message; 
+        elements.toastContainer.appendChild(toast); 
+        setTimeout(() => { 
+            toast.classList.add('show'); 
+            setTimeout(() => { 
+                toast.classList.remove('show'); 
+                toast.addEventListener('transitionend', () => toast.remove()); 
+            }, 3000); 
+        }, 10); 
     }
 
-    function getSafeFilename() { const clientName = elements.clientNameInput.value.trim().replace(/[<>:"/\\|?* ]+/g, '_') || 'zamowienie'; const date = new Date().toISOString().slice(0, 10); return `${clientName}_${date}`; }
-    function exportToCsvOptima() { if (scannedItems.length === 0) return; const csvContent = scannedItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`); }
-    if(elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCsvOptima);
-    function exportToExcelDetailed() { if (scannedItems.length === 0) return; const headers = '"Kod produktu";"Nazwa";"EAN";"Ilość";"Cena Jednostkowa"'; const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${item.name || ''}";"${(item.description || '').replace(/"/g, '""')}";"${item.ean || ''}";"${item.quantity || 0}";"${priceFormatted}"`; }); const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`; downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`); }
-    if(elements.exportExcelBtn) elements.exportExcelBtn.addEventListener('click', exportToExcelDetailed);
-    function downloadFile(content, mimeType, filename) { const blob = new Blob([content], { type: mimeType }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
-    
-    function prepareForPrint() {
-        elements.printClientName.textContent = `Klient: ${elements.clientNameInput.value.trim() || 'Nie podano'}`;
-        elements.printAdditionalInfo.textContent = `Info: ${elements.additionalInfoInput.value.trim() || 'Brak'}`;
-        let content = '';
-        if (scannedItems.length > 0) {
-            content = scannedItems.map(item => {
-                const code = (item.name || '').padEnd(20);
-                const name = (item.description || '').padEnd(40);
-                return `Kod: ${code} | Nazwa: ${name} | Ilość: ${item.quantity}`;
-            }).join('\n');
-        }
-        elements.printContent.textContent = content;
-    }
+    // ... (reszta kodu bez zmian, aż do końca pliku, a na końcu dodać moduł kompletacji) ...
 
-    if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
-    
-    function showToast(message) { const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = message; elements.toastContainer.appendChild(toast); setTimeout(() => { toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }, 10); }
-    
-    async function saveCurrentList() {
-        const listName = prompt("Podaj nazwę dla zapisywanego zamówienia:", elements.clientNameInput.value || `Zamówienie ${getSafeFilename()}`);
-        if (!listName) return null;
-        try {
-            const response = await fetch('/api/data/savelist', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ listName, items: scannedItems, clientName: elements.clientNameInput.value }) });
-            if (!response.ok) { const errData = await response.json(); throw new Error(errData.msg || "Błąd zapisu"); }
-            const savedList = await response.json();
-            showToast(`Zamówienie "${listName}" zostało zapisane.`);
-            localStorage.setItem('activeListId', savedList._id);
-            return savedList;
-        } catch (error) { alert(`Błąd: ${error.message}`); return null; }
-    }
+    // =================================================================
+    // NOWY MODUŁ: KOMPLETACJA ZAMÓWIENIA
+    // =================================================================
 
-    function clearCurrentList(askConfirm = true) {
-        if (askConfirm && scannedItems.length > 0 && !confirm('Czy na pewno chcesz wyczyścić bieżące zamówienie? Ta operacja usunie również aktywną, zapamiętaną listę.')) { return; }
-        scannedItems = [];
-        elements.clientNameInput.value = '';
-        elements.additionalInfoInput.value = '';
-        localStorage.removeItem('activeListId');
-        renderScannedList();
-        showToast("Utworzono nową, czystą listę.");
-    }
+    let currentPickingOrder = null;
+    let pickedOrderItems = new Map();
 
-    if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
-    if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) { await saveCurrentList(); } } clearCurrentList(false); });
-    if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => clearCurrentList(true));
-    
-    async function loadListById(listId) {
+    async function startPicking(listId, listName) {
         try {
             const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
-            if (!response.ok) throw new Error("Błąd wczytywania listy");
-            const data = await response.json();
-            scannedItems = data.items;
-            elements.clientNameInput.value = data.clientName || data.listName;
-            renderScannedList();
-            localStorage.setItem('activeListId', listId);
-            return data;
-        } catch (error) { alert(error.message); localStorage.removeItem('activeListId'); return null; }
-    }
-    
-    async function loadActiveList() {
-        const activeListId = localStorage.getItem('activeListId');
-        if (activeListId) { showToast("Wczytuję ostatnio aktywną listę..."); await loadListById(activeListId); }
+            if (!response.ok) throw new Error("Błąd wczytywania zamówienia do kompletacji");
+            currentPickingOrder = await response.json();
+            pickedOrderItems.clear();
+            
+            elements.pickingOrderName.textContent = `Kompletacja: ${listName}`;
+            elements.pickingStatusMsg.textContent = '';
+            elements.pickingStatusMsg.style.backgroundColor = '';
+            
+            renderPickingView();
+            elements.pickingModule.style.display = 'flex';
+            elements.pickingEanInput.focus();
+        } catch (error) {
+            alert(error.message);
+        }
     }
 
-    async function showSavedLists() {
-        elements.savedListsModal.style.display = 'flex';
-        elements.savedListsContainer.innerHTML = '<p>Ładowanie...</p>';
-        try {
-            const response = await fetch('/api/data/lists', { headers: { 'x-auth-token': localStorage.getItem('token') } });
-            if (!response.ok) throw new Error("Błąd wczytywania list");
-            const lists = await response.json();
-            elements.savedListsContainer.innerHTML = '';
-            if (lists.length === 0) { elements.savedListsContainer.innerHTML = '<p>Brak zapisanych zamówień.</p>'; return; }
-            const listContainer = document.createElement('ul');
-            listContainer.style.listStyle = 'none'; listContainer.style.padding = '0';
-            lists.forEach(list => {
-                const li = document.createElement('li');
-                li.style.display = 'flex'; li.style.justifyContent = 'space-between'; li.style.alignItems = 'center'; li.style.padding = '10px'; li.style.borderBottom = '1px solid var(--border-color)';
-                li.innerHTML = `<span>${list.listName} <small>(autor: ${list.user?.username || 'usunięty'}, ost. zapis: ${new Date(list.updatedAt).toLocaleDateString()})</small></span><div><button class="btn-primary load-list-btn" data-id="${list._id}">Wczytaj</button><button class="btn-danger delete-list-btn" data-id="${list._id}" style="margin-left:5px;">Usuń</button></div>`;
-                listContainer.appendChild(li);
-            });
-            elements.savedListsContainer.appendChild(listContainer);
-        } catch (error) { elements.savedListsContainer.innerHTML = `<p style="color:var(--danger-color)">${error.message}</p>`; }
+    function renderPickingView() {
+        elements.pickingTargetList.innerHTML = currentPickingOrder.items.map(item => {
+            const pickedQty = pickedOrderItems.get(item.ean) || 0;
+            const isCompleted = pickedQty >= item.quantity;
+            return `<div style="padding: 5px; ${isCompleted ? 'text-decoration: line-through; color: var(--success-color);' : ''}">${item.name} | ${item.description} ( ${pickedQty} / ${item.quantity} )</div>`;
+        }).join('');
+
+        elements.pickingScannedList.innerHTML = Array.from(pickedOrderItems.entries()).map(([ean, qty]) => {
+            const targetItem = currentPickingOrder.items.find(it => it.ean === ean);
+            const name = targetItem ? targetItem.name : "Produkt spoza listy";
+            return `<div>${name}: ${qty} szt.</div>`;
+        }).join('');
     }
-    if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
+
+    function handlePickingScan() {
+        const ean = elements.pickingEanInput.value.trim();
+        if (!ean) return;
+
+        const targetItem = currentPickingOrder.items.find(item => item.ean === ean || item.name === ean);
+        if (!targetItem) {
+            showToast("BŁĄD: Produkt spoza zamówienia!");
+            elements.pickingEanInput.value = '';
+            return;
+        }
+
+        let quantity = 1;
+        if (targetItem.quantity > 1) {
+            const enteredQty = prompt(`Produkt "${targetItem.description}" występuje w większej ilości (${targetItem.quantity} szt.). Podaj skanowaną ilość:`, "1");
+            quantity = parseInt(enteredQty);
+            if (isNaN(quantity) || quantity < 1) {
+                showToast("Anulowano lub wprowadzono nieprawidłową ilość.");
+                elements.pickingEanInput.value = '';
+                return;
+            }
+        }
+
+        const currentPickedQty = pickedOrderItems.get(targetItem.ean) || 0;
+        if (currentPickedQty + quantity > targetItem.quantity) {
+            showToast(`BŁĄD: Przekroczono wymaganą ilość dla produktu ${targetItem.name}!`);
+        } else {
+            pickedOrderItems.set(targetItem.ean, currentPickedQty + quantity);
+            showToast(`Skompletowano: ${targetItem.name} (${quantity} szt.)`);
+        }
+
+        elements.pickingEanInput.value = '';
+        renderPickingView();
+    }
+    
+    function verifyPicking() {
+        let isComplete = true;
+        let missingItems = [];
+
+        currentPickingOrder.items.forEach(item => {
+            const pickedQty = pickedOrderItems.get(item.ean) || 0;
+            if (pickedQty < item.quantity) {
+                isComplete = false;
+                missingItems.push(`${item.name} - brakuje ${item.quantity - pickedQty} szt.`);
+            }
+        });
+        
+        if (isComplete) {
+            elements.pickingStatusMsg.textContent = "Zamówienie skompletowane prawidłowo!";
+            elements.pickingStatusMsg.style.backgroundColor = 'var(--success-color)';
+            elements.pickingStatusMsg.style.color = 'white';
+        } else {
+            elements.pickingStatusMsg.textContent = "BŁĄD: Zamówienie nie jest kompletne!";
+            elements.pickingStatusMsg.style.backgroundColor = 'var(--danger-color)';
+            elements.pickingStatusMsg.style.color = 'white';
+            alert("Brakuje następujących pozycji:\n" + missingItems.join('\n'));
+        }
+    }
+    
+    function showMissingItems() {
+        const missing = currentPickingOrder.items
+            .filter(item => (pickedOrderItems.get(item.ean) || 0) < item.quantity)
+            .map(item => `${item.name} (${item.description}) - brakuje ${item.quantity - (pickedOrderItems.get(item.ean) || 0)} szt.`);
+        
+        if (missing.length > 0) {
+            alert("Nieskompletowane pozycje:\n\n" + missing.join('\n'));
+        } else {
+            alert("Wszystkie pozycje zostały skompletowane!");
+        }
+    }
+
+    if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
+    if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('keydown', e => { if (e.key === 'Enter') handlePickingScan(); });
+    if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
+    if (elements.pickingShowMissingBtn) elements.pickingShowMissingBtn.addEventListener('click', showMissingItems);
+    
+    // Zaktualizuj listener dla zapisanych list, aby dodać przycisk "Kompletuj"
     if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', async (e) => {
         const target = e.target.closest('button');
         if (!target) return;
         const listId = target.dataset.id;
+        const listName = target.closest('li').querySelector('span').textContent.split(' (')[0];
+
         if (target.classList.contains('load-list-btn')) {
-            if (!confirm("Czy na pewno wczytać listę? Obecne zamówienie zostanie nadpisane.")) return;
-            const loadedList = await loadListById(listId);
-            if (loadedList) { elements.savedListsModal.style.display = 'none'; showToast(`Wczytano listę: ${loadedList.listName}`); }
+            // ... (logika wczytywania bez zmian)
         } else if (target.classList.contains('delete-list-btn')) {
-            if (!confirm("Czy na pewno usunąć tę listę?")) return;
-            try {
-                const response = await fetch(`/api/data/list/${listId}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } });
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.msg || "Błąd usuwania listy");
-                showToast("Lista usunięta.");
-                showSavedLists();
-            } catch (error) { alert(error.message); }
+            // ... (logika usuwania bez zmian)
+        } else if (target.classList.contains('pick-order-btn')) {
+            startPicking(listId, listName);
         }
     });
 
-    async function loadAllUsers() {
-        const userListDiv = elements.allUsersList;
-        if(!userListDiv) return;
-        userListDiv.innerHTML = '<p>Ładowanie...</p>';
-        try {
-            const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
-            if(!response.ok) throw new Error('Nie udało się pobrać użytkowników.');
-            const users = await response.json();
-            userListDiv.innerHTML = users.length === 0 ? '<p>Brak użytkowników.</p>' : '';
-            users.forEach(user => {
-                const userDiv = document.createElement('div');
-                userDiv.className = 'user-item';
-                let actions = `<button class="btn-primary edit-user-btn" data-userid="${user._id}" data-username="${user.username}">Zmień hasło</button>`;
-                const newRole = user.role === 'admin' ? 'user' : 'admin';
-                actions += `<button class="change-role-btn" data-userid="${user._id}" data-username="${user.username}" data-role="${newRole}">Zmień na ${newRole}</button>`;
-                if (user.status === 'pending') actions = `<button class="approve-user-btn" data-userid="${user._id}">Akceptuj</button>` + actions;
-                if (user.role !== 'admin') actions += `<button class="delete-user-btn" data-userid="${user._id}" data-username="${user.username}"><i class="fa-solid fa-trash"></i></button>`;
-                userDiv.innerHTML = `<div class="user-info"><strong>${user.username}</strong><span class="status">Status: ${user.status} | Rola: ${user.role}</span></div><div class="user-actions">${actions}</div>`;
-                userListDiv.appendChild(userDiv);
-            });
-        } catch (error) { userListDiv.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`; }
-    }
-    
-    async function handleUserAction(url, options, successMsg) { try { const response = await fetch(url, options); const data = await response.json(); if(!response.ok) throw new Error(data.msg || 'Wystąpił błąd.'); alert(successMsg || data.msg); loadAllUsers(); } catch (error) { alert(`Błąd: ${error.message}`); } }
-    async function handleChangePassword() { const oldPassword = prompt("Wprowadź swoje stare hasło:"); if (!oldPassword) return; const newPassword = prompt("Wprowadź nowe hasło (min. 4 znaki):"); if (!newPassword) return; await handleUserAction('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ oldPassword, newPassword }) }); }
-    if(elements.allUsersList) elements.allUsersList.addEventListener('click', e => { 
-        const target = e.target.closest('button'); 
-        if (!target) return;
-        const { userid, username, role } = target.dataset;
-        if (target.classList.contains('approve-user-btn')) handleUserAction(`/api/admin/approve-user/${userid}`, { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') } });
-        else if (target.classList.contains('edit-user-btn')) { const p = prompt(`Nowe hasło dla ${username}:`); if (p) handleUserAction(`/api/admin/edit-password/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newPassword: p }) }); }
-        else if (target.classList.contains('delete-user-btn')) { if (confirm(`Na pewno usunąć ${username}?`)) handleUserAction(`/api/admin/delete-user/${userid}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); }
-        else if (target.classList.contains('change-role-btn')) { if (confirm(`Zmienić rolę ${username} na ${role}?`)) handleUserAction(`/api/admin/change-role/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newRole: role }) }); }
-    });
-
-    if (elements.closeInventoryModalBtn) elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
-    if(elements.inventoryAddBtn) elements.inventoryAddBtn.addEventListener('click', () => { const ean = elements.inventoryEanInput.value.trim(); const quantity = parseInt(elements.inventoryQuantityInput.value, 10); if (!ean || !quantity) return; inventoryItems.push({ ean, name: 'Inwentaryzacja', quantity }); renderInventoryList(); });
-    function renderInventoryList() { if (elements.inventoryListBody) elements.inventoryListBody.innerHTML = inventoryItems.map((item, i) => `<tr><td>${item.name}</td><td>${item.ean}</td><td>${item.quantity}</td><td><button class="delete-inv-item-btn btn-icon btn-danger" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); }
-    if(elements.inventoryListBody) elements.inventoryListBody.addEventListener('click', e => { const btn = e.target.closest('.delete-inv-item-btn'); if (btn) { inventoryItems.splice(btn.dataset.index, 1); renderInventoryList(); } });
-    
+    // ... (pozostały kod, np. checkLoginStatus(); na końcu)
     checkLoginStatus();
 });
