@@ -7,137 +7,124 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <style>
         /* NOWA SZATA GRAFICZNA */
         :root {
-            --primary-color: #3498db; --primary-hover: #2980b9; --success-color: #27ae60;
-            --danger-color: #e74c3c; --danger-hover: #c0392b; --warning-color: #f39c12; --info-color: #3498db;
-            --print-color: #8e44ad; --excel-color: #16a085; --csv-color: #27ae60;
-            --text-color: #2c3e50; --text-light-color: #ffffff;
-            --bg-color: #f4f6f9; --surface-color: #ffffff;
-            --border-color: #dfe4ea; --shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            --font-family: 'Lato', sans-serif;
+            --font-family: 'Poppins', sans-serif;
+            --primary-color: #3478F6; --primary-hover: #2962FF;
+            --success-color: #34C759; --danger-color: #FF3B30; --warning-color: #FF9500;
+            --print-color: #5856D6; --excel-color: #007D4B; --csv-color: #27ae60;
+            --text-color: #1d1d1f; --text-light-color: #ffffff; --text-secondary-color: #6e6e73;
+            --bg-color: #f5f5f7; --surface-color: #ffffff;
+            --border-color: #d2d2d7; --shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
         }
         body.dark-mode {
-            --primary-color: #3498db; --text-color: #ecf0f1; --text-light-color: #2c3e50;
-            --bg-color: #2c3e50; --surface-color: #34495e; --border-color: #5d6d7e;
+            --primary-color: #0A84FF; --primary-hover: #3498db;
+            --text-color: #f5f5f7; --text-secondary-color: #86868b;
+            --bg-color: #121212; --surface-color: #1d1d1d; --border-color: #424245;
         }
         
         * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
         body { 
             font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); 
-            margin: 0; padding: 30px 10px 90px 10px; 
+            margin: 0; padding: 30px 10px 90px 10px; transition: background-color 0.3s, color 0.3s;
         }
         .container { 
-            width: 100%; max-width: 1000px; margin: 0 auto; background: var(--surface-color); 
-            padding: 30px; border-radius: 16px; box-shadow: var(--shadow); 
+            width: 100%; max-width: 1100px; margin: 0 auto; background: var(--surface-color); 
+            padding: 30px 40px; border-radius: 20px; box-shadow: var(--shadow); 
         }
         
         /* Typografia */
-        h1 { text-align: center; color: var(--primary-color); margin-top:0; margin-bottom: 25px; font-weight: 700; }
-        h2 { text-align: center; color: var(--text-color); font-size: 1.5em; margin: 30px 0 20px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+        h1 { text-align: center; color: var(--text-color); margin: 0 0 30px 0; font-weight: 600; font-size: 1.8em; }
         
         /* Przyciski */
         button, .btn {
-            cursor: pointer; border-radius: 8px; border: none; padding: 12px 22px; font-weight: 700; font-size: 1em;
-            font-family: var(--font-family); transition: all 0.2s ease; background-color: #bdc3c7; color: var(--text-color);
+            cursor: pointer; border-radius: 10px; border: none; padding: 12px 22px; font-weight: 600; font-size: 1em;
+            font-family: var(--font-family); transition: all 0.2s ease; background-color: #e5e5ea; color: var(--text-color);
             display: inline-flex; align-items: center; justify-content: center; gap: 8px;
         }
-        button:hover, .btn:hover { transform: translateY(-2px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        button:disabled { cursor: not-allowed; background-color: #95a5a6 !important; opacity: 0.6; transform: none; box-shadow: none; }
+        body.dark-mode button { background-color: #3a3a3c; color: var(--text-color); }
+        button:hover, .btn:hover { transform: translateY(-2px); }
+        button:disabled { cursor: not-allowed; background-color: #e5e5ea !important; color: #8e8e93 !important; transform: none; opacity: 0.7; }
         .btn-primary { background-color: var(--primary-color); color: var(--text-light-color); }
         .btn-danger { background-color: var(--danger-color); color: var(--text-light-color); }
         .btn-print { background-color: var(--print-color); color: var(--text-light-color); }
         .btn-excel { background-color: var(--excel-color); color: var(--text-light-color); }
         .btn-csv { background-color: var(--csv-color); color: var(--text-light-color); }
-        .btn-icon { padding: 0; width: 45px; height: 45px; font-size: 1.2em; border-radius: 50%; }
+        .btn-icon { padding: 0; width: 45px; height: 45px; font-size: 1.1em; border-radius: 50%; }
 
         /* Formularze */
         input[type="text"], input[type="number"], input[type="password"] {
             padding: 12px 15px; font-size: 1em; border: 1px solid var(--border-color);
             background-color: var(--bg-color); color: var(--text-color);
-            border-radius: 8px; width: 100%; transition: all 0.2s ease;
+            border-radius: 10px; width: 100%; transition: all 0.2s ease;
         }
-        input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25); }
-        .controls-grid { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; align-items: center; }
+        input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(52, 120, 246, 0.25); }
+        .controls-grid { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; align-items: stretch; }
         .controls-grid > input[type="text"] { flex: 1 1 300px; }
         .controls-grid > input[type="number"] { flex: 0 1 90px; }
         .controls-grid > button { flex: 0 1 130px; }
 
         /* Układ i UI */
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 2000; padding:10px; }
-        #loginBox { background: var(--surface-color); padding: 40px; border-radius: 12px; text-align: center; width: 100%; max-width: 400px; }
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(10px); background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; padding:10px; }
+        #loginBox { background: var(--surface-color); padding: 40px; border-radius: 20px; text-align: center; width: 100%; max-width: 400px; }
         
         .tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 25px; }
-        .tabs button { background: none; padding: 15px; font-size: 1.1em; font-weight: 700; color: #7f8c8d; border-radius: 8px 8px 0 0; position: relative; top: 1px; flex-grow: 1; border: none; border-bottom: 4px solid transparent; }
+        .tabs button { background: none; padding: 15px; font-size: 1.1em; font-weight: 600; color: var(--text-secondary-color); border-radius: 0; border: none; border-bottom: 4px solid transparent; flex-grow: 1; }
         .tabs button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* Menu górne */
         .top-right-menu { position: fixed; top: 15px; right: 15px; z-index: 1011; display: flex; gap: 10px; }
         .dropdown { position: relative; display: inline-block; }
-        .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--surface-color); min-width: 240px; box-shadow: var(--shadow); z-index: 1; border-radius: 8px; overflow: hidden; margin-top: 5px; }
-        .dropdown-content a { color: var(--text-color); padding: 14px 18px; text-decoration: none; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-color); }
-        .dropdown-content a:last-child { border-bottom: none; }
+        .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--surface-color); min-width: 240px; box-shadow: var(--shadow); z-index: 1; border-radius: 12px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border-color); }
+        .dropdown-content a { color: var(--text-color); padding: 14px 18px; text-decoration: none; display: flex; align-items: center; gap: 12px; }
         .dropdown-content a:hover { background-color: var(--primary-color); color: var(--text-light-color); }
         .dropdown-content.show { display: block; }
         
-        /* Dolny pasek */
-        .bottom-scroll-bar {
-            position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--surface-color);
-            box-shadow: 0 -2px 5px rgba(0,0,0,0.1); z-index: 1010; padding: 10px;
-            display: none; justify-content: center; gap: 20px;
-        }
+        .bottom-scroll-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--surface-color); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1010; padding: 10px; display: none; justify-content: center; gap: 20px; }
+        .bottom-scroll-bar button { background: none; border: 1px solid var(--border-color); color: var(--text-secondary-color); width: 50px; height: 50px; border-radius: 50%; }
         
-        /* Tabela */
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 1em; }
-        thead th { background-color: var(--bg-color); padding: 15px; text-align: left; font-weight: 700; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 20px; font-size: 1em; }
+        thead th { background-color: var(--bg-color); padding: 15px; text-align: left; font-weight: 600; color: var(--text-secondary-color); border-bottom: 1px solid var(--border-color); }
+        thead th:first-child { border-top-left-radius: 12px; }
+        thead th:last-child { border-top-right-radius: 12px; }
         tbody td { padding: 15px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         
-        /* Lista wyników */
-        .search-results-list { border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; margin-top: 10px; padding: 0; list-style-type: none; background-color: var(--surface-color); }
-        .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
-        .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
+        #totalOrderValue { 
+            text-align: right; font-size: 1.5em; font-weight: 700; margin-top: 25px; padding: 20px; 
+            border-radius: 12px; color: var(--success-color); border: 2px solid var(--success-color); background-color: rgba(46, 204, 113, 0.1);
+        }
         
-        .export-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
-
         /* Panel Admina */
         #pendingUsersList .user-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color); }
         #pendingUsersList .user-actions button { margin-left: 10px; padding: 8px 12px; }
 
         /* Powiadomienia "Toast" */
         #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 2000; }
-        .toast { background-color: var(--success-color); color: white; padding: 15px 25px; border-radius: 8px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; }
+        .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .toast.show { opacity: 1; transform: translateY(0); }
 
-        /* Media Queries */
-        @media (max-width: 768px) {
-            body { padding: 80px 5px 80px 5px; }
-            .container { padding: 15px 10px; }
-            .controls-grid > * { flex-basis: 100%; }
-        }
-
-        /* Style wydruku */
+        /* POPRAWKA: Ulepszone style wydruku */
         @media print {
-            body { padding: 0; }
-            body > * { display: none !important; }
+            body { padding: 0; margin: 0; }
+            body > *:not(#print-area) { display: none !important; }
             #print-area, #print-area * { display: block !important; visibility: visible !important; }
-            @page { margin: 0.5in; size: A4; }
-            #print-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
-            #print-table th, #print-table td { border: 1px solid #000; padding: 8px; text-align: left; }
-            #print-table th { background-color: #eee; font-weight: bold; }
+            @page { margin: 2cm; size: A4; }
+            #print-table { width: 100%; border-collapse: collapse; font-size: 10pt; font-family: Arial, sans-serif; }
+            #print-table th, #print-table td { border: 1px solid #333; padding: 8px; text-align: left; }
+            #print-table th { background-color: #eee !important; font-weight: bold; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
 </head>
 <body>
     
-    <div class="top-right-menu" id="topBar" style="display: none;">
+    <div class="top-right-menu" id="topBar">
         <button id="darkModeToggle" class="btn-icon"><i class="fa-solid fa-moon"></i></button>
         <div class="dropdown">
             <button id="menuToggleBtn" class="btn-primary btn-icon"><i class="fa-solid fa-bars"></i></button>
@@ -157,18 +144,19 @@
     <div id="loginOverlay">
         <div id="loginBox">
             <div id="loginForm">
-                <h2>Logowanie</h2>
+                <img src="logo.jpg" alt="Logo Firmy" id="appLogo" style="max-height: 50px; margin-bottom: 20px;">
+                <h2 style="border: none; margin-bottom: 10px;">Logowanie</h2>
                 <input type="text" id="loginUsername" placeholder="Login">
-                <input type="password" id="loginPassword" placeholder="Hasło">
-                <button id="loginBtn" class="btn-primary">Zaloguj się</button>
+                <input type="password" id="loginPassword" placeholder="Hasło" style="margin-top: 15px;">
+                <button id="loginBtn" class="btn-primary" style="width: 100%; margin-top: 20px;">Zaloguj się</button>
                 <p id="loginError"></p>
                 <p>Nie masz konta? <a href="#" id="showRegister">Zarejestruj się</a></p>
             </div>
             <div id="registerForm" style="display: none;">
                 <h2>Rejestracja</h2>
                 <input type="text" id="registerUsername" placeholder="Wybierz login">
-                <input type="password" id="registerPassword" placeholder="Wybierz hasło">
-                <button id="registerBtn" class="btn-primary">Zarejestruj się</button>
+                <input type="password" id="registerPassword" placeholder="Wybierz hasło" style="margin-top: 15px;">
+                <button id="registerBtn" class="btn-primary" style="width: 100%; margin-top: 20px;">Zarejestruj się</button>
                 <p id="registerError"></p>
                 <p>Masz już konto? <a href="#" id="showLogin">Zaloguj się</a></p>
             </div>
@@ -176,30 +164,24 @@
     </div>
 
     <div class="container" id="appContainer" style="display: none;">
-        <div class="app-header">
-            <img src="logo.jpg" alt="Logo Firmy" id="appLogo">
-            <h1>Panel sprzedaży</h1>
-        </div>
-        <p id="status" style="text-align: center; font-weight: 500;"></p>
+        <h1>Panel sprzedaży</h1>
 
         <div class="tabs">
-            <button id="tabLookupBtn" class="active"><i class="fa-solid fa-magnifying-glass"></i> Wyszukaj</button>
-            <button id="tabListBuilderBtn"><i class="fa-solid fa-list-check"></i> Zamówienie</button>
+            <button id="tabLookupBtn" class="active"><i class="fa-solid fa-search"></i> Wyszukaj</button>
+            <button id="tabListBuilderBtn"><i class="fa-solid fa-list"></i> Zamówienie</button>
         </div>
 
         <div id="lookupMode" class="tab-content active">
-            <h2>Szybkie wyszukiwanie informacji</h2>
             <div class="controls-grid">
                 <input type="text" id="lookupBarcode_Input" placeholder="Wpisz EAN, kod lub nazwę produktu..." disabled>
             </div>
-            <div id="lookupResult" class="search-results-area" style="display: none;"></div>
+            <div id="lookupResult" style="display: none; margin-top: 20px;"></div>
         </div>
 
         <div id="listBuilderMode" class="tab-content">
-            <h2>Zamówienie</h2>
             <div class="controls-grid">
-                <input type="text" id="clientNameInput" placeholder="Nazwa klienta..." disabled style="flex-basis: 100%;">
-                <input type="text" id="additionalInfoInput" placeholder="Informacje dodatkowe..." style="flex-basis: 100%;">
+                <input type="text" id="clientNameInput" placeholder="Nazwa klienta..." disabled>
+                <input type="text" id="additionalInfoInput" placeholder="Informacje dodatkowe...">
             </div>
             <div class="controls-grid">
                 <input type="text" id="listBarcode_Input" placeholder="Wpisz EAN, kod lub nazwę..." disabled>
@@ -220,7 +202,7 @@
                     <button id="printListBtn" class="btn btn-print" disabled><i class="fa-solid fa-print"></i> Drukuj</button>
                     <button id="exportCsvBtn" class="btn btn-csv" disabled><i class="fa-solid fa-file-csv"></i> CSV (Optima)</button>
                     <button id="exportExcelBtn" class="btn btn-excel" disabled><i class="fa-solid fa-file-excel"></i> Excel</button>
-                    <button id="clearListBtn" class="btn btn-danger" disabled><i class="fa-solid fa-eraser"></i> Wyczyść</button>
+                    <button id="clearListBtn" class="btn-danger" disabled><i class="fa-solid fa-eraser"></i> Wyczyść</button>
                 </div>
             </div>
         </div>
@@ -231,11 +213,11 @@
         </div>
     </div>
     
-    <div id="inventoryModule" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1050; padding: 15px;">
-        <div style="background-color: var(--surface-color); padding: 25px; border-radius: 12px; width: 100%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column;">
+    <div id="inventoryModule" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(5px); background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1050; padding: 15px;">
+        <div style="background-color: var(--surface-color); padding: 30px; border-radius: 16px; width: 100%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2><i class="fa-solid fa-boxes-packing"></i> Inwentaryzacja</h2>
-                <button id="closeInventoryModalBtn" title="Zamknij" class="btn-icon" style="background: none; box-shadow: none;">&times;</button>
+                <h2 style="border: none; padding: 0; margin: 0;"><i class="fa-solid fa-boxes-packing"></i> Inwentaryzacja</h2>
+                <button id="closeInventoryModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
             </div>
             <div class="controls-grid">
                 <input type="text" id="inventoryEanInput" placeholder="Wpisz EAN, kod lub nazwę..." disabled>
@@ -243,9 +225,9 @@
                 <button id="inventoryAddBtn" class="btn-primary" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
             </div>
             <div id="inventorySearchResults" class="search-results-list" style="display: none;"></div>
-            <div style="flex-grow: 1; overflow-y: auto; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px;">
+            <div style="flex-grow: 1; overflow-y: auto; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 12px;">
                 <table>
-                    <thead><tr><th>Nazwa (z bazy)</th><th>EAN</th><th>Ilość</th><th>Akcje</th></tr></thead>
+                    <thead><tr><th>Nazwa</th><th>EAN</th><th>Ilość</th><th>Akcje</th></tr></thead>
                     <tbody id="inventoryListBody"></tbody>
                 </table>
             </div>
@@ -255,7 +237,7 @@
     
     <div id="toast-container"></div>
 
-    <div id="print-area" style="display: none;">
+    <div id="print-area">
         <table id="print-table">
             <thead>
                 <tr><th>Kod produktu</th><th>Nazwa Produktu</th><th>EAN</th><th>Ilość</th></tr>
