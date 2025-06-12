@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (results.length > 1) {
             displayProductListInLookup(results);
         } else {
-            elements.lookupResultSingle.innerHTML = '<p>Nie znaleziono produktu.</p>';
+            elements.lookupResultSingle.innerHTML = '<p style="padding: 15px;">Nie znaleziono produktu.</p>';
             elements.lookupResultSingle.style.display = 'block';
         }
     }
@@ -243,6 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayProductListInLookup(products) {
         let listHtml = '<ul>';
         products.forEach(p => { listHtml += `<li data-product-json='${JSON.stringify(p)}'>${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+        listHtml += '</ul>';
         elements.lookupResultList.innerHTML = listHtml;
         elements.lookupResultList.style.display = 'block';
     }
@@ -294,10 +295,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
     
+    function showToast(message) { const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = message; elements.toastContainer.appendChild(toast); setTimeout(() => { toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }, 10); }
+    
+    async function saveCurrentList() {
+        const listName = prompt("Podaj nazwę dla zapisywanego zamówienia:", elements.clientNameInput.value || `Zamówienie ${getSafeFilename()}`);
+        if (!listName) return null;
+        try {
+            const response = await fetch('/api/data/savelist', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ listName, items: scannedItems, clientName: elements.clientNameInput.value }) });
+            if (!response.ok) { const errData = await response.json(); throw new Error(errData.msg || "Błąd zapisu"); }
+            const savedList = await response.json();
+            showToast(`Zamówienie "${listName}" zostało zapisane.`);
+            localStorage.setItem('activeListId', savedList._id);
+            return savedList;
+        } catch (error) { alert(`Błąd: ${error.message}`); return null; }
+    }
+
     function clearCurrentList(askConfirm = true) {
-        if (askConfirm && scannedItems.length > 0 && !confirm('Czy na pewno chcesz wyczyścić bieżące zamówienie?')) {
-            return;
-        }
+        if (askConfirm && scannedItems.length > 0 && !confirm('Czy na pewno chcesz wyczyścić bieżące zamówienie? Ta operacja usunie również aktywną, zapamiętaną listę.')) { return; }
         scannedItems = [];
         elements.clientNameInput.value = '';
         elements.additionalInfoInput.value = '';
@@ -305,31 +319,10 @@ document.addEventListener('DOMContentLoaded', () => {
         renderScannedList();
         showToast("Utworzono nową, czystą listę.");
     }
-    
-    if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => clearCurrentList(true));
-    
-    async function saveCurrentList() {
-        const listName = prompt("Podaj nazwę dla zapisywanego zamówienia:", elements.clientNameInput.value || `Zamówienie ${getSafeFilename()}`);
-        if (!listName) return null;
-        try {
-            const response = await fetch('/api/data/savelist', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ listName, items: scannedItems, clientName: elements.clientNameInput.value }) });
-            const savedList = await response.json();
-            if (!response.ok) throw new Error(savedList.msg || "Błąd zapisu");
-            showToast(`Zamówienie "${listName}" zostało zapisane.`);
-            localStorage.setItem('activeListId', savedList._id);
-            return savedList;
-        } catch (error) { alert(`Błąd: ${error.message}`); return null; }
-    }
 
     if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
-    if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => {
-        if (scannedItems.length > 0) {
-            if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) {
-                await saveCurrentList();
-            }
-        }
-        clearCurrentList(false);
-    });
+    if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) { await saveCurrentList(); } } clearCurrentList(false); });
+    if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => clearCurrentList(true));
     
     async function loadListById(listId) {
         try {
@@ -341,19 +334,12 @@ document.addEventListener('DOMContentLoaded', () => {
             renderScannedList();
             localStorage.setItem('activeListId', listId);
             return data;
-        } catch (error) {
-            alert(error.message);
-            localStorage.removeItem('activeListId');
-            return null;
-        }
+        } catch (error) { alert(error.message); localStorage.removeItem('activeListId'); return null; }
     }
     
     async function loadActiveList() {
         const activeListId = localStorage.getItem('activeListId');
-        if (activeListId) {
-            showToast("Wczytuję ostatnio aktywną listę...");
-            await loadListById(activeListId);
-        }
+        if (activeListId) { showToast("Wczytuję ostatnio aktywną listę..."); await loadListById(activeListId); }
     }
 
     async function showSavedLists() {
@@ -366,12 +352,11 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.savedListsContainer.innerHTML = '';
             if (lists.length === 0) { elements.savedListsContainer.innerHTML = '<p>Brak zapisanych zamówień.</p>'; return; }
             const listContainer = document.createElement('ul');
-            listContainer.style.listStyle = 'none';
-            listContainer.style.padding = '0';
+            listContainer.style.listStyle = 'none'; listContainer.style.padding = '0';
             lists.forEach(list => {
                 const li = document.createElement('li');
                 li.style.display = 'flex'; li.style.justifyContent = 'space-between'; li.style.alignItems = 'center'; li.style.padding = '10px'; li.style.borderBottom = '1px solid var(--border-color)';
-                li.innerHTML = `<span>${list.listName} <small>(${new Date(list.updatedAt).toLocaleString()})</small></span><div><button class="btn-primary load-list-btn" data-id="${list._id}">Wczytaj</button><button class="btn-danger delete-list-btn" data-id="${list._id}" style="margin-left:5px;">Usuń</button></div>`;
+                li.innerHTML = `<span>${list.listName} <small>(autor: ${list.user?.username || 'usunięty'}, ost. zapis: ${new Date(list.updatedAt).toLocaleDateString()})</small></span><div><button class="btn-primary load-list-btn" data-id="${list._id}">Wczytaj</button><button class="btn-danger delete-list-btn" data-id="${list._id}" style="margin-left:5px;">Usuń</button></div>`;
                 listContainer.appendChild(li);
             });
             elements.savedListsContainer.appendChild(listContainer);
@@ -385,15 +370,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (target.classList.contains('load-list-btn')) {
             if (!confirm("Czy na pewno wczytać listę? Obecne zamówienie zostanie nadpisane.")) return;
             const loadedList = await loadListById(listId);
-            if (loadedList) {
-                elements.savedListsModal.style.display = 'none';
-                showToast(`Wczytano listę: ${loadedList.listName}`);
-            }
+            if (loadedList) { elements.savedListsModal.style.display = 'none'; showToast(`Wczytano listę: ${loadedList.listName}`); }
         } else if (target.classList.contains('delete-list-btn')) {
             if (!confirm("Czy na pewno usunąć tę listę?")) return;
             try {
                 const response = await fetch(`/api/data/list/${listId}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } });
-                if (!response.ok) throw new Error("Błąd usuwania listy");
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.msg || "Błąd usuwania listy");
                 showToast("Lista usunięta.");
                 showSavedLists();
             } catch (error) { alert(error.message); }
