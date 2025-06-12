@@ -45,10 +45,13 @@ router.post('/savelist', authMiddleware, async (req, res) => {
         });
         await newList.save();
         res.status(201).json(newList);
+  // ... wewnątrz router.post('/savelist', ...
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Błąd serwera');
+        // POPRAWKA: Zwracaj błąd w formacie JSON
+        res.status(500).json({ msg: 'Błąd serwera podczas zapisu listy.' });
     }
+// ...
 });
 
 // DELETE /api/data/list/:id - Usuwa listę zamówienia
