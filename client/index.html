@@ -7,113 +7,118 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <style>
+        /* NOWA SZATA GRAFICZNA */
         :root {
-            --primary-color: #3498db; --primary-hover: #2980b9; --success-color: #2ecc71;
-            --danger-color: #e74c3c; --danger-hover: #c0392b; --warning-color: #f1c40f; --info-color: #3498db;
-            --print-color: #9b59b6; --excel-color: #16a085; --csv-color: #27ae60;
-            --text-color: #34495e; --text-light-color: #ecf0f1;
-            --bg-color: #ecf0f1; --surface-color: #ffffff;
-            --border-color: #bdc3c7; --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --primary-color: #3498db; --primary-hover: #2980b9; --success-color: #27ae60;
+            --danger-color: #e74c3c; --danger-hover: #c0392b; --warning-color: #f39c12; --info-color: #3498db;
+            --print-color: #8e44ad; --excel-color: #16a085; --csv-color: #27ae60;
+            --text-color: #2c3e50; --text-light-color: #ffffff;
+            --bg-color: #f4f6f9; --surface-color: #ffffff;
+            --border-color: #dfe4ea; --shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            --font-family: 'Lato', sans-serif;
         }
         body.dark-mode {
             --primary-color: #3498db; --text-color: #ecf0f1; --text-light-color: #2c3e50;
-            --bg-color: #2c3e50; --surface-color: #34495e; --border-color: #7f8c8d;
+            --bg-color: #2c3e50; --surface-color: #34495e; --border-color: #5d6d7e;
         }
         
         * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
         body { 
-            font-family: 'Roboto', sans-serif; background-color: var(--bg-color); color: var(--text-color); 
-            margin: 0; padding: 80px 10px 80px 10px; 
+            font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); 
+            margin: 0; padding: 30px 10px 90px 10px; 
         }
         .container { 
-            width: 100%; max-width: 950px; margin: 0 auto; background: var(--surface-color); 
-            padding: 25px; border-radius: 12px; box-shadow: var(--shadow); 
+            width: 100%; max-width: 1000px; margin: 0 auto; background: var(--surface-color); 
+            padding: 30px; border-radius: 16px; box-shadow: var(--shadow); 
         }
         
         /* Typografia */
         h1 { text-align: center; color: var(--primary-color); margin-top:0; margin-bottom: 25px; font-weight: 700; }
-        h2 { text-align: center; color: var(--text-color); font-size: 1.4em; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        h2 { text-align: center; color: var(--text-color); font-size: 1.5em; margin: 30px 0 20px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
         
         /* Przyciski */
         button, .btn {
-            cursor: pointer; border-radius: 8px; border: none; padding: 10px 20px; font-weight: 500; font-size: 1em;
-            font-family: 'Roboto', sans-serif; transition: all 0.2s ease; background-color: #bdc3c7; color: var(--text-color);
+            cursor: pointer; border-radius: 8px; border: none; padding: 12px 22px; font-weight: 700; font-size: 1em;
+            font-family: var(--font-family); transition: all 0.2s ease; background-color: #bdc3c7; color: var(--text-color);
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
         }
-        button:hover, .btn:hover { opacity: 0.9; }
-        button:disabled { cursor: not-allowed; background-color: #95a5a6 !important; opacity: 0.7; }
+        button:hover, .btn:hover { transform: translateY(-2px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        button:disabled { cursor: not-allowed; background-color: #95a5a6 !important; opacity: 0.6; transform: none; box-shadow: none; }
         .btn-primary { background-color: var(--primary-color); color: var(--text-light-color); }
         .btn-danger { background-color: var(--danger-color); color: var(--text-light-color); }
         .btn-print { background-color: var(--print-color); color: var(--text-light-color); }
         .btn-excel { background-color: var(--excel-color); color: var(--text-light-color); }
         .btn-csv { background-color: var(--csv-color); color: var(--text-light-color); }
+        .btn-icon { padding: 0; width: 45px; height: 45px; font-size: 1.2em; border-radius: 50%; }
 
         /* Formularze */
         input[type="text"], input[type="number"], input[type="password"] {
-            padding: 10px 15px; font-size: 1em; border: 1px solid var(--border-color);
+            padding: 12px 15px; font-size: 1em; border: 1px solid var(--border-color);
             background-color: var(--bg-color); color: var(--text-color);
-            border-radius: 8px; width: 100%;
+            border-radius: 8px; width: 100%; transition: all 0.2s ease;
         }
         input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25); }
-        .controls-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: stretch; }
+        .controls-grid { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; align-items: center; }
         .controls-grid > input[type="text"] { flex: 1 1 300px; }
-        .controls-grid > input[type="number"] { flex: 0 1 80px; }
-        .controls-grid > button { flex: 0 1 120px; }
+        .controls-grid > input[type="number"] { flex: 0 1 90px; }
+        .controls-grid > button { flex: 0 1 130px; }
 
         /* Układ i UI */
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 2000; padding:10px; }
-        #loginBox { background: var(--surface-color); padding: 30px; border-radius: 12px; text-align: center; width: 100%; max-width: 380px; }
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 2000; padding:10px; }
+        #loginBox { background: var(--surface-color); padding: 40px; border-radius: 12px; text-align: center; width: 100%; max-width: 400px; }
         
-        .tabs { display: flex; border-bottom: 2px solid var(--border-color); margin-bottom: 25px; }
-        .tabs button { background: none; padding: 12px 15px; font-size: 1em; font-weight: 500; color: var(--text-muted-color); border-radius: 8px 8px 0 0; position: relative; top: 2px; flex-grow: 1; text-align: center; border: none; border-bottom: 4px solid transparent; }
+        .tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 25px; }
+        .tabs button { background: none; padding: 15px; font-size: 1.1em; font-weight: 700; color: #7f8c8d; border-radius: 8px 8px 0 0; position: relative; top: 1px; flex-grow: 1; border: none; border-bottom: 4px solid transparent; }
         .tabs button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         /* Menu górne */
-        .top-right-menu { position: fixed; top: 15px; right: 15px; z-index: 1011; }
+        .top-right-menu { position: fixed; top: 15px; right: 15px; z-index: 1011; display: flex; gap: 10px; }
         .dropdown { position: relative; display: inline-block; }
-        #menuToggleBtn { font-size: 1.2em; width: 50px; height: 50px; border-radius: 50%; }
-        .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--surface-color); min-width: 220px; box-shadow: var(--shadow); z-index: 1; border-radius: 8px; overflow: hidden; }
-        .dropdown-content a { color: var(--text-color); padding: 12px 16px; text-decoration: none; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color); }
+        .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--surface-color); min-width: 240px; box-shadow: var(--shadow); z-index: 1; border-radius: 8px; overflow: hidden; margin-top: 5px; }
+        .dropdown-content a { color: var(--text-color); padding: 14px 18px; text-decoration: none; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-color); }
         .dropdown-content a:last-child { border-bottom: none; }
-        .dropdown-content a:hover { background-color: var(--primary-hover); color: var(--text-light-color); }
+        .dropdown-content a:hover { background-color: var(--primary-color); color: var(--text-light-color); }
         .dropdown-content.show { display: block; }
         
-        /* Dolny pasek przewijania */
+        /* Dolny pasek */
         .bottom-scroll-bar {
             position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--surface-color);
             box-shadow: 0 -2px 5px rgba(0,0,0,0.1); z-index: 1010; padding: 10px;
             display: none; justify-content: center; gap: 20px;
         }
-        .bottom-scroll-bar button { background-color: var(--info-color); color: white; width: 60px; height: 45px; font-size: 1.4em; }
-
-        /* Lista zamówień */
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 1em; }
-        thead th { background-color: var(--bg-color); padding: 12px; text-align: left; font-weight: 700; }
-        tbody td { padding: 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         
-        .export-section { margin-top: 25px; padding-top: 25px; border-top: 1px solid var(--border-color); }
-        .export-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        /* Tabela */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 1em; }
+        thead th { background-color: var(--bg-color); padding: 15px; text-align: left; font-weight: 700; }
+        tbody td { padding: 15px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        
+        /* Lista wyników */
+        .search-results-list { border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; margin-top: 10px; padding: 0; list-style-type: none; background-color: var(--surface-color); }
+        .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
+        .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
+        
+        .export-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
 
         /* Panel Admina */
-        #pendingUsersList .user-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color); }
-        #pendingUsersList .user-item:last-child { border-bottom: none; }
-        #pendingUsersList .user-actions button { margin-left: 10px; }
+        #pendingUsersList .user-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color); }
+        #pendingUsersList .user-actions button { margin-left: 10px; padding: 8px 12px; }
 
         /* Powiadomienia "Toast" */
-        #toast-container { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 2000; }
-        .toast { background-color: var(--success-color); color: white; padding: 15px 25px; border-radius: 8px; margin-bottom: 10px; opacity: 0; transition: opacity 0.5s, transform 0.5s; transform: translateY(20px); }
+        #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 2000; }
+        .toast { background-color: var(--success-color); color: white; padding: 15px 25px; border-radius: 8px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; }
         .toast.show { opacity: 1; transform: translateY(0); }
 
-        /* Poprawki dla urządzeń mobilnych */
+        /* Media Queries */
         @media (max-width: 768px) {
-            body { padding: 70px 5px 70px 5px; }
+            body { padding: 80px 5px 80px 5px; }
             .container { padding: 15px 10px; }
             .controls-grid > * { flex-basis: 100%; }
         }
@@ -125,16 +130,17 @@
             #print-area, #print-area * { display: block !important; visibility: visible !important; }
             @page { margin: 0.5in; size: A4; }
             #print-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
-            #print-table th, #print-table td { border: 1px solid #000; padding: 6px; text-align: left; }
+            #print-table th, #print-table td { border: 1px solid #000; padding: 8px; text-align: left; }
             #print-table th { background-color: #eee; font-weight: bold; }
         }
     </style>
 </head>
 <body>
     
-    <div class="top-right-menu" id="topBar">
+    <div class="top-right-menu" id="topBar" style="display: none;">
+        <button id="darkModeToggle" class="btn-icon"><i class="fa-solid fa-moon"></i></button>
         <div class="dropdown">
-            <button id="menuToggleBtn" class="btn-primary"><i class="fa-solid fa-bars"></i></button>
+            <button id="menuToggleBtn" class="btn-primary btn-icon"><i class="fa-solid fa-bars"></i></button>
             <div id="dropdownMenu" class="dropdown-content">
                 <a href="#" id="menuAdminBtn" style="display: none;"><i class="fa-solid fa-user-shield"></i> Panel Admina</a>
                 <a href="#" id="menuInventoryBtn"><i class="fa-solid fa-clipboard-list"></i> Inwentaryzacja</a>
@@ -219,7 +225,7 @@
             </div>
         </div>
         
-        <div id="adminPanel" class="tab-content" style="display: none;">
+        <div id="adminPanel" class="tab-content">
              <h2>Zarządzanie użytkownikami</h2>
              <div id="pendingUsersList"></div>
         </div>
@@ -228,8 +234,8 @@
     <div id="inventoryModule" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1050; padding: 15px;">
         <div style="background-color: var(--surface-color); padding: 25px; border-radius: 12px; width: 100%; max-width: 700px; max-height: 90vh; display: flex; flex-direction: column;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2><i class="fa-solid fa-boxes-packing"></i> Moduł Inwentaryzacji</h2>
-                <button id="closeInventoryModalBtn" title="Zamknij" style="font-size: 1.8em; background: none; border: none; color: var(--text-color); cursor: pointer;">&times;</button>
+                <h2><i class="fa-solid fa-boxes-packing"></i> Inwentaryzacja</h2>
+                <button id="closeInventoryModalBtn" title="Zamknij" class="btn-icon" style="background: none; box-shadow: none;">&times;</button>
             </div>
             <div class="controls-grid">
                 <input type="text" id="inventoryEanInput" placeholder="Wpisz EAN, kod lub nazwę..." disabled>
@@ -237,7 +243,7 @@
                 <button id="inventoryAddBtn" class="btn-primary" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
             </div>
             <div id="inventorySearchResults" class="search-results-list" style="display: none;"></div>
-            <div id="inventoryTableContainer" style="flex-grow: 1; overflow-y: auto; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px;">
+            <div style="flex-grow: 1; overflow-y: auto; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px;">
                 <table>
                     <thead><tr><th>Nazwa (z bazy)</th><th>EAN</th><th>Ilość</th><th>Akcje</th></tr></thead>
                     <tbody id="inventoryListBody"></tbody>
@@ -259,7 +265,6 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"  type="text/javascript"></script>
     <script src="skaner.js"></script>
 </body>
 </html>
