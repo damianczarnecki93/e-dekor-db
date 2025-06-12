@@ -82,7 +82,7 @@
         .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .toast.show { opacity: 1; transform: translateY(0); }
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(5px); background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1050; padding: 15px; }
-        .modal-content { background-color: var(--surface-color); padding: 30px; border-radius: 16px; width: 100%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; }
+        .modal-content { background-color: var(--surface-color); padding: 30px; border-radius: 16px; width: 100%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .modal-header h2 { border: none; padding: 0; margin: 0; }
         .modal-body { flex-grow: 1; overflow-y: auto; }
@@ -91,7 +91,7 @@
             body { padding: 80px 5px 80px 5px; }
             .container { padding: 20px 15px; }
             .controls-grid > * { flex-basis: 100%; }
-            .col-desc, .col-ean { display: none; }
+            .col-code, .col-ean { display: none; }
             .export-controls { grid-template-columns: 1fr; }
             #totalOrderValue { font-size: 1rem; padding: 10px; }
             .bottom-scroll-bar button, .top-right-menu .btn-icon { width: 40px; height: 40px; }
@@ -168,7 +168,7 @@
                 <input type="text" id="lookupBarcodeInput" placeholder="Wpisz EAN, kod lub nazwę produktu..." disabled>
                 <div id="lookupResultList" class="search-results-list" style="display: none;"></div>
             </div>
-            <div id="lookupResultSingle" style="display: none; margin-top: 20px;"></div>
+            <div id="lookupResultSingle" style="margin-top: 20px;"></div>
         </div>
 
         <div id="listBuilderMode" class="tab-content">
@@ -250,6 +250,35 @@
                 <button id="closeSavedListsModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
             </div>
             <div id="savedListsContainer" class="modal-body"></div>
+        </div>
+    </div>
+
+    <div id="pickingModule" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="picking-order-name">Kompletacja zamówienia</h2>
+                <button id="closePickingModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+            </div>
+            <div class="modal-body">
+                 <div class="search-container">
+                    <input type="text" id="picking-ean-input" placeholder="Skanuj lub wpisz kod produktu...">
+                </div>
+                <div id="picking-status-msg" style="text-align: center; font-weight: 600; margin: 15px 0; padding: 10px; border-radius: 8px;"></div>
+                <div style="display: flex; gap: 20px; flex-grow: 1; min-height: 300px;">
+                    <div style="width: 50%;">
+                        <h3>Do zebrania:</h3>
+                        <div id="picking-target-list" style="height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
+                    </div>
+                    <div style="width: 50%;">
+                        <h3>Skompletowano:</h3>
+                        <div id="picking-scanned-list" style="height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
+                    </div>
+                </div>
+                <div class="controls-grid" style="margin-top: 15px;">
+                    <button id="picking-verify-btn" class="btn-primary">Weryfikacja</button>
+                    <button id="picking-show-missing-btn" class="btn-danger">Pokaż braki</button>
+                </div>
+            </div>
         </div>
     </div>
     
