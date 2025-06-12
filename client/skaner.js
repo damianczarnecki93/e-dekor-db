@@ -267,13 +267,16 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.listBuilderSearchResults.innerHTML = listHtml;
             elements.listBuilderSearchResults.style.display = 'block';
         } else {
-             addProductToList(searchTerm);
+             if (window.confirm(`Produkt "${searchTerm}" nie został znaleziony. Czy chcesz dodać go jako pozycję spoza bazy?`)) {
+                addProductToList(searchTerm);
+             }
         }
     }
     if(elements.listBarcodeInput) elements.listBarcodeInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); handleListBuilderSearch();} });
     if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) addProductToList(targetLi.dataset.ean); });
     if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
 
+    // POPRAWKA: Prawidłowa obsługa listy wyboru dla wyszukiwarki
     function handleLookupSearch() {
         const searchTerm = elements.lookupBarcodeInput.value.trim();
         elements.lookupResultDiv.innerHTML = '';
@@ -285,27 +288,26 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (results.length > 1) {
             displayProductListInLookup(results);
         } else {
-            elements.lookupResultDiv.innerHTML = '<p>Nie znaleziono produktu.</p>';
+            elements.lookupResultDiv.innerHTML = '<li>Brak wyników</li>';
             elements.lookupResultDiv.style.display = 'block';
         }
     }
     
     function displaySingleProductInLookup(product) {
-        let html = `<div style="padding-bottom: 15px; margin-bottom: 15px;"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
+        let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
         elements.lookupResultDiv.innerHTML = html;
         elements.lookupResultDiv.style.display = 'block';
     }
 
     function displayProductListInLookup(products) {
-        let listHtml = '<ul>';
+        let listHtml = '';
         products.forEach(p => { listHtml += `<li data-product-json='${JSON.stringify(p)}'>${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
-        listHtml += '</ul>';
         elements.lookupResultDiv.innerHTML = listHtml;
         elements.lookupResultDiv.style.display = 'block';
     }
 
     if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('keydown', e => { if(e.key === 'Enter') handleLookupSearch(); });
-    if(elements.lookupResultDiv) elements.lookupResultDiv.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { elements.lookupResultDiv.style.display = 'none'; displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
+    if(elements.lookupResultDiv) elements.lookupResultDiv.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); });
     
     // =================================================================
     // RENDEROWANIE LISTY, EKSPORT, WYDRUK
@@ -316,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         [elements.exportCsvBtn, elements.exportExcelBtn, elements.printListBtn, elements.clearListBtn].forEach(btn => { if(btn) btn.disabled = !canOperate; });
         scannedItems.forEach((item, index) => {
             const row = document.createElement('tr');
-            row.innerHTML = `<td class="col-name">${item.description}</td><td class="col-code">${item.name}</td><td class="col-ean">${item.ean}</td><td><input type="number" class="quantity-in-table" value="${item.quantity}" min="1" data-index="${index}"></td><td><button class="delete-btn btn-icon" data-index="${index}"><i class="fa-solid fa-trash-can"></i></button></td>`;
+            row.innerHTML = `<td class="col-desc">${item.description}</td><td class="col-code">${item.name}</td><td class="col-ean">${item.ean}</td><td><input type="number" class="quantity-in-table" value="${item.quantity}" min="1" data-index="${index}"></td><td><button class="delete-btn btn-icon" data-index="${index}"><i class="fa-solid fa-trash-can"></i></button></td>`;
             elements.scannedListBody.appendChild(row);
         });
         const totalValue = scannedItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);
@@ -351,8 +353,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (scannedItems.length === 0) return;
         scannedItems.forEach(item => {
             const row = elements.printTableBody.insertRow();
-            row.insertCell().textContent = item.description || '';
             row.insertCell().textContent = item.name || '';
+            row.insertCell().textContent = item.description || '';
             row.insertCell().textContent = item.ean || '';
             row.insertCell().textContent = item.quantity;
         });
@@ -389,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
             users.forEach(user => {
                 const userDiv = document.createElement('div');
                 userDiv.className = 'user-item';
-                userDiv.innerHTML = `<span>${user.username}</span><div class="user-actions"><button class="btn-primary approve-user-btn" data-userid="${user._id}">Akceptuj</button><button class="btn-danger reject-user-btn" data-userid="${user._id}">Odrzuć</button></div>`;
+                userDiv.innerHTML = `<span>${user.username}</span><div class="user-actions"><button class="btn-primary approve-user-btn" data-userid="${user._id}">Akceptuj</button><button class="btn-danger reject-user-btn" data-userid="${user._id}">Odrzuć</button><button class="delete-user-btn" data-userid="${user._id}"><i class="fa-solid fa-trash"></i></button></div>`;
                 elements.pendingUsersList.appendChild(userDiv);
             });
         } catch (error) { elements.pendingUsersList.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`; }
@@ -403,7 +405,27 @@ document.addEventListener('DOMContentLoaded', () => {
             loadPendingUsers();
         } catch (error) { alert(`Błąd: ${error.message}`); }
     }
-    if(elements.pendingUsersList) elements.pendingUsersList.addEventListener('click', e => { const target = e.target.closest('button'); if (target?.classList.contains('approve-user-btn')) handleUserApproval(target.dataset.userid, 'approve'); else if (target?.classList.contains('reject-user-btn')) handleUserApproval(target.dataset.userid, 'reject'); });
+    
+    async function handleUserDelete(userId, username) {
+        if (!confirm(`Czy na pewno chcesz trwale usunąć użytkownika "${username}"? Tej operacji nie można cofnąć.`)) return;
+        try {
+            const response = await fetch(`/api/admin/delete-user/${userId}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if(!response.ok) { const data = await response.json(); throw new Error(data.msg || 'Wystąpił błąd.'); }
+            alert(`Użytkownik "${username}" został usunięty.`);
+            loadPendingUsers();
+        } catch (error) { alert(`Błąd: ${error.message}`); }
+    }
+
+    if(elements.pendingUsersList) elements.pendingUsersList.addEventListener('click', e => { 
+        const target = e.target.closest('button'); 
+        if (!target) return;
+        const userId = target.dataset.userid;
+        const username = target.parentElement.previousElementSibling.textContent;
+
+        if (target.classList.contains('approve-user-btn')) handleUserApproval(userId, 'approve'); 
+        else if (target.classList.contains('reject-user-btn')) handleUserApproval(userId, 'reject');
+        else if (target.classList.contains('delete-user-btn')) handleUserDelete(userId, username);
+    });
 
     if (elements.closeInventoryModalBtn) elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
     
