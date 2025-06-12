@@ -73,11 +73,10 @@
         #pendingUsersList .user-actions { display: flex; flex-wrap: wrap; gap: 5px; }
         #pendingUsersList .user-actions button { padding: 5px 10px; font-size: 0.8em; }
         .search-container { position: relative; width: 100%; }
-        .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 100; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
+        .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1000; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
         .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
-        #lookupResult { max-height: 40vh; overflow-y: auto; }
-        .lookup-result-item { padding: 15px; border-bottom: 1px solid var(--border-color); }
+        .lookup-result-item { padding: 15px; border-bottom: 1px solid var(--border-color); max-height: 40vh; overflow-y: auto; }
         #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 2000; }
         .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .toast.show { opacity: 1; transform: translateY(0); }
@@ -86,11 +85,10 @@
             body { padding: 80px 5px 80px 5px; }
             .container { padding: 20px 15px; }
             .controls-grid > * { flex-basis: 100%; }
-            .col-ean, .col-desc { display: none; }
-            .export-controls { grid-template-columns: 1fr; }
+            .col-code, .col-ean { display: none; }
+            button, .btn { padding: 10px 15px; font-size: 0.9em; }
             #totalOrderValue { font-size: 1rem; padding: 10px; }
             .bottom-scroll-bar button, .top-right-menu .btn-icon { width: 40px; height: 40px; }
-            button, .btn { padding: 10px 15px; font-size: 0.9em; }
         }
         
         @media print {
@@ -190,10 +188,9 @@
             </table>
             <div id="totalOrderValue">Total: 0.00 PLN</div>
             <div class="export-section">
-                <h2>Eksport</h2>
                 <div class="export-controls">
                     <button id="printListBtn" class="btn btn-print" disabled><i class="fa-solid fa-print"></i> Drukuj</button>
-                    <button id="exportCsvBtn" class="btn btn-csv" disabled><i class="fa-solid fa-file-csv"></i> CSV (Optima)</button>
+                    <button id="exportCsvBtn" class="btn btn-csv" disabled><i class="fa-solid fa-file-csv"></i> Optima</button>
                     <button id="exportExcelBtn" class="btn btn-excel" disabled><i class="fa-solid fa-file-excel"></i> Excel</button>
                     <button id="clearListBtn" class="btn-danger" disabled><i class="fa-solid fa-eraser"></i> Wyczyść</button>
                 </div>
@@ -202,7 +199,7 @@
         
         <div id="adminPanel" class="tab-content">
              <h2>Zarządzanie użytkownikami</h2>
-             <div id="pendingUsersList"></div>
+             <div id="allUsersList"></div>
         </div>
     </div>
     
@@ -217,7 +214,9 @@
                 <input type="number" id="inventoryQuantityInput" value="1" min="1" inputmode="numeric" disabled>
                 <button id="inventoryAddBtn" class="btn-primary" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
             </div>
-            <div id="inventorySearchResults" class="search-results-list" style="display: none;"></div>
+            <div class="search-container">
+                <div id="inventorySearchResults" class="search-results-list" style="display: none;"></div>
+            </div>
             <div style="flex-grow: 1; overflow-y: auto; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 12px;">
                 <table>
                     <thead><tr><th>Nazwa</th><th>EAN</th><th>Ilość</th><th>Akcje</th></tr></thead>
