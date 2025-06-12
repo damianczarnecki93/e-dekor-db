@@ -67,11 +67,6 @@
         thead th:last-child { border-top-right-radius: 12px; }
         tbody td { padding: 15px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         #totalOrderValue { text-align: right; font-size: 1.2em; font-weight: 600; margin-top: 20px; padding: 12px 20px; border-radius: 12px; color: var(--success-color); border: 1px solid var(--success-color); background-color: rgba(52, 199, 89, 0.05); }
-        .admin-user-list .user-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color); }
-        .admin-user-list .user-info { display: flex; flex-direction: column; }
-        .admin-user-list .user-info .status { font-size: 0.8em; opacity: 0.7; }
-        .admin-user-list .user-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
-        .admin-user-list .user-actions button { padding: 5px 10px; font-size: 0.8em; }
         .search-container { position: relative; width: 100%; }
         .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1000; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
         .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
@@ -86,12 +81,13 @@
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .modal-header h2 { border: none; padding: 0; margin: 0; }
         .modal-body { flex-grow: 1; overflow-y: auto; }
+        .section-header { padding-bottom: 10px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); }
         
         @media (max-width: 768px) {
             body { padding: 80px 5px 80px 5px; }
             .container { padding: 20px 15px; }
             .controls-grid > * { flex-basis: 100%; }
-            .col-code, .col-ean { display: none; }
+            .col-desc, .col-ean { display: none; }
             .export-controls { grid-template-columns: 1fr; }
             #totalOrderValue { font-size: 1rem; padding: 10px; }
             .bottom-scroll-bar button, .top-right-menu .btn-icon { width: 40px; height: 40px; }
@@ -99,7 +95,6 @@
         }
         
         @media print {
-            body { padding: 0; margin: 0; }
             body > *:not(#print-area) { display: none !important; }
             #print-area, #print-area * { display: block !important; visibility: visible !important; }
             @page { margin: 1.5cm; size: A4; }
@@ -199,8 +194,12 @@
             <div id="totalOrderValue">Total: 0.00 PLN</div>
             <div class="export-section">
                 <div class="controls-grid" style="gap: 10px; margin-top: 15px;">
-                     <button id="newListBtn" class="btn-primary" style="background-color: var(--warning-color); flex-grow: 1;">Nowa lista</button>
-                     <button id="saveListBtn" class="btn-primary" disabled style="flex-grow: 1;"><i class="fa-solid fa-save"></i> Zapisz listę</button>
+                    <label for="importCsvInput" class="btn btn-primary" style="background-color: var(--info-color); flex-grow: 1;">
+                        <i class="fa-solid fa-file-import"></i> Importuj z CSV
+                    </label>
+                    <input type="file" id="importCsvInput" accept=".csv" style="display: none;">
+                    <button id="newListBtn" class="btn-primary" style="background-color: var(--warning-color); flex-grow: 1;">Nowa lista</button>
+                    <button id="saveListBtn" class="btn-primary" disabled style="flex-grow: 1;"><i class="fa-solid fa-save"></i> Zapisz listę</button>
                 </div>
                 <div class="export-controls" style="margin-top: 15px;">
                     <button id="printListBtn" class="btn btn-print" disabled><i class="fa-solid fa-print"></i> Drukuj</button>
@@ -261,7 +260,8 @@
             </div>
             <div class="modal-body">
                  <div class="search-container">
-                    <input type="text" id="picking-ean-input" placeholder="Skanuj lub wpisz kod produktu...">
+                    <input type="text" id="picking-ean-input" placeholder="Skanuj lub wyszukaj produkt...">
+                    <div id="picking-search-results" class="search-results-list" style="display:none;"></div>
                 </div>
                 <div id="picking-status-msg" style="text-align: center; font-weight: 600; margin: 15px 0; padding: 10px; border-radius: 8px;"></div>
                 <div style="display: flex; gap: 20px; flex-grow: 1; min-height: 300px;">
@@ -276,8 +276,21 @@
                 </div>
                 <div class="controls-grid" style="margin-top: 15px;">
                     <button id="picking-verify-btn" class="btn-primary">Weryfikacja</button>
-                    <button id="picking-show-missing-btn" class="btn-danger">Pokaż braki</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="pickingSummaryModal" class="modal">
+        <div class="modal-content">
+             <div class="modal-header">
+                <h2>Podsumowanie kompletacji</h2>
+                <button id="closePickingSummaryModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+            </div>
+            <div id="pickingSummaryBody" class="modal-body"></div>
+            <div class="controls-grid" style="margin-top: 15px;">
+                <button id="picking-accept-btn" class="btn-primary">Akceptuj i zamknij</button>
+                <button id="picking-export-csv-btn" class="btn-csv">Eksportuj CSV</button>
             </div>
         </div>
     </div>
