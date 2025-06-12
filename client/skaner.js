@@ -56,10 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
         inventorySearchResults: document.getElementById('inventorySearchResults'),
         toastContainer: document.getElementById('toast-container'),
-        printTableBody: document.getElementById('print-table-body'),
+        printClientName: document.getElementById('print-client-name'),
+        printAdditionalInfo: document.getElementById('print-additional-info'),
+        printContent: document.getElementById('print-content'),
     };
 
     let productDatabase = [], scannedItems = [], inventoryItems = [], activeTab = 'lookup';
+    const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
     const showApp = (userData) => {
         elements.loginOverlay.style.display = 'none';
@@ -192,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: quantity, price: productData.cena });
         renderScannedList();
         saveDataToServer();
-        showToast(`Dodano: ${productData.opis || productData.nazwa_produktu} (Ilość: ${quantity})`);
+        showToast(`Dodano: ${productData.nazwa_produktu} (Ilość: ${quantity})`);
         elements.listBarcodeInput.value = '';
         elements.quantityInput.value = '1';
         elements.listBuilderSearchResults.innerHTML = '';
@@ -205,10 +208,18 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.listBuilderSearchResults.style.display = 'none';
         if (!searchTerm) return;
         const results = performSearch(searchTerm);
-        const exactMatch = results.find(p => p.nazwa_produktu === searchTerm || p.kod_kreskowy === searchTerm);
+        
+        // POPRAWKA: Logika dla urządzeń mobilnych
+        if (isMobile) {
+            const exactMatch = results.find(p => p.nazwa_produktu.toLowerCase() === searchTerm || p.kod_kreskowy === searchTerm);
+            addProductToList(exactMatch ? exactMatch.kod_kreskowy : searchTerm);
+            return;
+        }
 
-        if (exactMatch) { addProductToList(exactMatch.kod_kreskowy); } 
-        else if (results.length > 0) {
+        // Logika dla desktopów
+        if (results.length === 1) {
+            addProductToList(results[0].kod_kreskowy);
+        } else if (results.length > 1) {
             let listHtml = '<ul>';
             results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
             listHtml += '</ul>';
@@ -224,10 +235,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) addProductToList(targetLi.dataset.ean); });
     if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
 
+    // POPRAWKA: Naprawiono wyświetlanie listy w szybkim wyszukiwaniu
     function handleLookupSearch() {
         const searchTerm = elements.lookupBarcodeInput.value.trim();
-        elements.lookupResultDiv.innerHTML = '';
-        elements.lookupResultDiv.style.display = 'none';
+        const resultsDiv = elements.lookupResultDiv;
+        resultsDiv.innerHTML = '';
+        resultsDiv.style.display = 'none';
         if (!searchTerm) return;
         const results = performSearch(searchTerm);
         if (results.length === 1) {
@@ -235,8 +248,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (results.length > 1) {
             displayProductListInLookup(results);
         } else {
-            elements.lookupResultDiv.innerHTML = '<li>Brak wyników</li>';
-            elements.lookupResultDiv.style.display = 'block';
+            resultsDiv.innerHTML = '<li>Brak wyników</li>';
+            resultsDiv.style.display = 'block';
         }
     }
     
@@ -269,6 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.totalOrderValue.textContent = `Total: ${totalValue.toFixed(2)} PLN`;
     }
     
+    // POPRAWKA: Użyto zdarzenia 'change' zamiast 'input' aby naprawić błąd wpisywania ilości
     const handleQuantityFocus = (event) => { event.target.select(); };
     if(elements.quantityInput) elements.quantityInput.addEventListener('focus', handleQuantityFocus);
     if(elements.scannedListBody) {
@@ -284,17 +298,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if(elements.exportExcelBtn) elements.exportExcelBtn.addEventListener('click', exportToExcelDetailed);
     function downloadFile(content, mimeType, filename) { const blob = new Blob([content], { type: mimeType }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
     
+    // POPRAWKA: Przepisany moduł wydruku na format tekstowy
     function prepareForPrint() {
-        if (!elements.printTableBody) return;
-        elements.printTableBody.innerHTML = '';
-        if (scannedItems.length === 0) return;
-        scannedItems.forEach(item => {
-            const row = elements.printTableBody.insertRow();
-            row.insertCell().textContent = item.name || '';
-            row.insertCell().textContent = item.description || '';
-            row.insertCell().textContent = item.ean || '';
-            row.insertCell().textContent = item.quantity;
-        });
+        elements.printClientName.textContent = `Klient: ${elements.clientNameInput.value.trim() || 'Nie podano'}`;
+        elements.printAdditionalInfo.textContent = `Info: ${elements.additionalInfoInput.value.trim() || 'Brak'}`;
+        
+        let content = '';
+        if (scannedItems.length > 0) {
+            content = scannedItems.map(item => {
+                const code = (item.name || '').padEnd(20);
+                const name = (item.description || '').padEnd(40);
+                return `Kod: ${code} | Nazwa: ${name} | Ilość: ${item.quantity}`;
+            }).join('\n');
+        }
+        elements.printContent.textContent = content;
     }
 
     if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
@@ -314,6 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 10);
     }
 
+    // POPRAWKA: Panel admina z nowymi funkcjami
     async function loadAllUsers() {
         const userListDiv = elements.allUsersList;
         if(!userListDiv) return;
@@ -331,7 +349,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 actions += `<button class="change-role-btn" data-userid="${user._id}" data-username="${user.username}" data-role="${newRole}">Zmień na ${newRole}</button>`;
                 if (user.status === 'pending') actions = `<button class="approve-user-btn" data-userid="${user._id}">Akceptuj</button>` + actions;
                 if (user.role !== 'admin') actions += `<button class="delete-user-btn" data-userid="${user._id}" data-username="${user.username}">Usuń</button>`;
-                
                 userDiv.innerHTML = `<div class="user-info"><strong>${user.username}</strong><span class="status">Status: ${user.status} | Rola: ${user.role}</span></div><div class="user-actions">${actions}</div>`;
                 userListDiv.appendChild(userDiv);
             });
@@ -360,7 +377,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = e.target.closest('button'); 
         if (!target) return;
         const { userid, username, role } = target.dataset;
-
         if (target.classList.contains('approve-user-btn')) handleUserAction(`/api/admin/approve-user/${userid}`, { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') } });
         else if (target.classList.contains('edit-user-btn')) { const p = prompt(`Nowe hasło dla ${username}:`); if (p) handleUserAction(`/api/admin/edit-password/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newPassword: p }) }); }
         else if (target.classList.contains('delete-user-btn')) { if (confirm(`Na pewno usunąć ${username}?`)) handleUserAction(`/api/admin/delete-user/${userid}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); }
