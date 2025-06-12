@@ -34,9 +34,28 @@
             --primary-color-rgb: 88, 166, 255;
         }
         body.dark-mode #appLogo { filter: invert(1); }
+        
+        * {
+            box-sizing: border-box;
+        }
         html { scroll-behavior: smooth; }
-        body { font-family: 'Montserrat', sans-serif; background-color: var(--page-bg); color: var(--text-color); margin: 0; padding: 70px 10px 70px 10px; font-size: 15px; }
-        .container { width: 100%; max-width: 900px; margin: 0 auto; background: var(--container-bg); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); }
+        body { 
+            font-family: 'Montserrat', sans-serif; 
+            background-color: var(--page-bg); 
+            color: var(--text-color); 
+            margin: 0;
+            padding: 80px 10px 80px 10px; /* Odsunięcie dla stałych pasków */
+            font-size: 15px; 
+        }
+        .container { 
+            width: 100%; 
+            max-width: 900px; 
+            margin: 0 auto;
+            background: var(--container-bg); 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: var(--shadow); 
+        }
         .app-header { text-align: center; margin-bottom: 20px; }
         #appLogo { max-height: 60px; margin-bottom: 10px; }
         h1 { text-align: center; color: var(--primary-color); margin-top:0; margin-bottom: 15px; font-size: 1.6em; }
@@ -45,22 +64,23 @@
         input[type="text"], input[type="number"], input[type="email"], input[type="password"] {
             padding: 10px; font-size: 1em; border: 1px solid var(--border-color);
             background-color: var(--input-bg); color: var(--text-color);
-            border-radius: 8px; box-sizing: border-box; width: 100%;
+            border-radius: 8px; width: 100%;
         }
         input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.25); }
         button:disabled, input:disabled { background-color: var(--input-disabled-bg) !important; color: var(--text-muted-color) !important; cursor: not-allowed !important; border-color: var(--border-color) !important; }
 
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--modal-overlay-bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding:10px; box-sizing: border-box; }
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--modal-overlay-bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding:10px; }
         #loginBox { background: var(--container-bg); padding: 30px; border-radius: 12px; box-shadow: var(--shadow); text-align: center; width: 100%; max-width: 360px; }
         
         .tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
         .tabs button { background: none; border: none; padding: 12px 10px; font-size: 1em; font-weight: 500; color: var(--text-muted-color); border-radius: 8px 8px 0 0; position: relative; top: 1px; flex-grow: 1; text-align: center; border-bottom: 3px solid transparent; }
         .tabs button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         .search-results-list, .search-results-area ul { border: 1px solid var(--border-color); max-height: 200px; overflow-y: auto; border-radius: 5px; margin-top: 10px; padding: 0; list-style-type: none; background-color: var(--input-bg); }
-        .search-results-list li, .search-results-area ul li { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-color); transition: background-color 0.2s ease; }
+        .search-results-list li, .search-results-area ul li { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; table-layout: fixed; }
         thead th { background-color: var(--table-header-bg); padding: 10px 8px; text-align: left; font-weight: 700; border-bottom: 2px solid var(--border-color); }
@@ -74,7 +94,6 @@
         
         #totalOrderValue { text-align: right; font-size: 1.2em; font-weight: 700; margin-top: 20px; padding: 12px; background-color: var(--success-color); color: white; border-radius: 8px;}
         
-        /* ZMIANA: NOWE STYLE MENU I PASKÓW */
         .top-bar {
             position: fixed;
             top: 0;
@@ -84,38 +103,14 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             z-index: 1010;
             padding: 10px 20px;
-            display: none; /* Ukryte do zalogowania */
+            display: none;
             align-items: center;
             justify-content: flex-end;
-            box-sizing: border-box;
         }
-        .dropdown {
-            position: relative;
-            display: inline-block;
-        }
-        #menuToggleBtn {
-            background-color: var(--primary-color);
-            color: white;
-            font-size: 1em;
-        }
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            right: 0;
-            background-color: var(--container-bg);
-            min-width: 180px;
-            box-shadow: var(--shadow);
-            z-index: 1;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .dropdown-content a {
-            color: var(--text-color);
-            padding: 12px 16px;
-            text-decoration: none;
-            display: block;
-            border-bottom: 1px solid var(--border-color);
-        }
+        .dropdown { position: relative; display: inline-block; }
+        #menuToggleBtn { background-color: var(--primary-color); color: white; font-size: 1em; }
+        .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--container-bg); min-width: 180px; box-shadow: var(--shadow); z-index: 1; border-radius: 8px; overflow: hidden; }
+        .dropdown-content a { color: var(--text-color); padding: 12px 16px; text-decoration: none; display: block; border-bottom: 1px solid var(--border-color); }
         .dropdown-content a:last-child { border-bottom: none; }
         .dropdown-content a:hover { background-color: var(--primary-hover); color: white; }
         .dropdown-content.show { display: block; }
@@ -129,29 +124,22 @@
             box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
             z-index: 1010;
             padding: 10px;
-            display: none; /* Ukryte do zalogowania */
+            display: none;
             justify-content: center;
             gap: 20px;
-            box-sizing: border-box;
         }
-        .bottom-scroll-bar button {
-            background-color: var(--info-color);
-            color: white;
-            width: 60px;
-            height: 40px;
-            font-size: 1.2em;
-        }
+        .bottom-scroll-bar button { background-color: var(--info-color); color: white; width: 60px; height: 40px; font-size: 1.2em; }
 
         @media (max-width: 768px) {
-            body { padding: 80px 5px 80px 5px; }
+            body { padding: 70px 5px 70px 5px; }
             .container { padding: 15px 10px; }
             h1 { font-size: 1.4em; } h2 { font-size: 1.2em; }
             .export-controls { grid-template-columns: 1fr; }
         }
         
-        /* ZMIANA: NOWE STYLE WYDRUKU */
         @media print {
-            body > * { display: none !important; }
+            body { padding: 0; }
+            body > *:not(#print-area) { display: none !important; }
             #print-area, #print-area * { display: block !important; visibility: visible !important; }
             @page { margin: 0.5in; }
             #print-area { font-family: Arial, sans-serif; font-size: 10pt; }
@@ -239,7 +227,7 @@
                 <input type="number" id="quantityInput" value="1" min="1" inputmode="numeric" disabled>
                 <button id="addToListBtn" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
             </div>
-            <div id="listBuilderSearchResults" class="search-results-list"></div>
+            <div id="listBuilderSearchResults" class="search-results-list" style="display: none;"></div>
             <table>
                 <thead>
                     <tr><th>Kod produktu</th><th>Nazwa Produktu</th><th>EAN</th><th>Ilość</th><th>Akcje</th></tr>
@@ -258,9 +246,8 @@
             </div>
         </div>
         
-        <div id="adminPanel" class="tab-content">
+        <div id="adminPanel" class="tab-content" style="display: none;">
              <h2><i class="fa-solid fa-user-check"></i> Zarządzanie użytkownikami</h2>
-             <p>Tutaj pojawi się lista użytkowników oczekujących na akceptację.</p>
              <div id="pendingUsersList"></div>
         </div>
     </div>
@@ -269,12 +256,12 @@
         <div style="background-color: var(--container-bg); padding: 25px; border-radius: 12px; box-shadow: var(--shadow); width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; position:relative;">
             <button id="closeInventoryModalBtn" title="Zamknij" style="position: absolute; top: 10px; right: 15px; font-size: 1.8em; background: none; border: none; color: var(--text-muted-color); cursor: pointer;">&times;</button>
             <h2><i class="fa-solid fa-boxes-packing"></i> Moduł Inwentaryzacji</h2>
-            <div class="controls-grid">
+            <div class="controls-grid" style="flex-direction: row;">
                 <input type="text" id="inventoryEanInput" placeholder="Wpisz EAN, kod lub nazwę..." disabled>
                 <input type="number" id="inventoryQuantityInput" value="1" min="1" inputmode="numeric" disabled>
                 <button id="inventoryAddBtn" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
             </div>
-            <div id="inventorySearchResults" class="search-results-list"></div>
+            <div id="inventorySearchResults" class="search-results-list" style="display: none;"></div>
             <div id="inventoryTableContainer" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px;">
                 <table>
                     <thead><tr><th>Nazwa (z bazy)</th><th>EAN</th><th>Ilość</th><th>Akcje</th></tr></thead>
@@ -285,10 +272,6 @@
         </div>
     </div>
 
-    <footer>
-        <p>Copyright © 1997-2025 Dekor-Art-Serwis</p>
-    </footer>
-    
     <div id="print-area" style="display: none;">
         <table id="print-table">
             <thead>
