@@ -27,7 +27,7 @@
             --inventory-modal-input-bg: #ffffff;
         }
         body.dark-mode {
-            --page-bg: #3a3a3a; --container-bg: #1e1e1e; --text-color: #e0e0e0;
+            --page-bg: #2d2d2d; --container-bg: #1e1e1e; --text-color: #e0e0e0;
             --text-muted-color: #9e9e9e; --border-color: #4b515c; --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
             --primary-color: #58a6ff; --primary-hover: #79b8ff; --success-color: #34c759;
             --success-hover: #2aa34a; --danger-color: #ff453a; --danger-hover: #ff6b61;
@@ -40,12 +40,13 @@
         body.dark-mode #appLogo {
             filter: invert(1);
         }
+        html { scroll-behavior: smooth; }
         body { font-family: 'Montserrat', sans-serif; background-color: var(--page-bg); color: var(--text-color); margin: 0; padding: 10px; font-size: 15px; transition: background-color 0.3s, color 0.3s; }
-        .app-header { text-align: center; margin-bottom: 20px; }
-        #appLogo { max-height: 70px; margin-bottom: 10px; }
         .container { width: 100%; max-width: 900px; margin: 10px auto; background: var(--container-bg); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); transition: background-color 0.3s, box-shadow 0.3s; }
-        h1 { text-align: center; color: var(--primary-color); margin-top:0; margin-bottom: 15px; font-size: 1.8em; }
-        h2 { text-align: center; color: var(--text-color); font-size: 1.3em; margin-top: 0; margin-bottom: 15px;}
+        .app-header { text-align: center; margin-bottom: 20px; }
+        #appLogo { max-height: 60px; margin-bottom: 10px; }
+        h1 { text-align: center; color: var(--primary-color); margin-top:0; margin-bottom: 15px; font-size: 1.6em; }
+        h2 { text-align: center; color: var(--text-color); font-size: 1.3em; margin-top: 0; margin-bottom: 20px;}
         button { cursor: pointer; border-radius: 8px; border: none; padding: 10px 15px; font-weight: 500; font-family: 'Montserrat', sans-serif; transition: all 0.2s ease; }
         input[type="text"], input[type="number"], input[type="email"], input[type="password"] {
             padding: 10px; font-size: 1em; border: 1px solid var(--border-color);
@@ -56,7 +57,7 @@
         input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.25); }
         button:disabled, input:disabled { background-color: var(--input-disabled-bg) !important; color: var(--text-muted-color) !important; cursor: not-allowed !important; border-color: var(--border-color) !important; }
 
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--modal-overlay-bg); display: flex; justify-content: center; align-items: center; z-index: 1000; padding:10px; box-sizing: border-box; }
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--modal-overlay-bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding:10px; box-sizing: border-box; }
         #loginBox { background: var(--container-bg); padding: 30px; border-radius: 12px; box-shadow: var(--shadow); text-align: center; width: 100%; max-width: 360px; }
         #loginBox h2 { margin-top: 0; font-size: 1.5em; color: var(--text-color); }
         #loginBox input { margin-bottom: 15px; }
@@ -72,14 +73,11 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         #status { text-align: center; font-weight: 500; padding: 10px; border-radius: 8px; min-height: 24px; margin-bottom: 20px; transition: opacity 0.5s ease-out; }
-
-        .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; align-items: stretch; }
-        .input-group.horizontal-align { flex-direction: row; align-items: center;}
-        .input-group input[type="text"], .input-group input[type="number"] { flex-grow: 1; }
-
-        .action-buttons-group { display: flex; gap:10px; margin-top:10px; }
-        .action-buttons-group button { flex-grow: 1; }
-        #startCameraBtn { display: none; background-color: #6c757d; color: white; } #startCameraBtn:hover { background-color: #5a6268;}
+        
+        .controls-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        
+        .action-buttons-group { display: flex; gap:10px; margin-top:10px; justify-content: center; }
+        #startCameraBtn { display: none; background-color: #6c757d; color: white; flex-grow: 1; max-width: 250px; } #startCameraBtn:hover { background-color: #5a6268;}
 
         .camera-scanner-container { padding: 10px; border: 1px solid var(--border-color); margin-top: 15px; border-radius: 8px; display: none; background-color: var(--page-bg); }
         #camera-reader { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 8px; }
@@ -98,126 +96,126 @@
         .search-results-list li:hover small, .search-results-area ul li:hover small { color: #e0e0e0; }
         .search-results-list li small, .search-results-area ul li small { display: block; color: var(--text-muted-color); font-size: 0.8em; margin-top: 4px; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; table-layout: fixed; }
         thead th { background-color: var(--table-header-bg); padding: 10px 8px; text-align: left; font-weight: 700; border-bottom: 2px solid var(--border-color); }
-        tbody td { padding: 10px 8px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        tbody td { padding: 10px 8px; border-bottom: 1px solid var(--border-color); vertical-align: middle; word-wrap: break-word; }
         tbody tr:nth-child(even) { background-color: var(--table-row-even-bg); }
-        .quantity-in-table { width: 50px; text-align: center; padding: 6px; border: 1px solid var(--border-color); border-radius: 5px; font-size: 0.9em; }
-        .delete-btn { background: none; color: var(--danger-color); font-size: 1.1em; padding: 5px; } .delete-btn:hover { color: var(--danger-hover); }
+        .quantity-in-table { width: 60px; text-align: center; padding: 6px; font-size: 1em; }
+        .delete-btn { background: none; color: var(--danger-color); font-size: 1.2em; padding: 5px; } .delete-btn:hover { color: var(--danger-hover); }
 
-        .order-info-fields { display: flex; gap: 15px; margin-bottom: 15px; }
-        .order-info-fields input { flex: 1; }
-
-        .export-section { margin-top: 25px; padding-top: 25px; border-top: 1px solid var(--border-color); }
-        .export-controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; }
-        .export-controls button { width: auto; flex-grow: 1; }
+        .order-info-fields { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
         
+        .export-section { margin-top: 25px; padding-top: 25px; border-top: 1px solid var(--border-color); }
+        .export-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
         #totalOrderValue { text-align: right; font-size: 1.2em; font-weight: 700; margin-top: 20px; padding: 12px; background-color: var(--success-color); color: white; border-radius: 8px;}
         body.dark-mode #totalOrderValue { background-color: var(--success-hover); }
 
-        #clearListBtn { background-color: var(--danger-color); color: white; } #clearListBtn:hover { background-color: var(--danger-hover); }
+        #clearListBtn { background-color: var(--danger-color); color: white; grid-column: 1 / -1; } #clearListBtn:hover { background-color: var(--danger-hover); }
         #exportCsvBtn { background-color: var(--success-color); color: white; } #exportCsvBtn:hover { background-color: var(--success-hover); }
         #exportExcelBtn { background-color: var(--excel-color); color: white; } #exportExcelBtn:hover { background-color: var(--excel-hover); }
         #sendEmailBtn { background-color: var(--warning-color); color: var(--text-color); } #sendEmailBtn:hover { background-color: var(--warning-hover); }
 
         #darkModeToggle { position: fixed; top: 15px; right: 15px; background-color: var(--container-bg); color: var(--text-color); border: 1px solid var(--border-color); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.2em; box-shadow: var(--shadow); z-index: 1001;}
         #darkModeToggle:hover { background-color: var(--page-bg); }
-
-        .fab { position: fixed; bottom: 25px; right: 25px; background-color: var(--primary-color); color: white; width: 60px; height: 60px; border-radius: 50%; display: none; justify-content: center; align-items: center; font-size: 1.8em; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 999; }
-        .fab:hover { background-color: var(--primary-hover); }
+        
+        #fabInventoryBtn { position: fixed; bottom: 25px; right: 25px; background-color: var(--primary-color); color: white; width: 60px; height: 60px; border-radius: 50%; display: none; justify-content: center; align-items: center; font-size: 1.8em; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 999; }
+        #fabInventoryBtn:hover { background-color: var(--primary-hover); }
 
         footer { text-align: center; margin-top: 30px; color: var(--text-muted-color); font-size: 0.85em; }
+
+        .form-switcher { margin-top: 20px; font-size: 0.9em; }
+        .form-switcher a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
+        .form-switcher a:hover { text-decoration: underline; }
+
+        #adminPanel { border-top: 2px dashed var(--warning-color); margin-top: 20px; padding-top: 20px; display: none; }
+        #adminPanel h3 { color: var(--warning-color); }
+
+        .floating-controls-left {
+            position: fixed;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1001;
+            display: none; 
+        }
+        .floating-controls-left button {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        #logoutBtn { background-color: var(--danger-color); color: white; }
+        #scrollTopBtn, #scrollBottomBtn { background-color: var(--info-color); color: white; }
+
+        @media (max-width: 768px) {
+            body { padding: 5px; font-size: 14px; }
+            .container { padding: 15px 10px; margin: 5px auto; }
+            #appLogo { max-height: 50px; }
+            h1 { font-size: 1.4em; } h2 { font-size: 1.2em; }
+            button, input, select { font-size: 1rem; }
+            .tabs button { padding: 10px 5px; font-size: 0.9em; }
+            .controls-grid { flex-direction: column; }
+            .controls-grid > * { width: 100%; }
+            table { font-size: 0.8em; }
+            thead th, tbody td { padding: 8px 4px; }
+            .export-controls { grid-template-columns: 1fr; }
+            .export-controls button { width: 100%; }
+            #fabInventoryBtn { width: 50px; height: 50px; font-size: 1.5em; bottom: 15px; right: 15px;}
+            .floating-controls-left { left: 10px; }
+            .floating-controls-left button { width: 40px; height: 40px; font-size: 1.1em; }
+        }
 
         #inventoryModule { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--modal-overlay-bg); display: none; justify-content: center; align-items: center; z-index: 1050; padding: 15px; box-sizing: border-box; }
         .inventory-modal-content { background-color: var(--inventory-modal-bg); color: var(--inventory-modal-text); padding: 25px; border-radius: 12px; box-shadow: var(--shadow); width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; position:relative; }
         .inventory-modal-content h2 { margin-top: 0; color: var(--primary-color); }
         .inventory-modal-content .close-btn { position: absolute; top: 10px; right: 15px; font-size: 1.8em; background: none; border: none; color: var(--text-muted-color); cursor: pointer; padding: 5px; line-height: 1; }
         .inventory-modal-content .close-btn:hover { color: var(--danger-color); }
-        .inventory-modal-content .close-btn-inline { background-color: var(--text-muted-color); color: var(--inventory-modal-bg); margin-top:15px; }
-        .inventory-modal-content input[type="text"], .inventory-modal-content input[type="number"] { background-color: var(--inventory-modal-input-bg); border: 1px solid var(--inventory-modal-border); color: var(--inventory-modal-text); }
+        .inventory-modal-content .close-btn-inline { background-color: var(--text-muted-color); color: var(--inventory-modal-bg); margin-top:15px; width: 100%; }
+        .inventory-modal-content .input-group { display: flex; flex-direction: column; gap: 10px; }
         #inventoryTableContainer { max-height: 300px; overflow-y: auto; margin-bottom: 15px; border: 1px solid var(--inventory-modal-border); border-radius: 8px;}
         #inventoryTableContainer table { margin-top:0; }
         #inventoryTableContainer thead th { background-color: #e9ecef; color: #495057;}
         #inventoryTableContainer tbody tr:nth-child(even) { background-color: #f8f9fa;  }
-
-        .form-switcher { margin-top: 20px; font-size: 0.9em; }
-        .form-switcher a { color: var(--primary-color); text-decoration: none; font-weight: 500; }
-        .form-switcher a:hover { text-decoration: underline; }
-
-        /* NOWY STYL DLA PANELU ADMINA */
-        #adminPanelBtn {
-            background-color: var(--info-color);
-            color: white;
-            display: none; /* Ukryty domyślnie */
-        }
-        #adminPanel {
-            border-top: 2px dashed var(--warning-color);
-            margin-top: 20px;
-            padding-top: 20px;
-            display: none; /* Ukryty domyślnie */
-        }
-        #adminPanel h3 {
-             color: var(--warning-color);
+        @media (min-width: 769px) {
+             .controls-grid { flex-direction: row; align-items: center; }
+             #addToListBtn { width: auto; }
+             .order-info-fields { flex-direction: row; }
+             .export-controls { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+             .inventory-modal-content .input-group { flex-direction: row; }
         }
 
-        @media (max-width: 768px) {
-            body { padding: 5px; font-size: 14px; }
-            .container { padding: 15px; margin: 5px auto; }
-            #appLogo { max-height: 50px; }
-            h1 { font-size: 1.6em; } h2 { font-size: 1.2em; }
-            button, input[type="text"], input[type="number"], input[type="password"], input[type="email"] { font-size: 0.95em; padding: 10px;}
-            #loginBox { padding: 20px; }
-            .tabs button { padding: 10px 5px; font-size: 0.9em; }
-            .input-group.horizontal-align #startCameraBtn { width: 100%; margin-top: 10px;}
-            .controls-grid { grid-template-columns: 1fr; }
-            #quantityInput { width: 100% !important; margin-top:0; }
-            .inventory-modal-content .input-group #inventoryQuantityInput { width: 100% !important; margin-top:0; }
-            .order-info-fields { flex-direction: column; }
-            #addToListBtn, .export-controls button { width: 100%; }
-            table { font-size: 0.85em; }
-            thead th, tbody td { padding: 8px 5px; }
-            .quantity-in-table { width: 45px; padding: 5px; }
-            .export-controls { margin-top: 15px; }
-            #totalOrderValue { font-size: 1.1em; padding: 10px; }
-            .info-row { grid-template-columns: 1fr; }
-            .info-row strong { margin-bottom: 2px; }
-            .fab { width: 50px; height: 50px; font-size: 1.5em; bottom: 15px; right: 15px;}
-            .inventory-modal-content { padding: 20px; }
-            .inventory-modal-content .close-btn { top:10px; right: 10px; font-size: 1.5em;}
-            .inventory-modal-content .input-group { flex-direction: column; }
-            .inventory-modal-content .input-group input[type="number"] { width: 100% !important; margin-top: 10px; }
-            .inventory-modal-content .input-group button { width: 100%; margin-top: 10px; }
-            .action-buttons-group button { width: 100%; }
+         @media print {
+            body > *:not(#print-area) { display: none; }
+            #print-area, #print-area * { display: block !important; visibility: visible !important; }
+            @page { margin: 0.75in; }
+            #print-area { font-family: Arial, sans-serif; font-size: 10pt; }
+            #print-header { margin-bottom: 25px; }
+            #print-client-name { font-size: 14pt; font-weight: bold; margin: 0; }
+            #print-additional-info { font-size: 10pt; margin: 5px 0 0 0; }
+            #print-total-value { font-size: 12pt; font-weight: bold; margin: 15px 0 0 0; text-align: left; }
+            #print-table { width: 100%; border-collapse: collapse; }
+            #print-table th, #print-table td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+            #print-table th { background-color: #f0f0f0; font-weight: bold; }
         }
-
-         @media (min-width: 769px) {
-            .input-group { flex-direction: row; }
-            #startCameraBtn { width: auto; }
-            .controls-grid { grid-template-columns: 1fr auto auto; }
-            .controls-grid > input[type="text"] { min-width: 0; }
-            #quantityInput { width: 80px; }
-            #addToListBtn { width: auto; }
-            .action-buttons-group { justify-content: center; }
-            .action-buttons-group button { width: auto; }
-        }
-    </style>
-
-    <style media="print">
-        body > *:not(#print-area) { display: none; }
-        #print-area, #print-area * { display: block !important; visibility: visible !important; }
-        @page { margin: 0.75in; }
-        #print-area { font-family: Arial, sans-serif; font-size: 10pt; }
-        #print-header { margin-bottom: 25px; }
-        #print-client-name { font-size: 14pt; font-weight: bold; margin: 0; }
-        #print-additional-info { font-size: 10pt; margin: 5px 0 0 0; }
-        #print-total-value { font-size: 12pt; font-weight: bold; margin: 15px 0 0 0; text-align: left; }
-        #print-table { width: 100%; border-collapse: collapse; }
-        #print-table th, #print-table td { border: 1px solid #ccc; padding: 6px; text-align: left; }
-        #print-table th { background-color: #f0f0f0; font-weight: bold; }
     </style>
 </head>
 <body>
     <button id="darkModeToggle" title="Przełącz tryb ciemny/jasny"><i class="fa-solid fa-moon"></i></button>
+    
+    <div class="floating-controls-left" id="floatingControls">
+        <button id="logoutBtn" title="Wyloguj się"><i class="fa-solid fa-right-from-bracket"></i></button>
+        <button id="scrollTopBtn" title="Przewiń do góry"><i class="fa-solid fa-arrow-up"></i></button>
+        <button id="scrollBottomBtn" title="Przewiń na dół listy"><i class="fa-solid fa-arrow-down"></i></button>
+    </div>
 
     <div id="loginOverlay">
         <div id="loginBox">
@@ -264,7 +262,7 @@
         <div id="lookupMode" class="tab-content active">
             <h2>Szybkie wyszukiwanie informacji</h2>
             <div class="controls-grid">
-                <input type="text" id="lookupBarcode_Input" placeholder="Wpisz EAN, kod produktu lub fragment nazwy..." disabled>
+                <input type="text" id="lookupBarcode_Input" placeholder="Wpisz EAN, kod lub nazwę produktu..." disabled>
             </div>
             <div id="lookupResult" class="search-results-area" style="display: none;"></div>
         </div>
@@ -276,7 +274,7 @@
                 <input type="text" id="additionalInfoInput" placeholder="Informacje dodatkowe...">
             </div>
             <div class="controls-grid">
-                <input type="text" id="listBarcode_Input" placeholder="Wpisz EAN, kod prod. lub fragment nazwy..." disabled>
+                <input type="text" id="listBarcode_Input" placeholder="Wpisz EAN, kod lub nazwę produktu..." disabled>
                 <input type="number" id="quantityInput" value="1" min="1" inputmode="numeric" disabled>
                 <button id="addToListBtn" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
             </div>
@@ -295,12 +293,13 @@
             </table>
             <div id="totalOrderValue">Wartość sumaryczna: 0.00 PLN</div>
             <div class="export-section">
+                <h2>Eksport</h2>
                 <div class="export-controls">
-                    <button id="clearListBtn" disabled><i class="fa-solid fa-eraser"></i> Wyczyść wszystko</button>
                     <button id="printListBtn" disabled><i class="fa-solid fa-print"></i> Drukuj</button>
                     <button id="sendEmailBtn" disabled><i class="fa-solid fa-envelope"></i> Wyślij e-mail</button>
                     <button id="exportCsvBtn" disabled><i class="fa-solid fa-file-csv"></i> CSV (Optima)</button>
                     <button id="exportExcelBtn" disabled><i class="fa-solid fa-file-excel"></i> Excel (Szczegóły)</button>
+                    <button id="clearListBtn" disabled><i class="fa-solid fa-eraser"></i> Wyczyść wszystko</button>
                 </div>
             </div>
         </div>
@@ -308,10 +307,8 @@
         <div id="adminPanel" class="tab-content">
              <h2><i class="fa-solid fa-user-check"></i> Zarządzanie użytkownikami</h2>
              <p>Tutaj pojawi się lista użytkowników oczekujących na akceptację.</p>
-             <div id="pendingUsersList">
-                </div>
+             <div id="pendingUsersList"></div>
         </div>
-
     </div>
 
     <button id="fabInventoryBtn" class="fab" title="Moduł Inwentaryzacji"><i class="fa-solid fa-clipboard-list"></i></button>
@@ -321,7 +318,7 @@
             <button class="close-btn" id="closeInventoryModalBtn" title="Zamknij">&times;</button>
             <h2><i class="fa-solid fa-boxes-packing"></i> Moduł Inwentaryzacji</h2>
             <div class="input-group">
-                <input type="text" id="inventoryEanInput" placeholder="Wpisz EAN, kod prod. lub fragment nazwy..." disabled>
+                <input type="text" id="inventoryEanInput" placeholder="Wpisz EAN, kod lub nazwę..." disabled>
                 <input type="number" id="inventoryQuantityInput" value="1" min="1" inputmode="numeric" disabled>
                 <button id="inventoryAddBtn" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
             </div>
@@ -335,7 +332,7 @@
                 </table>
             </div>
             <button id="inventoryExportCsvBtn" style="width:100%; margin-top:10px;" disabled><i class="fa-solid fa-file-download"></i> Eksportuj inwentaryzację do CSV</button>
-            <button id="closeInventoryModalBtnBottom" class="close-btn-inline" style="width:100%;">Zamknij Moduł</button>
+            <button id="closeInventoryModalBtnBottom" class="close-btn-inline">Zamknij Moduł</button>
         </div>
     </div>
 
