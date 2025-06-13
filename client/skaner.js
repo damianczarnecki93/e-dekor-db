@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Definicja wszystkich elementów DOM
     const elements = {
+        // Logowanie i Rejestracja
         loginOverlay: document.getElementById('loginOverlay'),
         appContainer: document.getElementById('appContainer'),
         loginUsername: document.getElementById('loginUsername'),
@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
         registerError: document.getElementById('registerError'),
         showRegister: document.getElementById('showRegister'),
         showLogin: document.getElementById('showLogin'),
+        
+        // Główne UI i Nawigacja
         topBar: document.getElementById('topBar'),
         bottomBar: document.getElementById('bottomBar'),
         darkModeToggle: document.getElementById('darkModeToggle'),
@@ -30,11 +32,18 @@ document.addEventListener('DOMContentLoaded', () => {
         menuSavedLists: document.getElementById('menuSavedLists'),
         scrollTopBtn: document.getElementById('scrollTopBtn'),
         scrollBottomBtn: document.getElementById('scrollBottomBtn'),
+
+        // Szybkie wyszukiwanie (Modal)
         quickSearchModal: document.getElementById('quickSearchModal'),
         closeQuickSearchModalBtn: document.getElementById('closeQuickSearchModalBtn'),
         lookupBarcodeInput: document.getElementById('lookupBarcodeInput'),
         lookupResultList: document.getElementById('lookupResultList'),
         lookupResultSingle: document.getElementById('lookupResultSingle'),
+        
+        // Główne Zamówienie
+        mainContent: document.getElementById('main-content'),
+        adminPanel: document.getElementById('adminPanel'),
+        allUsersList: document.getElementById('allUsersList'),
         listBarcodeInput: document.getElementById('listBarcode_Input'),
         listBuilderSearchResults: document.getElementById('listBuilderSearchResults'),
         quantityInput: document.getElementById('quantityInput'),
@@ -49,10 +58,12 @@ document.addEventListener('DOMContentLoaded', () => {
         exportExcelBtn: document.getElementById('exportExcelBtn'),
         printListBtn: document.getElementById('printListBtn'),
         clearListBtn: document.getElementById('clearListBtn'),
-        importCsvInput: document.getElementById('importCsvInput'),
+        
+        // Import CSV
         importCsvBtn: document.getElementById('importCsvBtn'),
-        adminPanel: document.getElementById('adminPanel'),
-        allUsersList: document.getElementById('allUsersList'),
+        importCsvInput: document.getElementById('importCsvInput'),
+        
+        // Inwentaryzacja (Modal)
         inventoryModule: document.getElementById('inventoryModule'),
         closeInventoryModalBtn: document.getElementById('closeInventoryModalBtn'),
         inventoryEanInput: document.getElementById('inventoryEanInput'),
@@ -61,36 +72,33 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryListBody: document.getElementById('inventoryListBody'),
         inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
         inventorySearchResults: document.getElementById('inventorySearchResults'),
+        
+        // Zapisane listy (Modal)
         savedListsModal: document.getElementById('savedListsModal'),
         closeSavedListsModalBtn: document.getElementById('closeSavedListsModalBtn'),
         savedListsContainer: document.getElementById('savedListsContainer'),
+
+        // Kompletacja (Modal)
         pickingModule: document.getElementById('pickingModule'),
         closePickingModalBtn: document.getElementById('closePickingModalBtn'),
         pickingOrderName: document.getElementById('picking-order-name'),
         pickingEanInput: document.getElementById('pickingEanInput'),
         pickingSearchResults: document.getElementById('picking-search-results'),
-        pickingStatusMsg: document.getElementById('picking-status-msg'),
         pickingTargetList: document.getElementById('picking-target-list'),
         pickingScannedList: document.getElementById('picking-scanned-list'),
         pickingVerifyBtn: document.getElementById('picking-verify-btn'),
+        
+        // Inne
         toastContainer: document.getElementById('toast-container'),
         printArea: document.getElementById('print-area'),
         printClientName: document.getElementById('print-client-name'),
         printAdditionalInfo: document.getElementById('print-additional-info'),
         printTableBody: document.getElementById('print-table-body'),
-        numpadModal: document.getElementById('numpad-modal'),
-        numpadDisplay: document.getElementById('numpad-display'),
-        numpadOk: document.getElementById('numpad-ok'),
-        numpadClear: document.getElementById('numpad-clear'),
-        numpadBackspace: document.getElementById('numpad-backspace'),
-        numpadKeys: document.querySelectorAll('.numpad-key'),
     };
 
     let productDatabase = [], scannedItems = [], inventoryItems = [];
     let currentPickingOrder = null;
     let pickedItems = [];
-    let numpadTarget = null;
-    let numpadCallback = null;
     const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
     // =================================================================
@@ -160,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.menuToggleBtn) elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
         window.addEventListener('click', () => { if (elements.dropdownMenu.classList.contains('show')) elements.dropdownMenu.classList.remove('show'); });
         
-        if (elements.menuAdminBtn) elements.menuAdminBtn.addEventListener('click', (e) => { e.preventDefault(); loadAllUsers(); });
+        if (elements.menuAdminBtn) elements.menuAdminBtn.addEventListener('click', (e) => { e.preventDefault(); showAdminPanel(); });
         if (elements.menuInventoryBtn) elements.menuInventoryBtn.addEventListener('click', (e) => { e.preventDefault(); elements.inventoryModule.style.display = 'flex'; });
         if (elements.menuLogoutBtn) elements.menuLogoutBtn.addEventListener('click', (e) => { e.preventDefault(); localStorage.clear(); location.reload(); });
         if (elements.menuChangePassword) elements.menuChangePassword.addEventListener('click', (e) => { e.preventDefault(); handleChangePassword(); });
@@ -185,11 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
         if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) { await saveCurrentList(); } } clearCurrentList(false); });
         
-        if(elements.importCsvBtn) elements.importCsvBtn.addEventListener('click', () => elements.importCsvInput.click());
-        if(elements.importCsvInput) elements.importCsvInput.addEventListener('change', handleFileImport);
-        
-        if(elements.allUsersList) elements.allUsersList.addEventListener('click', handleAdminAction);
-        
         if (elements.closeInventoryModalBtn) elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
         if(elements.inventoryAddBtn) elements.inventoryAddBtn.addEventListener('click', handleInventoryAdd);
         if(elements.inventoryEanInput) elements.inventoryEanInput.addEventListener('input', handleInventorySearch);
@@ -205,9 +208,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.pickingTargetList) elements.pickingTargetList.addEventListener('click', e => { const itemDiv = e.target.closest('.pick-item'); if(itemDiv?.dataset.ean) { pickItemFromList(itemDiv.dataset.ean); } });
         if (elements.pickingScannedList) elements.pickingScannedList.addEventListener('click', handlePickedItemClick);
         if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
-        if (elements.closePickingSummaryModalBtn) elements.closePickingSummaryModalBtn.addEventListener('click', () => elements.pickingSummaryModal.style.display = 'none');
-        
-        attachNumpadListeners();
     }
     
     // =================================================================
@@ -228,12 +228,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // NAWIGACJA I UI
     // =================================================================
     function switchTab(newTab) {
-        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-        document.getElementById('main-content').style.display = 'block';
-
         if (newTab === 'admin') {
-            document.getElementById('main-content').style.display = 'none';
+            elements.mainContent.style.display = 'none';
             elements.adminPanel.style.display = 'block';
+        } else {
+             elements.adminPanel.style.display = 'none';
+             elements.mainContent.style.display = 'block';
         }
     }
     
@@ -251,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.lookupResultList.innerHTML = '';
         elements.lookupResultList.style.display = 'none';
         elements.lookupResultSingle.innerHTML = '';
+        
         if (!searchTerm) return;
         const results = performSearch(searchTerm);
         if (results.length === 1) {
@@ -263,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function displaySingleProductInLookup(product) {
-        let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
+        let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div></div>`;
         elements.lookupResultSingle.innerHTML = html;
         elements.lookupResultList.style.display = 'none';
     }
@@ -303,14 +304,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!searchTerm) return;
         
         const results = performSearch(searchTerm);
-
-        if (isMobile) {
-            addProductToList(searchTerm, 1);
+        
+        if (isMobile && results.length > 0) {
+            addProductToList(results[0].kod_kreskowy, 1);
             return;
         }
 
-        if (results.length === 1) { addProductToList(results[0].kod_kreskowy); } 
-        else if (results.length > 1) {
+        if (results.length > 0) {
             let listHtml = '<ul>';
             results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
             listHtml += `<li class="add-unknown-item" data-ean="${searchTerm}"><i class="fa fa-plus"></i> Dodaj "${searchTerm}" jako nową pozycję</li>`;
@@ -598,8 +598,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleNumpadOK() {
         const value = parseInt(elements.numpadDisplay.textContent, 10) || 0;
         if (numpadTarget) {
-            numpadTarget.value = value;
-            numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
+            if (value > 0) {
+                numpadTarget.value = value;
+                numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         }
         if (numpadCallback) {
             numpadCallback(value);
@@ -610,7 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function attachNumpadListeners() {
         elements.numpadKeys.forEach(key => key.addEventListener('click', () => {
             const display = elements.numpadDisplay;
-            if (display.textContent === '0' || !/^\d+$/.test(display.textContent)) display.textContent = '';
+            if (display.textContent === '0') display.textContent = '';
             display.textContent += key.dataset.key;
         }));
         elements.numpadClear.addEventListener('click', () => { elements.numpadDisplay.textContent = '0'; });
@@ -695,7 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function verifyPicking() {
-        // ... (logika weryfikacji bez zmian)
+        // ... (logika weryfikacji)
     }
 
     function exportPickedToCsv() {
@@ -704,6 +706,6 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadFile(csvContent, 'text/csv;charset=utf-8;', `${currentPickingOrder.listName}_skompletowane.csv`);
     }
 
-    // Wywołanie startowe
+    // Inicjalizacja Aplikacji
     checkLoginStatus();
 });
