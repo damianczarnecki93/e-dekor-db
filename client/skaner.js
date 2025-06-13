@@ -301,24 +301,6 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.totalOrderValue.textContent = `Total: ${totalValue.toFixed(2)} PLN`;
     }
     
-    if(elements.scannedListBody) {
-        elements.scannedListBody.addEventListener('click', e => { 
-            const target = e.target;
-            if (target.classList.contains('quantity-in-table')) {
-                e.preventDefault();
-                openNumpad(target, (newValue) => {
-                    const index = target.dataset.index;
-                    if(newValue > 0) scannedItems[index].quantity = newValue;
-                    renderScannedList();
-                });
-            } else if (target.closest('.delete-btn')) {
-                const deleteButton = target.closest('.delete-btn');
-                scannedItems.splice(deleteButton.dataset.index, 1); 
-                renderScannedList(); 
-            }
-        });
-    }
-
     function getSafeFilename() { const clientName = elements.clientNameInput.value.trim().replace(/[<>:"/\\|?* ]+/g, '_') || 'zamowienie'; const date = new Date().toISOString().slice(0, 10); return `${clientName}_${date}`; }
     function exportToCsvOptima() { if (scannedItems.length === 0) return; const csvContent = scannedItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`); }
     if(elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCsvOptima);
@@ -403,12 +385,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                      <input type="file" id="importCsvInput" accept=".csv" style="display: none;">
                                    </div><h3>Zapisane listy:</h3>`;
             
-            // Ponowne podpięcie listenera po dynamicznym dodaniu przycisku
             container.querySelector('#importCsvInput').addEventListener('change', handleFileImport);
 
             if (lists.length === 0) { container.innerHTML += '<p>Brak zapisanych zamówień.</p>'; return; }
             const listContainer = document.createElement('ul');
-            listContainer.style.cssText = 'list-style: none; padding: 0;';
+            listContainer.style.listStyle = 'none'; listContainer.style.padding = '0';
             lists.forEach(list => {
                 const li = document.createElement('li');
                 li.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border-color); flex-wrap: wrap; gap: 10px;';
@@ -479,25 +460,72 @@ document.addEventListener('DOMContentLoaded', () => {
         event.target.value = '';
     }
     
-    async function loadAllUsers() { /* ... kod bez zmian ... */ }
-    async function handleUserAction(url, options, successMsg) { /* ... kod bez zmian ... */ }
-    async function handleChangePassword() { /* ... kod bez zmian ... */ }
-    if(elements.allUsersList) { /* ... kod bez zmian ... */ }
-    if (elements.closeInventoryModalBtn) { /* ... kod bez zmian ... */ }
+    async function loadAllUsers() {
+        const userListDiv = elements.allUsersList;
+        if(!userListDiv) return;
+        userListDiv.innerHTML = '<p>Ładowanie...</p>';
+        try {
+            const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if(!response.ok) throw new Error('Nie udało się pobrać użytkowników.');
+            const users = await response.json();
+            userListDiv.innerHTML = users.length === 0 ? '<p>Brak użytkowników.</p>' : '';
+            users.forEach(user => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                let actions = `<button class="btn-primary edit-user-btn" data-userid="${user._id}" data-username="${user.username}">Zmień hasło</button>`;
+                const newRole = user.role === 'admin' ? 'user' : 'admin';
+                actions += `<button class="change-role-btn" data-userid="${user._id}" data-username="${user.username}" data-role="${newRole}">Zmień na ${newRole}</button>`;
+                if (user.status === 'pending') actions = `<button class="approve-user-btn" data-userid="${user._id}">Akceptuj</button>` + actions;
+                if (user.role !== 'admin') actions += `<button class="delete-user-btn" data-userid="${user._id}" data-username="${user.username}"><i class="fa-solid fa-trash"></i></button>`;
+                userDiv.innerHTML = `<div class="user-info"><strong>${user.username}</strong><span class="status">Status: ${user.status} | Rola: ${user.role}</span></div><div class="user-actions">${actions}</div>`;
+                userListDiv.appendChild(userDiv);
+            });
+        } catch (error) { userListDiv.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`; }
+    }
     
-    // ... NOWE I PRZEPISANE MODUŁY ...
+    async function handleUserAction(url, options, successMsg) { try { const response = await fetch(url, options); const data = await response.json(); if(!response.ok) throw new Error(data.msg || 'Wystąpił błąd.'); alert(successMsg || data.msg); loadAllUsers(); } catch (error) { alert(`Błąd: ${error.message}`); } }
+    async function handleChangePassword() { const oldPassword = prompt("Wprowadź swoje stare hasło:"); if (!oldPassword) return; const newPassword = prompt("Wprowadź nowe hasło (min. 4 znaki):"); if (!newPassword) return; await handleUserAction('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ oldPassword, newPassword }) }); }
+    if(elements.allUsersList) elements.allUsersList.addEventListener('click', e => { 
+        const target = e.target.closest('button'); 
+        if (!target) return;
+        const { userid, username, role } = target.dataset;
+        if (target.classList.contains('approve-user-btn')) handleUserAction(`/api/admin/approve-user/${userid}`, { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') } });
+        else if (target.classList.contains('edit-user-btn')) { const p = prompt(`Nowe hasło dla ${username}:`); if (p) handleUserAction(`/api/admin/edit-password/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newPassword: p }) }); }
+        else if (target.classList.contains('delete-user-btn')) { if (confirm(`Na pewno usunąć ${username}?`)) handleUserAction(`/api/admin/delete-user/${userid}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); }
+        else if (target.classList.contains('change-role-btn')) { if (confirm(`Zmienić rolę ${username} na ${role}?`)) handleUserAction(`/api/admin/change-role/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newRole: role }) }); }
+    });
 
-    // MODUŁ Klawiatury Numerycznej
-    let numpadCallback = null;
-
-    function openNumpad(callbackOnOk) {
+    if (elements.closeInventoryModalBtn) elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
+    if(elements.inventoryAddBtn) elements.inventoryAddBtn.addEventListener('click', () => { const ean = elements.inventoryEanInput.value.trim(); const quantity = parseInt(elements.inventoryQuantityInput.value, 10); if (!ean || !quantity) return; const existing = inventoryItems.find(i => i.ean === ean); if (existing) existing.quantity += quantity; else inventoryItems.push({ ean: ean, name: 'Inwentaryzacja', quantity: quantity }); renderInventoryList(); });
+    function renderInventoryList() { if (elements.inventoryListBody) elements.inventoryListBody.innerHTML = inventoryItems.map((item, i) => `<tr><td>${item.name}</td><td>${item.ean}</td><td><input type="number" readonly class="quantity-in-table" value="${item.quantity}" data-index="${i}"></td><td><button class="delete-inv-item-btn btn-icon btn-danger" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); }
+    if(elements.inventoryListBody) {
+        elements.inventoryListBody.addEventListener('click', e => {
+            const btn = e.target.closest('.delete-inv-item-btn');
+            if (btn) { inventoryItems.splice(btn.dataset.index, 1); renderInventoryList(); }
+            if(e.target.classList.contains('quantity-in-table')) {
+                e.preventDefault();
+                openNumpad(e.target, (newValue) => {
+                    inventoryItems[e.target.dataset.index].quantity = newValue;
+                    renderInventoryList();
+                });
+            }
+        });
+    }
+    
+    // NOWA FUNKCJA: Klawiatura numeryczna
+    function openNumpad(targetElement, callbackOnOk) {
+        numpadTarget = targetElement;
         numpadCallback = callbackOnOk;
-        elements.numpadDisplay.textContent = '1';
+        elements.numpadDisplay.textContent = targetElement.value || '1';
         elements.numpadModal.style.display = 'flex';
     }
 
     function handleNumpadOK() {
         const value = parseInt(elements.numpadDisplay.textContent) || 0;
+        if (numpadTarget) {
+            numpadTarget.value = value;
+            numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
+        }
         if (numpadCallback) {
             numpadCallback(value);
         }
@@ -516,6 +544,9 @@ document.addEventListener('DOMContentLoaded', () => {
             display.textContent = display.textContent.slice(0, -1) || '0';
         });
         elements.numpadOk.addEventListener('click', handleNumpadOK);
+        
+        elements.quantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
+        elements.inventoryQuantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
     }
 
     // MODUŁ Kompletacji Zamówienia
@@ -533,29 +564,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderPickingView() {
         if(!currentPickingOrder) return;
-        const toPickHtml = currentPickingOrder.items.filter(item => !pickedItems.some(p => p.ean === item.ean)).map(item => 
-            `<div class="pick-item" data-ean="${item.ean}" style="padding: 8px; cursor: pointer; border-bottom: 1px solid var(--border-color);">
-                <strong>${item.name}</strong><br><small>${item.description}</small> (ilość: ${item.quantity})
-            </div>`
-        ).join('');
-        elements.pickingTargetList.innerHTML = toPickHtml || "<p>Wszystko zebrane!</p>";
-
-        const pickedHtml = pickedItems.map((item, index) => 
-            `<div class="picked-item" style="display: flex; justify-content: space-between; align-items: center; padding: 5px;">
-                <span>${item.name} | ${item.description}</span>
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <input type="number" value="${item.quantity}" class="picked-quantity-input" data-index="${index}" style="width: 60px; text-align: center;" readonly>
-                    <button class="unpick-item-btn btn-icon" data-index="${index}" style="background: none; color: var(--danger-color);"><i class="fa-solid fa-arrow-left"></i></button>
-                </div>
-            </div>`
-        ).join('');
-        elements.pickingScannedList.innerHTML = pickedHtml;
+        const toPickItems = currentPickingOrder.items.filter(item => !pickedItems.some(p => p.ean === item.ean));
+        elements.pickingTargetList.innerHTML = toPickItems.map(item => `<div class="pick-item" data-ean="${item.ean}" style="padding: 8px; cursor: pointer; border-bottom: 1px solid var(--border-color);"><strong>${item.name}</strong><br><small>${item.description}</small> (ilość: ${item.quantity})</div>`).join('') || "<p>Wszystko zebrane!</p>";
+        elements.pickingScannedList.innerHTML = pickedItems.map((item, index) => `<div class="picked-item" style="display: flex; justify-content: space-between; align-items: center; padding: 5px;"><span>${item.name} | ${item.description}</span><div><input type="number" value="${item.quantity}" class="picked-quantity-input" data-index="${index}" style="width: 60px; text-align: center;" readonly><button class="unpick-item-btn btn-icon" data-index="${index}" style="background: none; color: var(--danger-color);"><i class="fa-solid fa-arrow-left"></i></button></div></div>`).join('');
     }
 
     function moveItemToPicked(ean, quantity) {
-        const itemToMove = currentPickingOrder.items.find(item => item.ean === ean);
-        if (itemToMove && !pickedItems.some(p => p.ean === ean)) {
-            pickedItems.push({ ...itemToMove, quantity: quantity });
+        const itemToMoveIndex = currentPickingOrder.items.findIndex(item => item.ean === ean);
+        if (itemToMoveIndex > -1) {
+            const originalItem = currentPickingOrder.items[itemToMoveIndex];
+            pickedItems.push({ ...originalItem, quantity: quantity });
             renderPickingView();
         }
     }
@@ -565,7 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const itemDiv = e.target.closest('.pick-item');
         if (itemDiv?.dataset.ean) {
             const item = currentPickingOrder.items.find(i => i.ean === itemDiv.dataset.ean);
-            openNumpad((quantity) => {
+            openNumpad({ value: item.quantity }, (quantity) => { // Symulacja inputu dla klawiatury
                 if (quantity > 0) moveItemToPicked(item.ean, quantity);
             });
         }
@@ -581,19 +599,15 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (target.classList.contains('picked-quantity-input')) {
                 e.preventDefault();
                 openNumpad(target, (newQuantity) => {
-                    if(newQuantity >= 0) {
-                       if (newQuantity === 0) pickedItems.splice(index, 1);
-                       else pickedItems[index].quantity = newQuantity;
-                       renderPickingView();
+                    if (newQuantity >= 0) {
+                        if (newQuantity === 0) pickedItems.splice(index, 1);
+                        else pickedItems[index].quantity = newQuantity;
+                        renderPickingView();
                     }
                 });
             }
         });
     }
-    
-    // Pozostałe, mniej krytyczne funkcje zostawione dla zwięzłości...
-    // Na przykład funkcje z panelu admina, inwentaryzacji, które były w poprzedniej wersji
-    // oraz `checkLoginStatus()` na samym końcu.
     
     checkLoginStatus();
 });
