@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     const elements = {
-        // Logowanie i Rejestracja
         loginOverlay: document.getElementById('loginOverlay'),
         appContainer: document.getElementById('appContainer'),
         loginUsername: document.getElementById('loginUsername'),
@@ -16,8 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
         registerError: document.getElementById('registerError'),
         showRegister: document.getElementById('showRegister'),
         showLogin: document.getElementById('showLogin'),
-        
-        // Główne UI i Nawigacja
         topBar: document.getElementById('topBar'),
         bottomBar: document.getElementById('bottomBar'),
         darkModeToggle: document.getElementById('darkModeToggle'),
@@ -32,15 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
         menuSavedLists: document.getElementById('menuSavedLists'),
         scrollTopBtn: document.getElementById('scrollTopBtn'),
         scrollBottomBtn: document.getElementById('scrollBottomBtn'),
-
-        // Szybkie wyszukiwanie (Modal)
         quickSearchModal: document.getElementById('quickSearchModal'),
         closeQuickSearchModalBtn: document.getElementById('closeQuickSearchModalBtn'),
         lookupBarcodeInput: document.getElementById('lookupBarcodeInput'),
         lookupResultList: document.getElementById('lookupResultList'),
         lookupResultSingle: document.getElementById('lookupResultSingle'),
-        
-        // Główne Zamówienie
         mainContent: document.getElementById('main-content'),
         adminPanel: document.getElementById('adminPanel'),
         allUsersList: document.getElementById('allUsersList'),
@@ -58,12 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
         exportExcelBtn: document.getElementById('exportExcelBtn'),
         printListBtn: document.getElementById('printListBtn'),
         clearListBtn: document.getElementById('clearListBtn'),
-        
-        // Import CSV
         importCsvBtn: document.getElementById('importCsvBtn'),
         importCsvInput: document.getElementById('importCsvInput'),
-        
-        // Inwentaryzacja (Modal)
         inventoryModule: document.getElementById('inventoryModule'),
         closeInventoryModalBtn: document.getElementById('closeInventoryModalBtn'),
         inventoryEanInput: document.getElementById('inventoryEanInput'),
@@ -72,13 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryListBody: document.getElementById('inventoryListBody'),
         inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
         inventorySearchResults: document.getElementById('inventorySearchResults'),
-        
-        // Zapisane listy (Modal)
         savedListsModal: document.getElementById('savedListsModal'),
         closeSavedListsModalBtn: document.getElementById('closeSavedListsModalBtn'),
         savedListsContainer: document.getElementById('savedListsContainer'),
-
-        // Kompletacja (Modal)
         pickingModule: document.getElementById('pickingModule'),
         closePickingModalBtn: document.getElementById('closePickingModalBtn'),
         pickingOrderName: document.getElementById('picking-order-name'),
@@ -87,8 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
         pickingTargetList: document.getElementById('picking-target-list'),
         pickingScannedList: document.getElementById('picking-scanned-list'),
         pickingVerifyBtn: document.getElementById('picking-verify-btn'),
-        
-        // Inne
         toastContainer: document.getElementById('toast-container'),
         printArea: document.getElementById('print-area'),
         printClientName: document.getElementById('print-client-name'),
@@ -156,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // GŁÓWNA FUNKCJA PODPINANIA LISTENERS
+    // GŁÓWNA FUNKCJA PODPINANIA LISTENERS - NAPRAWIONA
     // =================================================================
     function attachAllEventListeners() {
         if (elements.loginBtn) elements.loginBtn.addEventListener('click', attemptLogin);
@@ -193,6 +176,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
         if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) { await saveCurrentList(); } } clearCurrentList(false); });
         
+        if(elements.importCsvBtn) elements.importCsvBtn.addEventListener('click', () => elements.importCsvInput.click());
+        if(elements.importCsvInput) elements.importCsvInput.addEventListener('change', handleFileImport);
+        
+        if(elements.allUsersList) elements.allUsersList.addEventListener('click', handleAdminAction);
+        
         if (elements.closeInventoryModalBtn) elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
         if(elements.inventoryAddBtn) elements.inventoryAddBtn.addEventListener('click', handleInventoryAdd);
         if(elements.inventoryEanInput) elements.inventoryEanInput.addEventListener('input', handleInventorySearch);
@@ -201,57 +189,111 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
         if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', handleSavedListAction);
-
-        if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
-        if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('input', handlePickingSearch);
-        if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { pickItemFromList(li.dataset.ean); } });
-        if (elements.pickingTargetList) elements.pickingTargetList.addEventListener('click', e => { const itemDiv = e.target.closest('.pick-item'); if(itemDiv?.dataset.ean) { pickItemFromList(itemDiv.dataset.ean); } });
-        if (elements.pickingScannedList) elements.pickingScannedList.addEventListener('click', handlePickedItemClick);
-        if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
     }
     
     // =================================================================
-    // ŁADOWANIE DANYCH
+    // POZOSTAŁE FUNKCJE
     // =================================================================
+
     async function loadDataFromServer() {
         console.log('Ładowanie bazy produktów...');
-        function fetchAndParseCsv(filename) { return fetch(filename).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); }
-        await Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')])
-            .then(([data1, data2]) => {
-                const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() });
-                productDatabase = [...data1.map(mapData), ...data2.map(mapData)];
-                console.log(`Baza danych załadowana (${productDatabase.length} pozycji).`);
-            }).catch(error => { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); });
+        try {
+            const fetchAndParseCsv = (filename) => fetch(filename)
+                .then(r => { if (!r.ok) throw new Error(`Błąd sieci dla ${filename}`); return r.arrayBuffer(); })
+                .then(b => new TextDecoder("Windows-1250").decode(b))
+                .then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) })));
+            
+            const [data1, data2] = await Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')]);
+            
+            const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() });
+            productDatabase = [...data1.map(mapData), ...data2.map(mapData)];
+            console.log(`Baza danych załadowana (${productDatabase.length} pozycji).`);
+        } catch (error) {
+            console.error('Krytyczny błąd ładowania danych:', error);
+            alert('BŁĄD: Nie udało się załadować bazy produktów.');
+        }
     }
 
-    // =================================================================
-    // NAWIGACJA I UI
-    // =================================================================
-    function switchTab(newTab) {
-        if (newTab === 'admin') {
-            elements.mainContent.style.display = 'none';
-            elements.adminPanel.style.display = 'block';
+    function showAdminPanel() {
+        elements.mainContent.style.display = 'none';
+        elements.adminPanel.style.display = 'block';
+        loadAllUsers();
+    }
+    
+    function setDarkMode(isDark) { 
+        const iconElement = elements.darkModeToggle.querySelector('i');
+        if (isDark) {
+            document.body.classList.add('dark-mode');
+            iconElement.classList.replace('fa-moon', 'fa-sun');
+            localStorage.setItem('theme', 'dark');
         } else {
-             elements.adminPanel.style.display = 'none';
-             elements.mainContent.style.display = 'block';
+            document.body.classList.remove('dark-mode');
+            iconElement.classList.replace('fa-sun', 'fa-moon');
+            localStorage.setItem('theme', 'light');
         }
     }
     
-    function setDarkMode(isDark) { const iconElement = elements.darkModeToggle.querySelector('i'); if (isDark) { document.body.classList.add('dark-mode'); iconElement.classList.replace('fa-moon', 'fa-sun'); localStorage.setItem('theme', 'dark'); } else { document.body.classList.remove('dark-mode'); iconElement.classList.replace('fa-sun', 'fa-moon'); localStorage.setItem('theme', 'light'); } }
-    
-    function showToast(message) { const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = message; elements.toastContainer.appendChild(toast); setTimeout(() => { toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }, 10); }
+    function showToast(message) { 
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+        elements.toastContainer.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 3000);
+        }, 10);
+    }
 
-    // =================================================================
-    // WYSZUKIWANIE
-    // =================================================================
-    function performSearch(searchTerm) { if (!searchTerm) return []; const term = searchTerm.toLowerCase(); return productDatabase.filter(p => (p.kod_kreskowy?.toLowerCase().includes(term)) || (p.nazwa_produktu?.toLowerCase().includes(term)) || (p.opis?.toLowerCase().includes(term))); }
+    function performSearch(searchTerm) { 
+        if (!searchTerm) return [];
+        const term = searchTerm.toLowerCase();
+        return productDatabase.filter(p => 
+            (p.kod_kreskowy?.toLowerCase().includes(term)) || 
+            (p.nazwa_produktu?.toLowerCase().includes(term)) || 
+            (p.opis?.toLowerCase().includes(term))
+        );
+    }
+    
+    function addProductToList(code = null, quantity = null) {
+        const ean = code || elements.listBarcodeInput.value.trim();
+        const qty = quantity || parseInt(elements.quantityInput.value, 10);
+        if (!ean || isNaN(qty) || qty < 1) return alert("Podaj kod/EAN i prawidłową ilość.");
+        let productData = productDatabase.find(p => p.kod_kreskowy === ean || p.nazwa_produktu === ean);
+        if (!productData) productData = { kod_kreskowy: ean, nazwa_produktu: ean, opis: ean, cena: "0" };
+        const existingItem = scannedItems.find(item => item.ean === productData.kod_kreskowy);
+        if (existingItem) existingItem.quantity += qty;
+        else scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: qty, price: productData.cena });
+        renderScannedList();
+        showToast(`Dodano: ${productData.nazwa_produktu} (Ilość: ${qty})`);
+        elements.listBarcodeInput.value = '';
+        elements.quantityInput.value = '1';
+        elements.listBuilderSearchResults.style.display = 'none';
+        elements.listBarcodeInput.focus();
+    }
+    
+    function handleListBuilderSearch(event) {
+        const searchTerm = event.target.value.trim();
+        elements.listBuilderSearchResults.style.display = 'none';
+        if (!searchTerm) return;
+        const results = performSearch(searchTerm);
+        if (results.length > 0) {
+            let listHtml = '<ul>';
+            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+            listHtml += `<li class="add-unknown-item" data-ean="${searchTerm}"><i class="fa fa-plus"></i> Dodaj "${searchTerm}" jako nową pozycję</li>`;
+            listHtml += '</ul>';
+            elements.listBuilderSearchResults.innerHTML = listHtml;
+            elements.listBuilderSearchResults.style.display = 'block';
+        }
+    }
     
     function handleLookupSearch(event) {
         const searchTerm = event.target.value.trim();
         elements.lookupResultList.innerHTML = '';
         elements.lookupResultList.style.display = 'none';
         elements.lookupResultSingle.innerHTML = '';
-        
         if (!searchTerm) return;
         const results = performSearch(searchTerm);
         if (results.length === 1) {
@@ -277,53 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.lookupResultList.style.display = 'block';
     }
     
-    // =================================================================
-    // GŁÓWNY MODUŁ ZAMÓWIEŃ
-    // =================================================================
-    function addProductToList(code = null, quantity = null) {
-        const ean = code || elements.listBarcodeInput.value.trim();
-        const qty = quantity || parseInt(elements.quantityInput.value, 10);
-        if (!ean || isNaN(qty) || qty < 1) return alert("Podaj kod/EAN i prawidłową ilość.");
-        let productData = productDatabase.find(p => p.kod_kreskowy === ean || p.nazwa_produktu === ean);
-        if (!productData) productData = { kod_kreskowy: ean, nazwa_produktu: ean, opis: ean, cena: "0" };
-        const existingItem = scannedItems.find(item => item.ean === productData.kod_kreskowy);
-        if (existingItem) existingItem.quantity += qty;
-        else scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: qty, price: productData.cena });
-        renderScannedList();
-        showToast(`Dodano: ${productData.nazwa_produktu} (Ilość: ${qty})`);
-        elements.listBarcodeInput.value = '';
-        elements.quantityInput.value = '1';
-        elements.listBuilderSearchResults.innerHTML = '';
-        elements.listBuilderSearchResults.style.display = 'none';
-        elements.listBarcodeInput.focus();
-    }
-    
-    function handleListBuilderSearch(event) {
-        const searchTerm = event.target.value.trim();
-        elements.listBuilderSearchResults.style.display = 'none';
-        if (!searchTerm) return;
-        
-        const results = performSearch(searchTerm);
-        
-        if (isMobile && results.length > 0) {
-            addProductToList(results[0].kod_kreskowy, 1);
-            return;
-        }
-
-        if (results.length > 0) {
-            let listHtml = '<ul>';
-            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
-            listHtml += `<li class="add-unknown-item" data-ean="${searchTerm}"><i class="fa fa-plus"></i> Dodaj "${searchTerm}" jako nową pozycję</li>`;
-            listHtml += '</ul>';
-            elements.listBuilderSearchResults.innerHTML = listHtml;
-            elements.listBuilderSearchResults.style.display = 'block';
-        } else {
-             if (window.confirm(`Produkt "${searchTerm}" nie został znaleziony. Czy chcesz dodać go jako nową pozycję?`)) {
-                addProductToList(searchTerm);
-             }
-        }
-    }
-    
     function renderScannedList() {
         elements.scannedListBody.innerHTML = '';
         const canOperate = scannedItems.length > 0;
@@ -344,11 +339,8 @@ document.addEventListener('DOMContentLoaded', () => {
             openNumpad(target, (newValue) => {
                 const index = target.dataset.index;
                 if(newValue >= 0 && index < scannedItems.length) {
-                    if (newValue === 0) {
-                        scannedItems.splice(index, 1);
-                    } else {
-                        scannedItems[index].quantity = newValue;
-                    }
+                    if (newValue === 0) scannedItems.splice(index, 1);
+                    else scannedItems[index].quantity = newValue;
                     renderScannedList();
                 }
             });
@@ -359,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+
     function getSafeFilename() { const clientName = elements.clientNameInput.value.trim().replace(/[<>:"/\\|?* ]+/g, '_') || 'zamowienie'; const date = new Date().toISOString().slice(0, 10); return `${clientName}_${date}`; }
     function exportToCsvOptima() { if (scannedItems.length === 0) return; const csvContent = scannedItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`); }
     function exportToExcelDetailed() { if (scannedItems.length === 0) return; const headers = '"Kod produktu";"Nazwa";"EAN";"Ilość";"Cena Jednostkowa"'; const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${item.name || ''}";"${(item.description || '').replace(/"/g, '""')}";"${item.ean || ''}";"${item.quantity || 0}";"${priceFormatted}"`; }); const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`; downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`); }
