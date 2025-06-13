@@ -10,7 +10,7 @@ app.use(express.json());
 
 // Łączenie z bazą danych MongoDB
 const dbURI = process.env.MONGO_URI;
-mongoose.connect(dbURI, { useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true, useFindAndModify: false })
+mongoose.connect(dbURI)
     .then(() => console.log('Połączono z MongoDB...'))
     .catch(err => console.error('Nie udało się połączyć z MongoDB...', err));
 
