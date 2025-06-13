@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pickingModule: document.getElementById('pickingModule'),
         closePickingModalBtn: document.getElementById('closePickingModalBtn'),
         pickingOrderName: document.getElementById('picking-order-name'),
-        pickingEanInput: document.getElementById('pickingEanInput'),
+        pickingEanInput: document.getElementById('picking-ean-input'),
         pickingSearchResults: document.getElementById('picking-search-results'),
         pickingStatusMsg: document.getElementById('picking-status-msg'),
         pickingTargetList: document.getElementById('picking-target-list'),
@@ -235,8 +235,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     function switchTab(newTab) {
         if (newTab === 'admin') {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            elements.adminPanel.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+            elements.adminPanel.style.display = 'block';
+        } else {
+             document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+             elements.listBuilderMode.style.display = 'block';
         }
     }
     
@@ -245,43 +248,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function showToast(message) { const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = message; elements.toastContainer.appendChild(toast); setTimeout(() => { toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }, 10); }
 
     // =================================================================
-    // WYSZUKIWANIE
+    // WYSZUKIWANIE I DODAWANIE PRODUKTÓW
     // =================================================================
     function performSearch(searchTerm) { if (!searchTerm) return []; const term = searchTerm.toLowerCase(); return productDatabase.filter(p => (p.kod_kreskowy?.toLowerCase().includes(term)) || (p.nazwa_produktu?.toLowerCase().includes(term)) || (p.opis?.toLowerCase().includes(term))); }
     
-    function handleLookupSearch(event) {
-        const searchTerm = event.target.value.trim();
-        elements.lookupResultList.innerHTML = '';
-        elements.lookupResultList.style.display = 'none';
-        elements.lookupResultSingle.innerHTML = '';
-        if (!searchTerm) return;
-        const results = performSearch(searchTerm);
-        if (results.length === 1) {
-            displaySingleProductInLookup(results[0]);
-        } else if (results.length > 1) {
-            displayProductListInLookup(results);
-        } else {
-            elements.lookupResultSingle.innerHTML = '<p style="padding: 15px;">Nie znaleziono produktu.</p>';
-        }
-    }
-    
-    function displaySingleProductInLookup(product) {
-        let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
-        elements.lookupResultSingle.innerHTML = html;
-        elements.lookupResultList.style.display = 'none';
-    }
-
-    function displayProductListInLookup(products) {
-        let listHtml = '<ul>';
-        products.forEach(p => { listHtml += `<li data-product-json='${JSON.stringify(p)}'>${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
-        listHtml += '</ul>';
-        elements.lookupResultList.innerHTML = listHtml;
-        elements.lookupResultList.style.display = 'block';
-    }
-    
-    // =================================================================
-    // GŁÓWNY MODUŁ ZAMÓWIEŃ
-    // =================================================================
     function addProductToList(code = null, quantity = null) {
         const ean = code || elements.listBarcodeInput.value.trim();
         const qty = quantity || parseInt(elements.quantityInput.value, 10);
@@ -315,6 +285,36 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.listBuilderSearchResults.innerHTML = listHtml;
             elements.listBuilderSearchResults.style.display = 'block';
         }
+    }
+    
+    function handleLookupSearch(event) {
+        const searchTerm = event.target.value.trim();
+        elements.lookupResultList.innerHTML = '';
+        elements.lookupResultList.style.display = 'none';
+        elements.lookupResultSingle.innerHTML = '';
+        if (!searchTerm) return;
+        const results = performSearch(searchTerm);
+        if (results.length === 1) {
+            displaySingleProductInLookup(results[0]);
+        } else if (results.length > 1) {
+            displayProductListInLookup(results);
+        } else {
+            elements.lookupResultSingle.innerHTML = '<p style="padding: 15px;">Nie znaleziono produktu.</p>';
+        }
+    }
+    
+    function displaySingleProductInLookup(product) {
+        let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
+        elements.lookupResultSingle.innerHTML = html;
+        elements.lookupResultList.style.display = 'none';
+    }
+
+    function displayProductListInLookup(products) {
+        let listHtml = '<ul>';
+        products.forEach(p => { listHtml += `<li data-product-json='${JSON.stringify(p)}'>${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+        listHtml += '</ul>';
+        elements.lookupResultList.innerHTML = listHtml;
+        elements.lookupResultList.style.display = 'block';
     }
     
     function renderScannedList() {
@@ -443,6 +443,29 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { container.innerHTML = `<p style="color:var(--danger-color)">${error.message}</p>`; }
     }
     
+    async function handleSavedListAction(e) {
+        const target = e.target.closest('button');
+        if (!target) return;
+        const listId = target.dataset.id;
+        if (target.classList.contains('load-list-btn')) {
+            if (!confirm("Czy na pewno wczytać listę? Obecne zamówienie zostanie nadpisane.")) return;
+            const loadedList = await loadListById(listId);
+            if (loadedList) { elements.savedListsModal.style.display = 'none'; showToast(`Wczytano listę: ${loadedList.listName}`); }
+        } else if (target.classList.contains('delete-list-btn')) {
+            if (!confirm("Czy na pewno usunąć tę listę?")) return;
+            try {
+                const response = await fetch(`/api/data/list/${listId}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.msg || "Błąd usuwania listy");
+                showToast("Lista usunięta.");
+                await showSavedLists();
+            } catch (error) { alert(error.message); }
+        } else if (target.classList.contains('pick-order-btn')) {
+             elements.savedListsModal.style.display = 'none';
+             await startPicking(listId, target.dataset.name);
+        }
+    }
+
     async function handleFileImport(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -473,115 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         event.target.value = '';
     }
-
-    // =================================================================
-    // MODUŁ KOMPLETACJI
-    // =================================================================
-    async function startPicking(listId, listName) {
-        try {
-            const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
-            if (!response.ok) throw new Error("Błąd wczytywania zamówienia do kompletacji");
-            currentPickingOrder = await response.json();
-            pickedItems = [];
-            elements.pickingOrderName.textContent = `Kompletacja: ${listName}`;
-            renderPickingView();
-            elements.pickingModule.style.display = 'flex';
-        } catch (error) { alert(error.message); }
-    }
-
-    function renderPickingView() {
-        if(!currentPickingOrder) return;
-        const toPickItems = currentPickingOrder.items.filter(item => !pickedItems.some(p => p.ean === item.ean));
-        elements.pickingTargetList.innerHTML = toPickItems.map(item => `<div class="pick-item" data-ean="${item.ean}" style="padding: 8px; cursor: pointer; border-bottom: 1px solid var(--border-color);"><strong>${item.name}</strong><br><small>${item.description}</small> (ilość: ${item.quantity})</div>`).join('') || "<p>Wszystko zebrane!</p>";
-        elements.pickingScannedList.innerHTML = pickedItems.map((item, index) => `<div class="picked-item" style="display: flex; justify-content: space-between; align-items: center; padding: 5px;"><span>${item.name} | ${item.description}</span><div><input type="number" value="${item.quantity}" class="picked-quantity-input" data-index="${index}" style="width: 60px; text-align: center;" readonly><button class="unpick-item-btn btn-icon" data-index="${index}" style="background: none; color: var(--danger-color);"><i class="fa-solid fa-arrow-left"></i></button></div></div>`).join('');
-    }
     
-    function pickItemFromList(ean) {
-        const item = currentPickingOrder.items.find(i => i.ean === ean);
-        if (item) {
-            openNumpad({ value: item.quantity }, (quantity) => {
-                if (quantity > 0) moveItemToPicked(item, quantity);
-            });
-        }
-    }
-    
-    function moveItemToPicked(item, quantity) {
-        const itemToMove = { ...item, quantity };
-        pickedItems.push(itemToMove);
-        renderPickingView();
-    }
-    
-    function handlePickedItemClick(e) {
-        const target = e.target.closest('button.unpick-item-btn, input.picked-quantity-input');
-        if (!target) return;
-        const index = target.dataset.index;
-        if (target.classList.contains('unpick-item-btn')) {
-            pickedItems.splice(index, 1);
-            renderPickingView();
-        } else if (target.classList.contains('picked-quantity-input')) {
-            e.preventDefault();
-            openNumpad(target, (newQuantity) => {
-                if(newQuantity >= 0) {
-                   if (newQuantity === 0) pickedItems.splice(index, 1);
-                   else pickedItems[index].quantity = newQuantity;
-                   renderPickingView();
-                }
-            });
-        }
-    }
-
-    function handlePickingSearch(event) {
-        const searchTerm = event.target.value.trim();
-        const resultsDiv = elements.pickingSearchResults;
-        resultsDiv.innerHTML = '';
-        resultsDiv.style.display = 'none';
-        if (!searchTerm) return;
-        const results = performSearch(searchTerm).filter(p => !pickedItems.some(pi => pi.ean === p.kod_kreskowy));
-        if(results.length > 0) {
-            let listHtml = '<ul>';
-            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
-            listHtml += '</ul>';
-            resultsDiv.innerHTML = listHtml;
-            resultsDiv.style.display = 'block';
-        }
-    }
-    
-    function verifyPicking() {
-        let shortages = [], surpluses = [];
-        const allEans = new Set([...currentPickingOrder.items.map(i => i.ean), ...pickedItems.map(i => i.ean)]);
-        allEans.forEach(ean => {
-            const targetItem = currentPickingOrder.items.find(i => i.ean === ean);
-            const pickedItem = pickedItems.find(i => i.ean === ean);
-            const pickedQty = pickedItem ? pickedItem.quantity : 0;
-            const targetQty = targetItem ? targetItem.quantity : 0;
-            const name = targetItem?.description || pickedItem?.description || `Produkt spoza listy (${ean})`;
-
-            if (pickedQty < targetQty) shortages.push(`${name}: brakuje ${targetQty - pickedQty}`);
-            else if (pickedQty > targetQty) surpluses.push(`${name}: nadwyżka ${pickedQty - targetQty}`);
-        });
-        let summaryHtml = '<h3>Podsumowanie</h3>';
-        if (shortages.length === 0 && surpluses.length === 0) {
-            summaryHtml += '<p style="color: var(--success-color);">Zamówienie jest kompletne i zgodne.</p>';
-        } else {
-            if (shortages.length > 0) summaryHtml += `<p style="color: var(--danger-color);">Niedobory:</p><ul>${shortages.map(s => `<li>${s}</li>`).join('')}</ul>`;
-            if (surpluses.length > 0) summaryHtml += `<p style="color: var(--warning-color);">Nadwyżki:</p><ul>${surpluses.map(s => `<li>${s}</li>`).join('')}</ul>`;
-            if (!confirm("Wykryto rozbieżności w zamówieniu. Czy chcesz je zaakceptować i kontynuować?")) return;
-        }
-        elements.pickingSummaryBody.innerHTML = summaryHtml;
-        elements.pickingSummaryModal.style.display = 'flex';
-    }
-    
-    function exportPickedToCsv() {
-        if (pickedItems.length === 0) return;
-        const csvContent = pickedItems.map(item => `${item.ean};${item.quantity}`).join('\n');
-        downloadFile(csvContent, 'text/csv;charset=utf-8;', `${currentPickingOrder.listName}_skompletowane.csv`);
-    }
-
-    // =================================================================
-    // POZOSTAŁE MODUŁY I EVENTY
-    // =================================================================
-    // Uzupełnienie kodu z poprzednich odpowiedzi... (Panel Admina, Inwentaryzacja, Numpad)
-
     async function loadAllUsers() {
         const userListDiv = elements.allUsersList;
         if(!userListDiv) return;
@@ -624,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!ean || !quantity) return;
         const existing = inventoryItems.find(i => i.ean === ean);
         if (existing) existing.quantity += quantity;
-        else inventoryItems.push({ ean: ean, name: 'Inwentaryzacja', quantity: quantity });
+        else inventoryItems.push({ ean: ean, name: ean, quantity: quantity });
         renderInventoryList();
         elements.inventoryEanInput.value = '';
         elements.inventoryQuantityInput.value = '1';
@@ -663,7 +578,10 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.inventoryListBody.innerHTML = inventoryItems.map((item, i) => `<tr><td>${item.name}</td><td>${item.ean}</td><td><input type="number" readonly class="quantity-in-table" value="${item.quantity}" data-index="${i}"></td><td><button class="delete-inv-item-btn btn-icon btn-danger" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); 
         }
     }
-
+    
+    // =================================================================
+    // MODUŁ Klawiatury Numerycznej
+    // =================================================================
     function openNumpad(targetElement, callbackOnOk) {
         numpadTarget = targetElement;
         numpadCallback = callbackOnOk;
@@ -673,13 +591,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleNumpadOK() {
         const value = parseInt(elements.numpadDisplay.textContent, 10) || 0;
-        if (numpadTarget && value >= 0) {
-            if (numpadCallback) {
-                numpadCallback(value);
-            } else {
-                numpadTarget.value = value;
-                numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
-            }
+        if (numpadTarget) {
+            numpadTarget.value = value;
+            numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        if (numpadCallback) {
+            numpadCallback(value);
         }
         elements.numpadModal.style.display = 'none';
     }
@@ -687,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function attachNumpadListeners() {
         elements.numpadKeys.forEach(key => key.addEventListener('click', () => {
             const display = elements.numpadDisplay;
-            if (display.textContent === '0') display.textContent = '';
+            if (display.textContent === '0' || !/^\d+$/.test(display.textContent)) display.textContent = '';
             display.textContent += key.dataset.key;
         }));
         elements.numpadClear.addEventListener('click', () => { elements.numpadDisplay.textContent = '0'; });
@@ -697,10 +614,113 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         elements.numpadOk.addEventListener('click', handleNumpadOK);
         
-        elements.quantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
-        elements.inventoryQuantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
+        elements.quantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target, (newValue) => { e.target.value = newValue; }); });
+        elements.inventoryQuantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target, (newValue) => { e.target.value = newValue; }); });
     }
 
-    // Inicjalizacja Aplikacji
+    // =================================================================
+    // MODUŁ KOMPLETACJI
+    // =================================================================
+    async function startPicking(listId, listName) {
+        try {
+            const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if (!response.ok) throw new Error("Błąd wczytywania zamówienia do kompletacji");
+            currentPickingOrder = await response.json();
+            pickedItems = [];
+            elements.pickingOrderName.textContent = `Kompletacja: ${listName}`;
+            renderPickingView();
+            elements.pickingModule.style.display = 'flex';
+        } catch (error) { alert(error.message); }
+    }
+
+    function renderPickingView() {
+        if(!currentPickingOrder) return;
+        const toPickItems = currentPickingOrder.items.filter(item => !pickedItems.some(p => p.ean === item.ean));
+        elements.pickingTargetList.innerHTML = toPickItems.map(item => `<div class="pick-item" data-ean="${item.ean}" style="padding: 8px; cursor: pointer; border-bottom: 1px solid var(--border-color);"><strong>${item.name}</strong><br><small>${item.description}</small> (ilość: ${item.quantity})</div>`).join('') || "<p>Wszystko zebrane!</p>";
+        elements.pickingScannedList.innerHTML = pickedItems.map((item, index) => `<div class="picked-item" style="display: flex; justify-content: space-between; align-items: center; padding: 5px;"><span>${item.name} | ${item.description}</span><div><input type="number" value="${item.quantity}" class="picked-quantity-input" data-index="${index}" style="width: 60px; text-align: center;" readonly><button class="unpick-item-btn btn-icon" data-index="${index}" style="background: none; color: var(--danger-color);"><i class="fa-solid fa-arrow-left"></i></button></div></div>`).join('');
+    }
+
+    function pickItemFromList(ean) {
+        const item = currentPickingOrder.items.find(i => i.ean === ean);
+        if (item) {
+            openNumpad({ value: item.quantity }, (quantity) => {
+                if (quantity > 0) moveItemToPicked(item, quantity);
+            });
+        }
+    }
+    
+    function moveItemToPicked(item, quantity) {
+        const itemToMove = { ...item, quantity };
+        pickedItems.push(itemToMove);
+        renderPickingView();
+    }
+    
+    function handlePickedItemClick(e) {
+        const target = e.target.closest('button.unpick-item-btn, input.picked-quantity-input');
+        if (!target) return;
+        const index = target.dataset.index;
+        if (target.classList.contains('unpick-item-btn')) {
+            pickedItems.splice(index, 1);
+            renderPickingView();
+        } else if (target.classList.contains('picked-quantity-input')) {
+            e.preventDefault();
+            openNumpad(target, (newQuantity) => {
+                if(newQuantity >= 0) {
+                   if (newQuantity === 0) pickedItems.splice(index, 1);
+                   else pickedItems[index].quantity = newQuantity;
+                   renderPickingView();
+                }
+            });
+        }
+    }
+
+    function handlePickingSearch(event) {
+        const searchTerm = event.target.value.trim();
+        const resultsDiv = elements.pickingSearchResults;
+        resultsDiv.innerHTML = '';
+        resultsDiv.style.display = 'none';
+        if(!searchTerm) return;
+        const results = performSearch(searchTerm).filter(p => !pickedItems.some(pi => pi.ean === p.kod_kreskowy));
+        if(results.length > 0) {
+            let listHtml = '<ul>';
+            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+            listHtml += '</ul>';
+            resultsDiv.innerHTML = listHtml;
+            resultsDiv.style.display = 'block';
+        }
+    }
+    
+    function verifyPicking() {
+        let shortages = [], surpluses = [];
+        const allEans = new Set([...currentPickingOrder.items.map(i => i.ean), ...pickedItems.map(i => i.ean)]);
+        allEans.forEach(ean => {
+            const targetItem = currentPickingOrder.items.find(i => i.ean === ean);
+            const pickedItem = pickedItems.find(i => i.ean === ean);
+            const pickedQty = pickedItem ? pickedItem.quantity : 0;
+            const targetQty = targetItem ? targetItem.quantity : 0;
+            const name = targetItem?.description || pickedItem?.description || `Produkt spoza listy (${ean})`;
+
+            if (pickedQty < targetQty) shortages.push(`${name}: brakuje ${targetQty - pickedQty}`);
+            else if (pickedQty > targetQty) surpluses.push(`${name}: nadwyżka ${pickedQty - targetQty}`);
+        });
+        let summaryHtml = '<h3>Podsumowanie</h3>';
+        if (shortages.length === 0 && surpluses.length === 0) {
+            summaryHtml += '<p style="color: var(--success-color);">Zamówienie jest kompletne i zgodne.</p>';
+        } else {
+            if (shortages.length > 0) summaryHtml += `<p style="color: var(--danger-color);">Niedobory:</p><ul>${shortages.map(s => `<li>${s}</li>`).join('')}</ul>`;
+            if (surpluses.length > 0) summaryHtml += `<p style="color: var(--warning-color);">Nadwyżki:</p><ul>${surpluses.map(s => `<li>${s}</li>`).join('')}</ul>`;
+            if (!confirm("Wykryto rozbieżności w zamówieniu. Czy chcesz je zaakceptować i kontynuować?")) return;
+        }
+        elements.pickingSummaryBody.innerHTML = summaryHtml;
+        elements.pickingSummaryModal.style.display = 'flex';
+    }
+    
+    function exportPickedToCsv() {
+        if (pickedItems.length === 0) return;
+        const csvContent = pickedItems.map(item => `${item.ean};${item.quantity}`).join('\n');
+        downloadFile(csvContent, 'text/csv;charset=utf-8;', `${currentPickingOrder.listName}_skompletowane.csv`);
+    }
+
+    // Wywołanie startowe
     checkLoginStatus();
 });
