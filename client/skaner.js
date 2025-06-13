@@ -468,3 +468,150 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ... (reszta kodu jest w następnym bloku)
 });
+// ... (kontynuacja pliku skaner.js)
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ... (cały kod z poprzedniego bloku, aż do tego miejsca) ...
+
+    function handleAdminAction(e) {
+        const target = e.target.closest('button'); 
+        if (!target) return;
+        const { userid, username, role } = target.dataset;
+        if (target.classList.contains('approve-user-btn')) handleUserAction(`/api/admin/approve-user/${userid}`, { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') } });
+        else if (target.classList.contains('edit-user-btn')) { const p = prompt(`Nowe hasło dla ${username}:`); if (p) handleUserAction(`/api/admin/edit-password/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newPassword: p }) }); }
+        else if (target.classList.contains('delete-user-btn')) { if (confirm(`Na pewno usunąć ${username}?`)) handleUserAction(`/api/admin/delete-user/${userid}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); }
+        else if (target.classList.contains('change-role-btn')) { if (confirm(`Zmienić rolę ${username} na ${role}?`)) handleUserAction(`/api/admin/change-role/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newRole: role }) }); }
+    }
+    
+    function handleDeleteInventoryItem(e) {
+        const btn = e.target.closest('.delete-inv-item-btn');
+        if (btn) { inventoryItems.splice(btn.dataset.index, 1); renderInventoryList(); }
+        if(e.target.classList.contains('quantity-in-table')) {
+            e.preventDefault();
+            openNumpad(e.target, (newValue) => {
+                inventoryItems[e.target.dataset.index].quantity = newValue;
+                renderInventoryList();
+            });
+        }
+    }
+    
+    function handleInventoryAdd() {
+        const ean = elements.inventoryEanInput.value.trim();
+        const quantity = parseInt(elements.inventoryQuantityInput.value, 10);
+        if (!ean || !quantity) return;
+        const existing = inventoryItems.find(i => i.ean === ean);
+        if (existing) existing.quantity += quantity;
+        else inventoryItems.push({ ean: ean, name: 'Inwentaryzacja', quantity: quantity });
+        renderInventoryList();
+        elements.inventoryEanInput.value = '';
+        elements.inventoryQuantityInput.value = '1';
+    }
+    
+    function handleInventorySearch(event) {
+        const searchTerm = event.target.value.trim();
+        const resultsDiv = elements.inventorySearchResults;
+        resultsDiv.style.display = 'none';
+        resultsDiv.innerHTML = '';
+        if(!searchTerm) return;
+        const results = performSearch(searchTerm);
+        if(results.length > 0) {
+            let listHtml = '<ul>';
+            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+            listHtml += '</ul>';
+            resultsDiv.innerHTML = listHtml;
+            resultsDiv.style.display = 'block';
+        }
+    }
+    
+    function renderInventoryList() { 
+        if (elements.inventoryListBody) {
+            elements.inventoryListBody.innerHTML = inventoryItems.map((item, i) => `<tr><td>${item.name}</td><td>${item.ean}</td><td><input type="number" readonly class="quantity-in-table" value="${item.quantity}" data-index="${i}"></td><td><button class="delete-inv-item-btn btn-icon btn-danger" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); 
+        }
+    }
+
+    // =================================================================
+    // MODUŁ KOMPLETACJI
+    // =================================================================
+    async function startPicking(listId, listName) {
+        try {
+            const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if (!response.ok) throw new Error("Błąd wczytywania zamówienia do kompletacji");
+            currentPickingOrder = await response.json();
+            pickedItems = [];
+            elements.pickingOrderName.textContent = `Kompletacja: ${listName}`;
+            renderPickingView();
+            elements.pickingModule.style.display = 'flex';
+        } catch (error) { alert(error.message); }
+    }
+
+    function renderPickingView() {
+        if(!currentPickingOrder) return;
+        const toPickItems = currentPickingOrder.items.filter(item => !pickedItems.some(p => p.ean === item.ean));
+        elements.pickingTargetList.innerHTML = toPickItems.map(item => `<div class="pick-item" data-ean="${item.ean}" style="padding: 8px; cursor: pointer; border-bottom: 1px solid var(--border-color);"><strong>${item.name}</strong><br><small>${item.description}</small> (ilość: ${item.quantity})</div>`).join('') || "<p>Wszystko zebrane!</p>";
+        elements.pickingScannedList.innerHTML = pickedItems.map((item, index) => `<div class="picked-item" style="display: flex; justify-content: space-between; align-items: center; padding: 5px;"><span>${item.name} | ${item.description}</span><div><input type="number" value="${item.quantity}" class="picked-quantity-input" data-index="${index}" style="width: 60px; text-align: center;" readonly><button class="unpick-item-btn btn-icon" data-index="${index}" style="background: none; color: var(--danger-color);"><i class="fa-solid fa-arrow-left"></i></button></div></div>`).join('');
+    }
+
+    function pickItemFromList(ean) {
+        const item = currentPickingOrder.items.find(i => i.ean === ean);
+        if (item) {
+            openNumpad({ value: item.quantity }, (quantity) => {
+                if (quantity > 0) moveItemToPicked(item, quantity);
+            });
+        }
+    }
+    
+    function moveItemToPicked(item, quantity) {
+        const itemToMove = { ...item, quantity };
+        pickedItems.push(itemToMove);
+        renderPickingView();
+    }
+
+    function handlePickedItemClick(e) {
+        const target = e.target.closest('button.unpick-item-btn, input.picked-quantity-input');
+        if (!target) return;
+        const index = target.dataset.index;
+        if (target.classList.contains('unpick-item-btn')) {
+            pickedItems.splice(index, 1);
+            renderPickingView();
+        } else if (target.classList.contains('picked-quantity-input')) {
+            e.preventDefault();
+            openNumpad(target, (newQuantity) => {
+                if(newQuantity >= 0) {
+                    if (newQuantity === 0) pickedItems.splice(index, 1);
+                    else pickedItems[index].quantity = newQuantity;
+                    renderPickingView();
+                }
+            });
+        }
+    }
+
+    function handlePickingSearch(event) {
+        const searchTerm = event.target.value.trim();
+        const resultsDiv = elements.pickingSearchResults;
+        resultsDiv.style.display = 'none';
+        resultsDiv.innerHTML = '';
+        if(!searchTerm) return;
+        const results = performSearch(searchTerm).filter(p => !pickedItems.some(pi => pi.ean === p.kod_kreskowy));
+        if(results.length > 0) {
+            let listHtml = '<ul>';
+            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+            listHtml += '</ul>';
+            resultsDiv.innerHTML = listHtml;
+            resultsDiv.style.display = 'block';
+        }
+    }
+
+    function verifyPicking() {
+        // ... (logika weryfikacji bez zmian)
+    }
+
+    function exportPickedToCsv() {
+        if (pickedItems.length === 0) return;
+        const csvContent = pickedItems.map(item => `${item.ean};${item.quantity}`).join('\n');
+        downloadFile(csvContent, 'text/csv;charset=utf-8;', `${currentPickingOrder.listName}_skompletowane.csv`);
+    }
+
+    // Inicjalizacja Aplikacji
+    checkLoginStatus();
+});
