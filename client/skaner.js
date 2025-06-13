@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         topBar: document.getElementById('topBar'),
         bottomBar: document.getElementById('bottomBar'),
         darkModeToggle: document.getElementById('darkModeToggle'),
+        quickSearchBtn: document.getElementById('quickSearchBtn'),
         menuToggleBtn: document.getElementById('menuToggleBtn'),
         dropdownMenu: document.getElementById('dropdownMenu'),
         menuUsername: document.getElementById('menuUsername'),
@@ -37,7 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
         lookupResultSingle: document.getElementById('lookupResultSingle'),
         quickSearchModal: document.getElementById('quickSearchModal'),
         closeQuickSearchModalBtn: document.getElementById('closeQuickSearchModalBtn'),
-        quickSearchBtn: document.getElementById('quickSearchBtn'),
         listBarcodeInput: document.getElementById('listBarcode_Input'),
         listBuilderSearchResults: document.getElementById('listBuilderSearchResults'),
         quantityInput: document.getElementById('quantityInput'),
@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         printListBtn: document.getElementById('printListBtn'),
         clearListBtn: document.getElementById('clearListBtn'),
         importCsvInput: document.getElementById('importCsvInput'),
+        importCsvBtn: document.getElementById('importCsvBtn'),
         adminPanel: document.getElementById('adminPanel'),
         allUsersList: document.getElementById('allUsersList'),
         inventoryModule: document.getElementById('inventoryModule'),
@@ -154,35 +155,19 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { registerError.textContent = 'Nie można połączyć się z serwerem.'; }
     }
 
-    async function loadDataFromServer() {
-        console.log('Ładowanie bazy produktów...');
-        function fetchAndParseCsv(filename) { return fetch(filename).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); }
-        await Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')])
-            .then(([data1, data2]) => {
-                const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() });
-                productDatabase = [...data1.map(mapData), ...data2.map(mapData)];
-                console.log(`Baza danych załadowana (${productDatabase.length} pozycji).`);
-                Object.values(elements).forEach(el => {
-                    if (el && typeof el.disabled !== 'undefined' && !el.closest('#loginOverlay')) {
-                        el.disabled = false;
-                    }
-                });
-            }).catch(error => { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); });
-    }
-
+    // =================================================================
+    // GŁÓWNA FUNKCJA PODPINANIA LISTENERÓW
+    // =================================================================
     function attachAllEventListeners() {
         if (elements.loginBtn) elements.loginBtn.addEventListener('click', attemptLogin);
         if (elements.loginPassword) elements.loginPassword.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
         if (elements.registerBtn) elements.registerBtn.addEventListener('click', handleRegistration);
         if (elements.showRegister) elements.showRegister.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'none'; elements.registerForm.style.display = 'block'; });
         if (elements.showLogin) elements.showLogin.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'block'; elements.registerForm.style.display = 'none'; });
-        
         if(elements.tabLookupBtn) elements.tabLookupBtn.addEventListener('click', () => switchTab('lookup'));
         if(elements.tabListBuilderBtn) elements.tabListBuilderBtn.addEventListener('click', () => switchTab('listBuilder'));
-        
         if (elements.menuToggleBtn) elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
         window.addEventListener('click', () => { if (elements.dropdownMenu.classList.contains('show')) elements.dropdownMenu.classList.remove('show'); });
-        
         if (elements.menuAdminBtn) elements.menuAdminBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('admin'); loadAllUsers(); });
         if (elements.menuInventoryBtn) elements.menuInventoryBtn.addEventListener('click', (e) => { e.preventDefault(); elements.inventoryModule.style.display = 'flex'; });
         if (elements.menuLogoutBtn) elements.menuLogoutBtn.addEventListener('click', (e) => { e.preventDefault(); localStorage.clear(); location.reload(); });
@@ -190,35 +175,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.menuSavedLists) elements.menuSavedLists.addEventListener('click', (e) => { e.preventDefault(); showSavedLists(); });
         if (elements.scrollTopBtn) elements.scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0 }));
         if (elements.scrollBottomBtn) elements.scrollBottomBtn.addEventListener('click', () => window.scrollTo({ top: document.body.scrollHeight }));
-        
         if (elements.darkModeToggle) elements.darkModeToggle.addEventListener('click', () => setDarkMode(!document.body.classList.contains('dark-mode')));
-        
         if(elements.listBarcodeInput) elements.listBarcodeInput.addEventListener('input', handleListBuilderSearch);
         if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) { addProductToList(targetLi.dataset.ean); } });
         if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
-        
         if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('input', handleLookupSearch);
         if(elements.lookupResultList) elements.lookupResultList.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
-        
         if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
         if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => clearCurrentList(true));
         if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
         if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) { await saveCurrentList(); } } clearCurrentList(false); });
-        
         if(elements.importCsvBtn) elements.importCsvBtn.addEventListener('click', () => elements.importCsvInput.click());
         if(elements.importCsvInput) elements.importCsvInput.addEventListener('change', handleFileImport);
-        
         if(elements.allUsersList) elements.allUsersList.addEventListener('click', handleAdminAction);
-        
         if (elements.closeInventoryModalBtn) elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
         if(elements.inventoryAddBtn) elements.inventoryAddBtn.addEventListener('click', handleInventoryAdd);
         if(elements.inventoryEanInput) elements.inventoryEanInput.addEventListener('input', handleInventorySearch);
         if(elements.inventorySearchResults) elements.inventorySearchResults.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.ean) { elements.inventoryEanInput.value = li.dataset.ean; elements.inventorySearchResults.style.display = 'none'; }});
         if(elements.inventoryListBody) elements.inventoryListBody.addEventListener('click', handleDeleteInventoryItem);
-        
         if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
         if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', handleSavedListAction);
-
         if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
         if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('input', handlePickingSearch);
         if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { pickItemFromList(li.dataset.ean); } });
@@ -228,51 +204,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.closePickingSummaryModalBtn) elements.closePickingSummaryModalBtn.addEventListener('click', () => elements.pickingSummaryModal.style.display = 'none');
         if (elements.pickingAcceptBtn) elements.pickingAcceptBtn.addEventListener('click', () => { elements.pickingSummaryModal.style.display = 'none'; showToast('Zmiany zaakceptowane.'); });
         if (elements.pickingExportCsvBtn) elements.pickingExportCsvBtn.addEventListener('click', exportPickedToCsv);
-
         attachNumpadListeners();
     }
     
-    // =================================================================
-    // KLAWIATURA NUMERYCZNA
-    // =================================================================
-    function openNumpad(targetElement, callbackOnOk) {
-        numpadTarget = targetElement;
-        numpadCallback = callbackOnOk;
-        elements.numpadDisplay.textContent = targetElement.value || '1';
-        elements.numpadModal.style.display = 'flex';
+    // ... reszta funkcji ...
+    async function loadDataFromServer() {
+        console.log('Ładowanie bazy produktów...');
+        function fetchAndParseCsv(filename) { return fetch(filename).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); }
+        await Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')])
+            .then(([data1, data2]) => {
+                const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() });
+                productDatabase = [...data1.map(mapData), ...data2.map(mapData)];
+                console.log(`Baza danych załadowana (${productDatabase.length} pozycji).`);
+            }).catch(error => { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); });
     }
 
-    function handleNumpadOK() {
-        const value = parseInt(elements.numpadDisplay.textContent, 10) || 0;
-        if (numpadTarget) {
-            numpadTarget.value = value;
-            numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        if (numpadCallback) {
-            numpadCallback(value);
-        }
-        elements.numpadModal.style.display = 'none';
-    }
-    
-    function attachNumpadListeners() {
-        elements.numpadKeys.forEach(key => key.addEventListener('click', () => {
-            const display = elements.numpadDisplay;
-            if (display.textContent === '0' || !/^\d+$/.test(display.textContent)) display.textContent = '';
-            display.textContent += key.dataset.key;
-        }));
-        elements.numpadClear.addEventListener('click', () => { elements.numpadDisplay.textContent = '0'; });
-        elements.numpadBackspace.addEventListener('click', () => {
-            const display = elements.numpadDisplay;
-            display.textContent = display.textContent.slice(0, -1) || '0';
-        });
-        elements.numpadOk.addEventListener('click', handleNumpadOK);
-        
-        elements.quantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
-        elements.inventoryQuantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
-        elements.scannedListBody.addEventListener('click', e => { if (e.target.classList.contains('quantity-in-table')) { e.preventDefault(); openNumpad(e.target); } });
-    }
-
-    // Pozostałe funkcje...
     function switchTab(newTab) {
         activeTab = newTab;
         [elements.lookupMode, elements.listBuilderMode, elements.adminPanel].forEach(el => el.classList.remove('active'));
@@ -310,9 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchTerm = event.target.value.trim();
         elements.listBuilderSearchResults.style.display = 'none';
         if (!searchTerm) return;
-        
         const results = performSearch(searchTerm);
-        
         if (results.length > 0) {
             let listHtml = '<ul>';
             results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
@@ -322,13 +266,12 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.listBuilderSearchResults.style.display = 'block';
         }
     }
-
+    
     function handleLookupSearch(event) {
         const searchTerm = event.target.value.trim();
         elements.lookupResultList.innerHTML = '';
         elements.lookupResultList.style.display = 'none';
         elements.lookupResultSingle.innerHTML = '';
-        elements.lookupResultSingle.style.display = 'none';
         if (!searchTerm) return;
         const results = performSearch(searchTerm);
         if (results.length === 1) {
@@ -344,7 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function displaySingleProductInLookup(product) {
         let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
         elements.lookupResultSingle.innerHTML = html;
-        elements.lookupResultSingle.style.display = 'block';
         elements.lookupResultList.style.display = 'none';
     }
 
@@ -354,6 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         listHtml += '</ul>';
         elements.lookupResultList.innerHTML = listHtml;
         elements.lookupResultList.style.display = 'block';
+        elements.lookupResultSingle.style.display = 'none';
     }
     
     function renderScannedList() {
@@ -369,13 +312,9 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.totalOrderValue.textContent = `Total: ${totalValue.toFixed(2)} PLN`;
     }
     
-    // ... (pozostały kod)
-    
     function getSafeFilename() { const clientName = elements.clientNameInput.value.trim().replace(/[<>:"/\\|?* ]+/g, '_') || 'zamowienie'; const date = new Date().toISOString().slice(0, 10); return `${clientName}_${date}`; }
     function exportToCsvOptima() { if (scannedItems.length === 0) return; const csvContent = scannedItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`); }
-    if(elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCsvOptima);
     function exportToExcelDetailed() { if (scannedItems.length === 0) return; const headers = '"Kod produktu";"Nazwa";"EAN";"Ilość";"Cena Jednostkowa"'; const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${item.name || ''}";"${(item.description || '').replace(/"/g, '""')}";"${item.ean || ''}";"${item.quantity || 0}";"${priceFormatted}"`; }); const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`; downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`); }
-    if(elements.exportExcelBtn) elements.exportExcelBtn.addEventListener('click', exportToExcelDetailed);
     function downloadFile(content, mimeType, filename) { const blob = new Blob([content], { type: mimeType }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
     
     function prepareForPrint() {
@@ -391,8 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
             row.insertCell().textContent = item.quantity;
         });
     }
-
-    if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
     
     function clearCurrentList(askConfirm = true) {
         if (askConfirm && scannedItems.length > 0 && !confirm('Czy na pewno chcesz wyczyścić bieżące zamówienie? Ta operacja usunie również aktywną, zapamiętaną listę.')) { return; }
@@ -403,8 +340,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderScannedList();
         showToast("Utworzono nową, czystą listę.");
     }
-    
-    if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => clearCurrentList(true));
     
     async function saveCurrentList() {
         const listName = prompt("Podaj nazwę dla zapisywanego zamówienia:", elements.clientNameInput.value || `Zamówienie ${getSafeFilename()}`);
@@ -418,9 +353,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return savedList;
         } catch (error) { alert(`Błąd: ${error.message}`); return null; }
     }
-
-    if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
-    if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) { await saveCurrentList(); } } clearCurrentList(false); });
     
     async function loadListById(listId) {
         try {
@@ -475,8 +407,8 @@ document.addEventListener('DOMContentLoaded', () => {
             container.appendChild(listContainer);
         } catch (error) { container.innerHTML = `<p style="color:var(--danger-color)">${error.message}</p>`; }
     }
-    if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
-    if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', async (e) => {
+    
+    async function handleSavedListAction(e) {
         const target = e.target.closest('button');
         if (!target) return;
         const listId = target.dataset.id;
@@ -497,14 +429,13 @@ document.addEventListener('DOMContentLoaded', () => {
              elements.savedListsModal.style.display = 'none';
              await startPicking(listId, target.dataset.name);
         }
-    });
-    
+    }
+
     async function handleFileImport(event) {
         const file = event.target.files[0];
         if (!file) return;
         const listName = prompt("Podaj nazwę dla importowanego zamówienia:", file.name.replace(/\.csv$/i, ''));
         if (!listName) { event.target.value = ''; return; }
-
         Papa.parse(file, {
             delimiter: ";", skipEmptyLines: true,
             complete: async (results) => {
@@ -531,158 +462,9 @@ document.addEventListener('DOMContentLoaded', () => {
         event.target.value = '';
     }
     
+    async function loadAllUsers() { /*... kod z poprzedniej odpowiedzi ...*/ }
+    async function handleUserAction(url, options, successMsg) { /*... kod z poprzedniej odpowiedzi ...*/ }
+    async function handleChangePassword() { /*... kod z poprzedniej odpowiedzi ...*/ }
+    
     // ... (reszta kodu jest w następnym bloku)
-});
-// ... (kontynuacja pliku skaner.js)
-
-document.addEventListener('DOMContentLoaded', () => {
-
-    // ... (cały kod z poprzedniego bloku, aż do tego miejsca) ...
-
-    // =================================================================
-    // PANEL ADMINA
-    // =================================================================
-    async function loadAllUsers() {
-        const userListDiv = elements.allUsersList;
-        if(!userListDiv) return;
-        userListDiv.innerHTML = '<p>Ładowanie...</p>';
-        try {
-            const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
-            if(!response.ok) throw new Error('Nie udało się pobrać użytkowników.');
-            const users = await response.json();
-            userListDiv.innerHTML = users.length === 0 ? '<p>Brak użytkowników.</p>' : '';
-            users.forEach(user => {
-                const userDiv = document.createElement('div');
-                userDiv.className = 'user-item';
-                let actions = `<button class="btn-primary edit-user-btn" data-userid="${user._id}" data-username="${user.username}">Zmień hasło</button>`;
-                const newRole = user.role === 'admin' ? 'user' : 'admin';
-                actions += `<button class="change-role-btn" data-userid="${user._id}" data-username="${user.username}" data-role="${newRole}">Zmień na ${newRole}</button>`;
-                if (user.status === 'pending') actions = `<button class="approve-user-btn" data-userid="${user._id}">Akceptuj</button>` + actions;
-                if (user.role !== 'admin') actions += `<button class="delete-user-btn" data-userid="${user._id}" data-username="${user.username}"><i class="fa-solid fa-trash"></i></button>`;
-                userDiv.innerHTML = `<div class="user-info"><strong>${user.username}</strong><span class="status">Status: ${user.status} | Rola: ${user.role}</span></div><div class="user-actions">${actions}</div>`;
-                userListDiv.appendChild(userDiv);
-            });
-        } catch (error) { userListDiv.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`; }
-    }
-    
-    async function handleUserAction(url, options, successMsg) { try { const response = await fetch(url, options); const data = await response.json(); if(!response.ok) throw new Error(data.msg || 'Wystąpił błąd.'); alert(successMsg || data.msg); await loadAllUsers(); } catch (error) { alert(`Błąd: ${error.message}`); } }
-    async function handleChangePassword() { const oldPassword = prompt("Wprowadź swoje stare hasło:"); if (!oldPassword) return; const newPassword = prompt("Wprowadź nowe hasło (min. 4 znaki):"); if (!newPassword) return; await handleUserAction('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ oldPassword, newPassword }) }); }
-    if(elements.allUsersList) elements.allUsersList.addEventListener('click', e => { 
-        const target = e.target.closest('button'); 
-        if (!target) return;
-        const { userid, username, role } = target.dataset;
-        if (target.classList.contains('approve-user-btn')) handleUserAction(`/api/admin/approve-user/${userid}`, { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') } });
-        else if (target.classList.contains('edit-user-btn')) { const p = prompt(`Nowe hasło dla ${username}:`); if (p) handleUserAction(`/api/admin/edit-password/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newPassword: p }) }); }
-        else if (target.classList.contains('delete-user-btn')) { if (confirm(`Na pewno usunąć ${username}?`)) handleUserAction(`/api/admin/delete-user/${userid}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); }
-        else if (target.classList.contains('change-role-btn')) { if (confirm(`Zmienić rolę ${username} na ${role}?`)) handleUserAction(`/api/admin/change-role/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newRole: role }) }); }
-    });
-
-    // =================================================================
-    // MODUŁ INWENTARYZACJI
-    // =================================================================
-    if (elements.closeInventoryModalBtn) elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
-    if(elements.inventoryAddBtn) elements.inventoryAddBtn.addEventListener('click', () => { const ean = elements.inventoryEanInput.value.trim(); const quantity = parseInt(elements.inventoryQuantityInput.value, 10); if (!ean || !quantity) return; const existing = inventoryItems.find(i => i.ean === ean); if (existing) existing.quantity += quantity; else inventoryItems.push({ ean: ean, name: 'Inwentaryzacja', quantity: quantity }); renderInventoryList(); });
-    function renderInventoryList() { if (elements.inventoryListBody) elements.inventoryListBody.innerHTML = inventoryItems.map((item, i) => `<tr><td>${item.name}</td><td>${item.ean}</td><td><input type="number" readonly class="quantity-in-table" value="${item.quantity}" data-index="${i}"></td><td><button class="delete-inv-item-btn btn-icon btn-danger" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); }
-    if(elements.inventoryListBody) {
-        elements.inventoryListBody.addEventListener('click', e => {
-            const btn = e.target.closest('.delete-inv-item-btn');
-            if (btn) { inventoryItems.splice(btn.dataset.index, 1); renderInventoryList(); }
-            if(e.target.classList.contains('quantity-in-table')) {
-                e.preventDefault();
-                openNumpad(e.target, (newValue) => {
-                    inventoryItems[e.target.dataset.index].quantity = newValue;
-                    renderInventoryList();
-                });
-            }
-        });
-    }
-
-    // =================================================================
-    // MODUŁ KOMPLETACJI
-    // =================================================================
-    async function startPicking(listId, listName) {
-        try {
-            const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
-            if (!response.ok) throw new Error("Błąd wczytywania zamówienia do kompletacji");
-            currentPickingOrder = await response.json();
-            pickedItems = [];
-            elements.pickingOrderName.textContent = `Kompletacja: ${listName}`;
-            renderPickingView();
-            elements.pickingModule.style.display = 'flex';
-        } catch (error) { alert(error.message); }
-    }
-
-    function renderPickingView() {
-        if(!currentPickingOrder) return;
-        const toPickItems = currentPickingOrder.items.filter(item => !pickedItems.some(p => p.ean === item.ean));
-        elements.pickingTargetList.innerHTML = toPickItems.map(item => `<div class="pick-item" data-ean="${item.ean}" style="padding: 8px; cursor: pointer; border-bottom: 1px solid var(--border-color);"><strong>${item.name}</strong><br><small>${item.description}</small> (ilość: ${item.quantity})</div>`).join('') || "<p>Wszystko zebrane!</p>";
-        elements.pickingScannedList.innerHTML = pickedItems.map((item, index) => `<div class="picked-item" style="display: flex; justify-content: space-between; align-items: center; padding: 5px;"><span>${item.name} | ${item.description}</span><div><input type="number" value="${item.quantity}" class="picked-quantity-input" data-index="${index}" style="width: 60px; text-align: center;" readonly><button class="unpick-item-btn btn-icon" data-index="${index}" style="background: none; color: var(--danger-color);"><i class="fa-solid fa-arrow-left"></i></button></div></div>`).join('');
-    }
-
-    function moveItemToPicked(ean, quantity) {
-        const itemToMoveIndex = currentPickingOrder.items.findIndex(item => item.ean === ean);
-        if (itemToMoveIndex > -1) {
-            const originalItem = currentPickingOrder.items[itemToMoveIndex];
-            if (quantity > originalItem.quantity) {
-                if (!confirm(`Wprowadzono większą ilość (${quantity}) niż wymagana (${originalItem.quantity}). Czy kontynuować?`)) return;
-            }
-            pickedItems.push({ ...originalItem, quantity: quantity });
-            renderPickingView();
-        }
-    }
-    
-    function handlePickingSearch() {
-        const searchTerm = elements.pickingEanInput.value.trim();
-        if (!searchTerm) return;
-        const results = performSearch(searchTerm);
-        if (results.length > 0) {
-            let listHtml = '<ul>';
-            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
-            listHtml += '</ul>';
-            elements.pickingSearchResults.innerHTML = listHtml;
-            elements.pickingSearchResults.style.display = 'block';
-        } else {
-            showToast(`Nie znaleziono produktu: ${searchTerm}`);
-        }
-    }
-    
-    function verifyPicking() {
-        // ... (logika weryfikacji bez zmian)
-    }
-
-    if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
-    if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('input', handlePickingSearch);
-    if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { openNumpad({value: 1}, (qty) => moveItemToPicked(li.dataset.ean, qty)); elements.pickingSearchResults.style.display = 'none'; elements.pickingEanInput.value = ''; }});
-    if (elements.pickingTargetList) elements.pickingTargetList.addEventListener('click', e => {
-        const itemDiv = e.target.closest('.pick-item');
-        if (itemDiv?.dataset.ean) {
-            const item = currentPickingOrder.items.find(i => i.ean === itemDiv.dataset.ean);
-            openNumpad({ value: item.quantity }, (quantity) => {
-                if (quantity > 0) moveItemToPicked(item.ean, quantity);
-            });
-        }
-    });
-    if (elements.pickingScannedList) {
-        elements.pickingScannedList.addEventListener('click', e => {
-            const target = e.target.closest('button.unpick-item-btn, input.picked-quantity-input');
-            if (!target) return;
-            const index = target.dataset.index;
-            if (target.classList.contains('unpick-item-btn')) {
-                pickedItems.splice(index, 1);
-                renderPickingView();
-            } else if (target.classList.contains('picked-quantity-input')) {
-                e.preventDefault();
-                openNumpad(target, (newQuantity) => {
-                    if(newQuantity >= 0) {
-                       if (newQuantity === 0) pickedItems.splice(index, 1);
-                       else pickedItems[index].quantity = newQuantity;
-                       renderPickingView();
-                    }
-                });
-            }
-        });
-    }
-    
-    // Inicjalizacja Aplikacji
-    checkLoginStatus();
 });
