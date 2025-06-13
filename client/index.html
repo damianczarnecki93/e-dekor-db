@@ -87,17 +87,12 @@
         .modal-header h2 { border: none; padding: 0; margin: 0; }
         .modal-body { flex-grow: 1; overflow-y: auto; }
         
-        #numpad-modal .modal-content { max-width: 320px; padding: 20px; }
-        #numpad-display { width: 100%; padding: 10px; font-size: 1.8em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color); }
-        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .numpad-grid button { padding: 20px; font-size: 1.2em; font-weight: 600; }
-        #numpad-ok { width: 100%; margin-top: 10px; }
-
         @media (max-width: 768px) {
             body { padding: 80px 5px 80px 5px; }
             .container { padding: 20px 15px; }
             .controls-grid > * { flex-basis: 100%; }
             .col-desc, .col-ean { display: none; }
+            .export-controls { grid-template-columns: 1fr; }
             #totalOrderValue { font-size: 1rem; padding: 10px; }
             .bottom-scroll-bar button, .top-right-menu .btn-icon { width: 40px; height: 40px; }
             button, .btn { padding: 10px 15px; font-size: 0.9em; }
@@ -282,7 +277,7 @@
                     <input type="text" id="pickingEanInput" placeholder="Wyszukaj lub zeskanuj produkt do skompletowania...">
                     <div id="pickingSearchResults" class="search-results-list" style="display:none;"></div>
                 </div>
-                <div id="pickingStatusMsg" style="text-align: center; font-weight: 600; margin: 15px 0; padding: 10px; border-radius: 8px;"></div>
+                <div id="picking-status-msg" style="text-align: center; font-weight: 600; margin: 15px 0; padding: 10px; border-radius: 8px;"></div>
                 <div style="display: flex; gap: 20px; flex-grow: 1; min-height: 300px;">
                     <div style="width: 50%; display: flex; flex-direction: column;">
                         <h3>Do zebrania:</h3>
