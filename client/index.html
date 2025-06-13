@@ -76,6 +76,7 @@
         .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1000; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
         .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
+        #lookupResultSingle { margin-top: 20px; border-radius: 12px; border: 1px solid var(--border-color); padding: 0 15px; }
         .lookup-result-item { padding: 15px 0; }
         #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 2000; }
         .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
@@ -86,11 +87,17 @@
         .modal-header h2 { border: none; padding: 0; margin: 0; }
         .modal-body { flex-grow: 1; overflow-y: auto; }
         
+        #numpad-modal .modal-content { max-width: 320px; padding: 20px; }
+        #numpad-display { width: 100%; padding: 10px; font-size: 1.8em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color); }
+        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .numpad-grid button { padding: 20px; font-size: 1.2em; font-weight: 600; }
+        #numpad-ok { width: 100%; margin-top: 10px; }
+
         @media (max-width: 768px) {
             body { padding: 80px 5px 80px 5px; }
             .container { padding: 20px 15px; }
             .controls-grid > * { flex-basis: 100%; }
-            .col-desc, .col-ean { display: none; }
+            .col-code, .col-ean { display: none; }
             .export-controls { grid-template-columns: 1fr; }
             #totalOrderValue { font-size: 1rem; padding: 10px; }
             .bottom-scroll-bar button, .top-right-menu .btn-icon { width: 40px; height: 40px; }
@@ -105,9 +112,9 @@
             #print-header { margin-bottom: 20px; }
             #print-header h2 { font-size: 14pt; font-weight: bold; }
             #print-header p { font-size: 11pt; }
-            #print-table { width: 100%; border-collapse: collapse; font-size: 10pt; font-family: Arial, sans-serif; }
-            #print-table th, #print-table td { border: 1px solid #000; padding: 8px; text-align: left; }
-            #print-table th { background-color: #eee !important; font-weight: bold; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            #print-content-table { width: 100%; border-collapse: collapse; font-size: 10pt; font-family: Arial, sans-serif; }
+            #print-content-table th, #print-content-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+            #print-content-table th { background-color: #eee !important; font-weight: bold; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
 </head>
@@ -182,7 +189,7 @@
                     <input type="text" id="listBarcode_Input" placeholder="Wpisz EAN, kod lub nazwę..." disabled>
                     <div id="listBuilderSearchResults" class="search-results-list" style="display: none;"></div>
                 </div>
-                <input type="number" id="quantityInput" value="1" min="1" inputmode="numeric" disabled>
+                <input type="number" id="quantityInput" value="1" min="1" inputmode="numeric" disabled readonly>
                 <button id="addToListBtn" class="btn-primary" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
             </div>
             <table>
@@ -227,7 +234,7 @@
             <div class="modal-body">
                 <div class="controls-grid">
                     <input type="text" id="inventoryEanInput" placeholder="Wpisz EAN, kod lub nazwę..." disabled>
-                    <input type="number" id="inventoryQuantityInput" value="1" min="1" inputmode="numeric" disabled>
+                    <input type="number" id="inventoryQuantityInput" value="1" min="1" inputmode="numeric" disabled readonly>
                     <button id="inventoryAddBtn" class="btn-primary" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
                 </div>
                 <div class="search-container">
@@ -252,9 +259,9 @@
             </div>
             <div class="modal-body">
                 <div style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);">
-                    <label for="importCsvInput" class="btn btn-primary" style="background-color: var(--info-color); width: 100%;">
+                    <button id="importCsvBtn" class="btn btn-primary" style="background-color: var(--info-color); width: 100%;">
                         <i class="fa-solid fa-file-import"></i> Importuj zamówienie z pliku CSV
-                    </label>
+                    </button>
                     <input type="file" id="importCsvInput" accept=".csv" style="display: none;">
                 </div>
                 <div id="savedListsContainer"></div>
@@ -269,13 +276,11 @@
                 <button id="closePickingModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="controls-grid">
-                    <div class="search-container" style="flex-grow: 1;">
-                        <input type="text" id="picking-ean-input" placeholder="Wyszukaj lub zeskanuj produkt...">
-                        <div id="picking-search-results" class="search-results-list" style="display:none;"></div>
-                    </div>
+                 <div class="search-container">
+                    <input type="text" id="picking-ean-input" placeholder="Wyszukaj lub zeskanuj produkt do skompletowania...">
+                    <div id="picking-search-results" class="search-results-list" style="display:none;"></div>
                 </div>
-                <div id="picking-status-msg" style="text-align: center; font-weight: 600; margin-bottom: 15px; padding: 10px; border-radius: 8px;"></div>
+                <div id="picking-status-msg" style="text-align: center; font-weight: 600; margin: 15px 0; padding: 10px; border-radius: 8px;"></div>
                 <div style="display: flex; gap: 20px; flex-grow: 1; min-height: 300px;">
                     <div style="width: 50%; display: flex; flex-direction: column;">
                         <h3>Do zebrania:</h3>
@@ -323,9 +328,9 @@
     </div>
 
     <div id="numpad-modal" class="modal">
-        <div style="background: var(--surface-color); padding: 20px; border-radius: 16px; width: 100%; max-width: 300px;">
-            <div id="numpad-display" style="width: 100%; padding: 10px; font-size: 1.5em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color);"></div>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+        <div class="modal-content" style="max-width: 320px; padding: 20px;">
+            <div id="numpad-display" style="width: 100%; padding: 10px; font-size: 1.8em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color);"></div>
+            <div class="numpad-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
                 <button class="numpad-key btn-icon" data-key="1">1</button>
                 <button class="numpad-key btn-icon" data-key="2">2</button>
                 <button class="numpad-key btn-icon" data-key="3">3</button>
