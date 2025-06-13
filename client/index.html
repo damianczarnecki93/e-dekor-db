@@ -3,34 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Testowy</title>
+    <title>Panel sprzedaży</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f0f0; }
-        .box { padding: 20px; border: 1px solid #ccc; border-radius: 8px; background-color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        input { display: block; margin-bottom: 10px; padding: 8px; width: 200px; }
-        button { padding: 10px 15px; }
-        #appContainer { display: none; }
-        #loginError { color: red; }
+        :root {
+            --font-family: 'Poppins', sans-serif;
+            --primary-color: #3478F6; --primary-hover: #2962FF;
+            --success-color: #34C759; --danger-color: #FF3B30; --warning-color: #FF9500;
+            --text-color: #1d1d1f; --text-light-color: #ffffff; --text-secondary-color: #6e6e73;
+            --bg-color: #f5f5f7; --surface-color: #ffffff;
+            --border-color: #d2d2d7; --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+        body.dark-mode {
+            --primary-color: #0A84FF; --primary-hover: #3498db;
+            --text-color: #f5f5f7; --text-secondary-color: #8d8d92;
+            --bg-color: #161617; --surface-color: #1d1d1f; --border-color: #424245;
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px 10px; transition: background-color 0.3s, color 0.3s; }
+        .container { width: 100%; max-width: 900px; margin: 0 auto; background: var(--surface-color); padding: 30px; border-radius: 20px; box-shadow: var(--shadow); }
+        .app-header { text-align: center; margin-bottom: 30px; }
+        .header-logo { max-height: 45px; }
+        body.dark-mode .header-logo { filter: invert(1); }
+        button, .btn { cursor: pointer; border-radius: 10px; border: none; padding: 12px 22px; font-weight: 600; font-size: 1em; font-family: var(--font-family); transition: all 0.2s ease; background-color: #e5e5ea; color: var(--text-color); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        body.dark-mode button { background-color: #3a3a3c; color: var(--text-color); }
+        button:hover, .btn:hover { transform: translateY(-2px); }
+        button:disabled { cursor: not-allowed; background-color: #e5e5ea !important; color: #8e8e93 !important; transform: none; opacity: 0.6; }
+        .btn-primary { background-color: var(--primary-color); color: var(--text-light-color); }
+        .btn-danger { background-color: var(--danger-color); color: var(--text-light-color); }
+        .btn-icon { padding: 0; width: 45px; height: 45px; font-size: 1.1em; border-radius: 50%; }
+        input[type="text"], input[type="number"], input[type="password"] { padding: 12px 15px; font-size: 1em; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); border-radius: 10px; width: 100%; transition: all 0.2s ease; }
+        input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(52, 120, 246, 0.25); }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(5px); background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1050; padding: 15px; }
+        .modal-content { background-color: var(--surface-color); padding: 30px; border-radius: 16px; width: 100%; max-width: 400px; display: flex; flex-direction: column; }
+        
+        /* Klawiatura numeryczna */
+        #numpad-modal .modal-content { max-width: 320px; padding: 20px; }
+        #numpad-display { width: 100%; padding: 10px; font-size: 1.8em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color); }
+        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .numpad-grid button { padding: 20px; font-size: 1.2em; font-weight: 600; }
+        #numpad-ok { width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
-
+    
     <div id="loginOverlay">
         <div class="box">
             <h2>Logowanie</h2>
             <input type="text" id="loginUsername" placeholder="Login">
             <input type="password" id="loginPassword" placeholder="Hasło">
-            <button id="loginBtn">Zaloguj się</button>
+            <button id="loginBtn" class="btn-primary">Zaloguj się</button>
             <p id="loginError"></p>
         </div>
     </div>
 
-    <div id="appContainer">
-        <div class="box">
-            <h1>Witaj!</h1>
-            <p>Zalogowano pomyślnie.</p>
-            <p>Użytkownik: <span id="welcomeUser"></span></p>
-            <button id="logoutBtn">Wyloguj</button>
+    <div class="container" id="appContainer" style="display: none;">
+        <div class="app-header">
+            <img src="logo.jpg" alt="Logo Firmy" class="header-logo">
+        </div>
+        <h1>Witaj! Zalogowano pomyślnie.</h1>
+        <p>Użytkownik: <span id="welcomeUser"></span></p>
+        <hr>
+        <h3>Przykładowe pole ilości:</h3>
+        <input type="number" class="quantity-input" value="1" readonly>
+        <hr>
+        <button id="logoutBtn" class="btn-danger">Wyloguj</button>
+    </div>
+
+    <div id="numpad-modal" class="modal">
+        <div class="modal-content">
+            <div id="numpad-display"></div>
+            <div class="numpad-grid">
+                <button class="numpad-key" data-key="1">1</button>
+                <button class="numpad-key" data-key="2">2</button>
+                <button class="numpad-key" data-key="3">3</button>
+                <button class="numpad-key" data-key="4">4</button>
+                <button class="numpad-key" data-key="5">5</button>
+                <button class="numpad-key" data-key="6">6</button>
+                <button class="numpad-key" data-key="7">7</button>
+                <button class="numpad-key" data-key="8">8</button>
+                <button class="numpad-key" data-key="9">9</button>
+                <button id="numpad-clear" class="btn-icon" style="font-size: 1em;">C</button>
+                <button class="numpad-key" data-key="0">0</button>
+                <button id="numpad-backspace" class="btn-icon"><i class="fa-solid fa-delete-left"></i></button>
+            </div>
+            <button id="numpad-ok" class="btn-primary">OK</button>
         </div>
     </div>
 
