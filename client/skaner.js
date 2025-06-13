@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Definicja wszystkich elementów DOM dla łatwego dostępu i unikania błędów
     const elements = {
         loginOverlay: document.getElementById('loginOverlay'),
         appContainer: document.getElementById('appContainer'),
@@ -16,8 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
         registerError: document.getElementById('registerError'),
         showRegister: document.getElementById('showRegister'),
         showLogin: document.getElementById('showLogin'),
-        
-        // Główne UI
         tabLookupBtn: document.getElementById('tabLookupBtn'),
         tabListBuilderBtn: document.getElementById('tabListBuilderBtn'),
         lookupMode: document.getElementById('lookupMode'),
@@ -35,13 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
         menuSavedLists: document.getElementById('menuSavedLists'),
         scrollTopBtn: document.getElementById('scrollTopBtn'),
         scrollBottomBtn: document.getElementById('scrollBottomBtn'),
-        
-        // Wyszukiwanie
-        lookupBarcodeInput: document.getElementById('lookupBarcode_Input'),
+        lookupBarcodeInput: document.getElementById('lookupBarcodeInput'),
         lookupResultList: document.getElementById('lookupResultList'),
         lookupResultSingle: document.getElementById('lookupResultSingle'),
-        
-        // Lista zamówień
+        quickSearchModal: document.getElementById('quickSearchModal'),
+        closeQuickSearchModalBtn: document.getElementById('closeQuickSearchModalBtn'),
+        quickSearchBtn: document.getElementById('quickSearchBtn'),
         listBarcodeInput: document.getElementById('listBarcode_Input'),
         listBuilderSearchResults: document.getElementById('listBuilderSearchResults'),
         quantityInput: document.getElementById('quantityInput'),
@@ -52,20 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
         clientNameInput: document.getElementById('clientNameInput'),
         additionalInfoInput: document.getElementById('additionalInfoInput'),
         totalOrderValue: document.getElementById('totalOrderValue'),
-        
-        // Eksport i Import
         exportCsvBtn: document.getElementById('exportCsvBtn'),
         exportExcelBtn: document.getElementById('exportExcelBtn'),
         printListBtn: document.getElementById('printListBtn'),
         clearListBtn: document.getElementById('clearListBtn'),
-        importCsvBtn: document.getElementById('importCsvBtn'), // Widoczny przycisk
-        importCsvInput: document.getElementById('importCsvInput'), // Ukryty input
-        
-        // Panel Admina
+        importCsvInput: document.getElementById('importCsvInput'),
         adminPanel: document.getElementById('adminPanel'),
         allUsersList: document.getElementById('allUsersList'),
-        
-        // Inwentaryzacja
         inventoryModule: document.getElementById('inventoryModule'),
         closeInventoryModalBtn: document.getElementById('closeInventoryModalBtn'),
         inventoryEanInput: document.getElementById('inventoryEanInput'),
@@ -74,18 +63,15 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryListBody: document.getElementById('inventoryListBody'),
         inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
         inventorySearchResults: document.getElementById('inventorySearchResults'),
-        
-        // Zapisane listy
         savedListsModal: document.getElementById('savedListsModal'),
         closeSavedListsModalBtn: document.getElementById('closeSavedListsModalBtn'),
         savedListsContainer: document.getElementById('savedListsContainer'),
-
-        // Kompletacja
         pickingModule: document.getElementById('pickingModule'),
         closePickingModalBtn: document.getElementById('closePickingModalBtn'),
         pickingOrderName: document.getElementById('picking-order-name'),
         pickingEanInput: document.getElementById('picking-ean-input'),
         pickingSearchResults: document.getElementById('picking-search-results'),
+        pickingStatusMsg: document.getElementById('picking-status-msg'),
         pickingTargetList: document.getElementById('picking-target-list'),
         pickingScannedList: document.getElementById('picking-scanned-list'),
         pickingVerifyBtn: document.getElementById('picking-verify-btn'),
@@ -94,15 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
         pickingSummaryBody: document.getElementById('pickingSummaryBody'),
         pickingAcceptBtn: document.getElementById('picking-accept-btn'),
         pickingExportCsvBtn: document.getElementById('picking-export-csv-btn'),
-        
-        // Inne
         toastContainer: document.getElementById('toast-container'),
         printArea: document.getElementById('print-area'),
         printClientName: document.getElementById('print-client-name'),
         printAdditionalInfo: document.getElementById('print-additional-info'),
         printTableBody: document.getElementById('print-table-body'),
-        
-        // Klawiatura numeryczna
         numpadModal: document.getElementById('numpad-modal'),
         numpadDisplay: document.getElementById('numpad-display'),
         numpadOk: document.getElementById('numpad-ok'),
@@ -180,13 +162,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() });
                 productDatabase = [...data1.map(mapData), ...data2.map(mapData)];
                 console.log(`Baza danych załadowana (${productDatabase.length} pozycji).`);
-                [...document.querySelectorAll('input:not(#loginForm input, #registerForm input), button:not(#loginForm button, #registerForm button)')].forEach(el => { if (el) el.disabled = false; });
+                Object.values(elements).forEach(el => {
+                    if (el && typeof el.disabled !== 'undefined' && !el.closest('#loginOverlay')) {
+                        el.disabled = false;
+                    }
+                });
             }).catch(error => { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); });
     }
 
-    // =================================================================
-    // GŁÓWNE EVENT LISTENERY
-    // =================================================================
     function attachAllEventListeners() {
         if (elements.loginBtn) elements.loginBtn.addEventListener('click', attemptLogin);
         if (elements.loginPassword) elements.loginPassword.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
@@ -213,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(elements.listBarcodeInput) elements.listBarcodeInput.addEventListener('input', handleListBuilderSearch);
         if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) { addProductToList(targetLi.dataset.ean); } });
         if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
-
+        
         if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('input', handleLookupSearch);
         if(elements.lookupResultList) elements.lookupResultList.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
         
@@ -222,29 +205,74 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
         if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) { await saveCurrentList(); } } clearCurrentList(false); });
         
-        if (elements.allUsersList) elements.allUsersList.addEventListener('click', handleAdminAction);
+        if(elements.importCsvBtn) elements.importCsvBtn.addEventListener('click', () => elements.importCsvInput.click());
+        if(elements.importCsvInput) elements.importCsvInput.addEventListener('change', handleFileImport);
+        
+        if(elements.allUsersList) elements.allUsersList.addEventListener('click', handleAdminAction);
+        
         if (elements.closeInventoryModalBtn) elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
         if(elements.inventoryAddBtn) elements.inventoryAddBtn.addEventListener('click', handleInventoryAdd);
         if(elements.inventoryEanInput) elements.inventoryEanInput.addEventListener('input', handleInventorySearch);
         if(elements.inventorySearchResults) elements.inventorySearchResults.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.ean) { elements.inventoryEanInput.value = li.dataset.ean; elements.inventorySearchResults.style.display = 'none'; }});
         if(elements.inventoryListBody) elements.inventoryListBody.addEventListener('click', handleDeleteInventoryItem);
+        
         if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
         if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', handleSavedListAction);
 
         if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
         if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('input', handlePickingSearch);
-        if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) pickItemFromList(li.dataset.ean); });
-        if (elements.pickingTargetList) elements.pickingTargetList.addEventListener('click', e => { const itemDiv = e.target.closest('.pick-item'); if(itemDiv?.dataset.ean) pickItemFromList(itemDiv.dataset.ean); });
+        if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { pickItemFromList(li.dataset.ean); } });
+        if (elements.pickingTargetList) elements.pickingTargetList.addEventListener('click', e => { const itemDiv = e.target.closest('.pick-item'); if(itemDiv?.dataset.ean) { pickItemFromList(itemDiv.dataset.ean); } });
         if (elements.pickingScannedList) elements.pickingScannedList.addEventListener('click', handlePickedItemClick);
         if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
         if (elements.closePickingSummaryModalBtn) elements.closePickingSummaryModalBtn.addEventListener('click', () => elements.pickingSummaryModal.style.display = 'none');
         if (elements.pickingAcceptBtn) elements.pickingAcceptBtn.addEventListener('click', () => { elements.pickingSummaryModal.style.display = 'none'; showToast('Zmiany zaakceptowane.'); });
         if (elements.pickingExportCsvBtn) elements.pickingExportCsvBtn.addEventListener('click', exportPickedToCsv);
+
+        attachNumpadListeners();
     }
     
     // =================================================================
-    // UI I NAWIGACJA
+    // KLAWIATURA NUMERYCZNA
     // =================================================================
+    function openNumpad(targetElement, callbackOnOk) {
+        numpadTarget = targetElement;
+        numpadCallback = callbackOnOk;
+        elements.numpadDisplay.textContent = targetElement.value || '1';
+        elements.numpadModal.style.display = 'flex';
+    }
+
+    function handleNumpadOK() {
+        const value = parseInt(elements.numpadDisplay.textContent, 10) || 0;
+        if (numpadTarget) {
+            numpadTarget.value = value;
+            numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        if (numpadCallback) {
+            numpadCallback(value);
+        }
+        elements.numpadModal.style.display = 'none';
+    }
+    
+    function attachNumpadListeners() {
+        elements.numpadKeys.forEach(key => key.addEventListener('click', () => {
+            const display = elements.numpadDisplay;
+            if (display.textContent === '0' || !/^\d+$/.test(display.textContent)) display.textContent = '';
+            display.textContent += key.dataset.key;
+        }));
+        elements.numpadClear.addEventListener('click', () => { elements.numpadDisplay.textContent = '0'; });
+        elements.numpadBackspace.addEventListener('click', () => {
+            const display = elements.numpadDisplay;
+            display.textContent = display.textContent.slice(0, -1) || '0';
+        });
+        elements.numpadOk.addEventListener('click', handleNumpadOK);
+        
+        elements.quantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
+        elements.inventoryQuantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
+        elements.scannedListBody.addEventListener('click', e => { if (e.target.classList.contains('quantity-in-table')) { e.preventDefault(); openNumpad(e.target); } });
+    }
+
+    // Pozostałe funkcje...
     function switchTab(newTab) {
         activeTab = newTab;
         [elements.lookupMode, elements.listBuilderMode, elements.adminPanel].forEach(el => el.classList.remove('active'));
@@ -253,52 +281,13 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (newTab === 'listBuilder') { elements.listBuilderMode.classList.add('active'); elements.tabListBuilderBtn.classList.add('active'); } 
         else if (newTab === 'admin') { elements.adminPanel.classList.add('active'); }
     }
-
+    
     function setDarkMode(isDark) { const iconElement = elements.darkModeToggle.querySelector('i'); if (isDark) { document.body.classList.add('dark-mode'); iconElement.classList.replace('fa-moon', 'fa-sun'); localStorage.setItem('theme', 'dark'); } else { document.body.classList.remove('dark-mode'); iconElement.classList.replace('fa-sun', 'fa-moon'); localStorage.setItem('theme', 'light'); } }
+    
+    function performSearch(searchTerm) { if (!searchTerm) return []; const term = searchTerm.toLowerCase(); return productDatabase.filter(p => (p.kod_kreskowy?.toLowerCase().includes(term)) || (p.nazwa_produktu?.toLowerCase().includes(term)) || (p.opis?.toLowerCase().includes(term))); }
     
     function showToast(message) { const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = message; elements.toastContainer.appendChild(toast); setTimeout(() => { toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }, 10); }
 
-    // =================================================================
-    // WYSZUKIWANIE
-    // =================================================================
-    function performSearch(searchTerm) { if (!searchTerm) return []; const term = searchTerm.toLowerCase(); return productDatabase.filter(p => (p.kod_kreskowy?.toLowerCase().includes(term)) || (p.nazwa_produktu?.toLowerCase().includes(term)) || (p.opis?.toLowerCase().includes(term))); }
-    
-    function handleLookupSearch() {
-        const searchTerm = elements.lookupBarcodeInput.value.trim();
-        elements.lookupResultList.innerHTML = '';
-        elements.lookupResultList.style.display = 'none';
-        elements.lookupResultSingle.innerHTML = '';
-        elements.lookupResultSingle.style.display = 'none';
-        if (!searchTerm) return;
-        const results = performSearch(searchTerm);
-        if (results.length === 1) {
-            displaySingleProductInLookup(results[0]);
-        } else if (results.length > 1) {
-            displayProductListInLookup(elements.lookupResultList, results);
-        } else {
-            elements.lookupResultSingle.innerHTML = '<p style="padding: 15px;">Nie znaleziono produktu.</p>';
-            elements.lookupResultSingle.style.display = 'block';
-        }
-    }
-    
-    function displaySingleProductInLookup(product) {
-        let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
-        elements.lookupResultSingle.innerHTML = html;
-        elements.lookupResultSingle.style.display = 'block';
-        elements.lookupResultList.style.display = 'none';
-    }
-
-    function displayProductListInLookup(container, products) {
-        let listHtml = '<ul>';
-        products.forEach(p => { listHtml += `<li data-product-json='${JSON.stringify(p)}'>${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
-        listHtml += '</ul>';
-        container.innerHTML = listHtml;
-        container.style.display = 'block';
-    }
-
-    // =================================================================
-    // MODUŁ ZAMÓWIENIA
-    // =================================================================
     function addProductToList(code = null, quantity = null) {
         const ean = code || elements.listBarcodeInput.value.trim();
         const qty = quantity || parseInt(elements.quantityInput.value, 10);
@@ -317,33 +306,56 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.listBarcodeInput.focus();
     }
     
-    function handleListBuilderSearch() {
-        const searchTerm = elements.listBarcodeInput.value.trim();
+    function handleListBuilderSearch(event) {
+        const searchTerm = event.target.value.trim();
         elements.listBuilderSearchResults.style.display = 'none';
         if (!searchTerm) return;
         
         const results = performSearch(searchTerm);
-
-        if (isMobile) {
-            addProductToList(searchTerm, 1);
-            return;
-        }
-
-        if (results.length === 1) { addProductToList(results[0].kod_kreskowy); } 
-        else if (results.length > 1) {
+        
+        if (results.length > 0) {
             let listHtml = '<ul>';
             results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
             listHtml += `<li class="add-unknown-item" data-ean="${searchTerm}"><i class="fa fa-plus"></i> Dodaj "${searchTerm}" jako nową pozycję</li>`;
             listHtml += '</ul>';
             elements.listBuilderSearchResults.innerHTML = listHtml;
             elements.listBuilderSearchResults.style.display = 'block';
-        } else {
-             if (window.confirm(`Produkt "${searchTerm}" nie został znaleziony. Czy chcesz dodać go jako nową pozycję?`)) {
-                addProductToList(searchTerm);
-             }
         }
     }
 
+    function handleLookupSearch(event) {
+        const searchTerm = event.target.value.trim();
+        elements.lookupResultList.innerHTML = '';
+        elements.lookupResultList.style.display = 'none';
+        elements.lookupResultSingle.innerHTML = '';
+        elements.lookupResultSingle.style.display = 'none';
+        if (!searchTerm) return;
+        const results = performSearch(searchTerm);
+        if (results.length === 1) {
+            displaySingleProductInLookup(results[0]);
+        } else if (results.length > 1) {
+            displayProductListInLookup(results);
+        } else {
+            elements.lookupResultSingle.innerHTML = '<p style="padding: 15px;">Nie znaleziono produktu.</p>';
+            elements.lookupResultSingle.style.display = 'block';
+        }
+    }
+    
+    function displaySingleProductInLookup(product) {
+        let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`;
+        elements.lookupResultSingle.innerHTML = html;
+        elements.lookupResultSingle.style.display = 'block';
+        elements.lookupResultList.style.display = 'none';
+    }
+
+    function displayProductListInLookup(products) {
+        let listHtml = '<ul>';
+        products.forEach(p => { listHtml += `<li data-product-json='${JSON.stringify(p)}'>${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+        listHtml += '</ul>';
+        elements.lookupResultList.innerHTML = listHtml;
+        elements.lookupResultList.style.display = 'block';
+    }
+    
     function renderScannedList() {
         elements.scannedListBody.innerHTML = '';
         const canOperate = scannedItems.length > 0;
@@ -357,9 +369,43 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.totalOrderValue.textContent = `Total: ${totalValue.toFixed(2)} PLN`;
     }
     
-    // =================================================================
-    // ZAPISYWANIE I WCZYTYWANIE LIST
-    // =================================================================
+    // ... (pozostały kod)
+    
+    function getSafeFilename() { const clientName = elements.clientNameInput.value.trim().replace(/[<>:"/\\|?* ]+/g, '_') || 'zamowienie'; const date = new Date().toISOString().slice(0, 10); return `${clientName}_${date}`; }
+    function exportToCsvOptima() { if (scannedItems.length === 0) return; const csvContent = scannedItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`); }
+    if(elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCsvOptima);
+    function exportToExcelDetailed() { if (scannedItems.length === 0) return; const headers = '"Kod produktu";"Nazwa";"EAN";"Ilość";"Cena Jednostkowa"'; const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${item.name || ''}";"${(item.description || '').replace(/"/g, '""')}";"${item.ean || ''}";"${item.quantity || 0}";"${priceFormatted}"`; }); const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`; downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`); }
+    if(elements.exportExcelBtn) elements.exportExcelBtn.addEventListener('click', exportToExcelDetailed);
+    function downloadFile(content, mimeType, filename) { const blob = new Blob([content], { type: mimeType }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+    
+    function prepareForPrint() {
+        if (!elements.printTableBody) return;
+        elements.printTableBody.innerHTML = '';
+        if (scannedItems.length === 0) return;
+        elements.printClientName.textContent = `Klient: ${elements.clientNameInput.value.trim() || 'Nie podano'}`;
+        elements.printAdditionalInfo.textContent = `Info: ${elements.additionalInfoInput.value.trim() || 'Brak'}`;
+        scannedItems.forEach(item => {
+            const row = elements.printTableBody.insertRow();
+            row.insertCell().textContent = item.name || '';
+            row.insertCell().textContent = item.description || '';
+            row.insertCell().textContent = item.quantity;
+        });
+    }
+
+    if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
+    
+    function clearCurrentList(askConfirm = true) {
+        if (askConfirm && scannedItems.length > 0 && !confirm('Czy na pewno chcesz wyczyścić bieżące zamówienie? Ta operacja usunie również aktywną, zapamiętaną listę.')) { return; }
+        scannedItems = [];
+        elements.clientNameInput.value = '';
+        elements.additionalInfoInput.value = '';
+        localStorage.removeItem('activeListId');
+        renderScannedList();
+        showToast("Utworzono nową, czystą listę.");
+    }
+    
+    if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => clearCurrentList(true));
+    
     async function saveCurrentList() {
         const listName = prompt("Podaj nazwę dla zapisywanego zamówienia:", elements.clientNameInput.value || `Zamówienie ${getSafeFilename()}`);
         if (!listName) return null;
@@ -373,15 +419,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { alert(`Błąd: ${error.message}`); return null; }
     }
 
-    function clearCurrentList(askConfirm = true) {
-        if (askConfirm && scannedItems.length > 0 && !confirm('Czy na pewno chcesz wyczyścić bieżące zamówienie? Ta operacja usunie również aktywną, zapamiętaną listę.')) { return; }
-        scannedItems = [];
-        elements.clientNameInput.value = '';
-        elements.additionalInfoInput.value = '';
-        localStorage.removeItem('activeListId');
-        renderScannedList();
-        showToast("Utworzono nową, czystą listę.");
-    }
+    if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
+    if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) { await saveCurrentList(); } } clearCurrentList(false); });
     
     async function loadListById(listId) {
         try {
@@ -409,9 +448,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/data/lists', { headers: { 'x-auth-token': localStorage.getItem('token') } });
             if (!response.ok) throw new Error("Błąd wczytywania list");
             const lists = await response.json();
-            container.innerHTML = `<div style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);"><button id="importCsvBtn" class="btn btn-primary" style="background-color: var(--info-color); width: 100%;"><i class="fa-solid fa-file-import"></i> Importuj zamówienie z pliku CSV</button><input type="file" id="importCsvInput" accept=".csv" style="display: none;"></div><h3>Zapisane listy:</h3>`;
+            container.innerHTML = `<div style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);">
+                                     <button id="importCsvBtn" class="btn btn-primary" style="background-color: var(--info-color); width: 100%;">
+                                         <i class="fa-solid fa-file-import"></i> Importuj zamówienie z pliku CSV
+                                     </button>
+                                     <input type="file" id="importCsvInput" accept=".csv" style="display: none;">
+                                   </div><h3>Zapisane listy:</h3>`;
             
-            container.querySelector('#importCsvBtn').addEventListener('click', () => elements.importCsvInput.click());
+            container.querySelector('#importCsvBtn').addEventListener('click', () => container.querySelector('#importCsvInput').click());
             container.querySelector('#importCsvInput').addEventListener('change', handleFileImport);
 
             if (lists.length === 0) { container.innerHTML += '<p>Brak zapisanych zamówień.</p>'; return; }
@@ -487,50 +531,17 @@ document.addEventListener('DOMContentLoaded', () => {
         event.target.value = '';
     }
     
-    // ... (pozostały kod bez zmian, dodany poniżej)
+    // ... (reszta kodu jest w następnym bloku)
+});
+// ... (kontynuacja pliku skaner.js)
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ... (cały kod z poprzedniego bloku, aż do tego miejsca) ...
 
     // =================================================================
-    // POZOSTAŁE MODUŁY I FUNKCJE
+    // PANEL ADMINA
     // =================================================================
-
-    // Klawiatura numeryczna
-    function openNumpad(targetElement, callbackOnOk) {
-        numpadTarget = targetElement;
-        numpadCallback = callbackOnOk;
-        elements.numpadDisplay.textContent = targetElement.value || '1';
-        elements.numpadModal.style.display = 'flex';
-    }
-
-    function handleNumpadOK() {
-        const value = parseInt(elements.numpadDisplay.textContent) || 0;
-        if (numpadTarget) {
-            numpadTarget.value = value;
-            numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        if (numpadCallback) {
-            numpadCallback(value);
-        }
-        elements.numpadModal.style.display = 'none';
-    }
-    
-    function attachNumpadListeners() {
-        elements.numpadKeys.forEach(key => key.addEventListener('click', () => {
-            const display = elements.numpadDisplay;
-            if (display.textContent === '0' || !/^\d+$/.test(display.textContent)) display.textContent = '';
-            display.textContent += key.dataset.key;
-        }));
-        elements.numpadClear.addEventListener('click', () => { elements.numpadDisplay.textContent = '0'; });
-        elements.numpadBackspace.addEventListener('click', () => {
-            const display = elements.numpadDisplay;
-            display.textContent = display.textContent.slice(0, -1) || '0';
-        });
-        elements.numpadOk.addEventListener('click', handleNumpadOK);
-        
-        elements.quantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
-        elements.inventoryQuantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
-    }
-
-    // Panel Admina
     async function loadAllUsers() {
         const userListDiv = elements.allUsersList;
         if(!userListDiv) return;
@@ -554,7 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { userListDiv.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`; }
     }
     
-    async function handleUserAction(url, options, successMsg) { try { const response = await fetch(url, options); const data = await response.json(); if(!response.ok) throw new Error(data.msg || 'Wystąpił błąd.'); alert(successMsg || data.msg); loadAllUsers(); } catch (error) { alert(`Błąd: ${error.message}`); } }
+    async function handleUserAction(url, options, successMsg) { try { const response = await fetch(url, options); const data = await response.json(); if(!response.ok) throw new Error(data.msg || 'Wystąpił błąd.'); alert(successMsg || data.msg); await loadAllUsers(); } catch (error) { alert(`Błąd: ${error.message}`); } }
     async function handleChangePassword() { const oldPassword = prompt("Wprowadź swoje stare hasło:"); if (!oldPassword) return; const newPassword = prompt("Wprowadź nowe hasło (min. 4 znaki):"); if (!newPassword) return; await handleUserAction('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ oldPassword, newPassword }) }); }
     if(elements.allUsersList) elements.allUsersList.addEventListener('click', e => { 
         const target = e.target.closest('button'); 
@@ -566,7 +577,9 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (target.classList.contains('change-role-btn')) { if (confirm(`Zmienić rolę ${username} na ${role}?`)) handleUserAction(`/api/admin/change-role/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newRole: role }) }); }
     });
 
-    // Moduł Inwentaryzacji
+    // =================================================================
+    // MODUŁ INWENTARYZACJI
+    // =================================================================
     if (elements.closeInventoryModalBtn) elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
     if(elements.inventoryAddBtn) elements.inventoryAddBtn.addEventListener('click', () => { const ean = elements.inventoryEanInput.value.trim(); const quantity = parseInt(elements.inventoryQuantityInput.value, 10); if (!ean || !quantity) return; const existing = inventoryItems.find(i => i.ean === ean); if (existing) existing.quantity += quantity; else inventoryItems.push({ ean: ean, name: 'Inwentaryzacja', quantity: quantity }); renderInventoryList(); });
     function renderInventoryList() { if (elements.inventoryListBody) elements.inventoryListBody.innerHTML = inventoryItems.map((item, i) => `<tr><td>${item.name}</td><td>${item.ean}</td><td><input type="number" readonly class="quantity-in-table" value="${item.quantity}" data-index="${i}"></td><td><button class="delete-inv-item-btn btn-icon btn-danger" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); }
@@ -584,7 +597,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Moduł Kompletacji
+    // =================================================================
+    // MODUŁ KOMPLETACJI
+    // =================================================================
     async function startPicking(listId, listName) {
         try {
             const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
@@ -630,14 +645,14 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast(`Nie znaleziono produktu: ${searchTerm}`);
         }
     }
-
+    
     function verifyPicking() {
-        // ... (logika weryfikacji pozostaje bez zmian)
+        // ... (logika weryfikacji bez zmian)
     }
 
     if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
     if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('input', handlePickingSearch);
-    if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { elements.pickingEanInput.value = ''; elements.pickingSearchResults.style.display = 'none'; moveItemToPicked(li.dataset.ean, 1); }});
+    if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { openNumpad({value: 1}, (qty) => moveItemToPicked(li.dataset.ean, qty)); elements.pickingSearchResults.style.display = 'none'; elements.pickingEanInput.value = ''; }});
     if (elements.pickingTargetList) elements.pickingTargetList.addEventListener('click', e => {
         const itemDiv = e.target.closest('.pick-item');
         if (itemDiv?.dataset.ean) {
@@ -667,11 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-     if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
-    if (elements.closePickingSummaryModalBtn) elements.closePickingSummaryModalBtn.addEventListener('click', () => elements.pickingSummaryModal.style.display = 'none');
-    if (elements.pickingAcceptBtn) elements.pickingAcceptBtn.addEventListener('click', () => { elements.pickingSummaryModal.style.display = 'none'; showToast('Zmiany zaakceptowane.'); });
-    if (elements.pickingExportCsvBtn) elements.pickingExportCsvBtn.addEventListener('click', () => { /* ... logika eksportu ... */ });
-
+    
     // Inicjalizacja Aplikacji
     checkLoginStatus();
 });
