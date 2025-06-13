@@ -159,10 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { registerError.textContent = 'Nie można połączyć się z serwerem.'; }
     }
 
-    // =================================================================
-    // GŁÓWNA FUNKCJA PODPINANIA LISTENERÓW
-    // =================================================================
-    function attachAllEventListeners() {
+   function attachAllEventListeners() {
         if (elements.loginBtn) elements.loginBtn.addEventListener('click', attemptLogin);
         if (elements.loginPassword) elements.loginPassword.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
         if (elements.registerBtn) elements.registerBtn.addEventListener('click', handleRegistration);
@@ -189,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) { addProductToList(targetLi.dataset.ean); } });
         if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
         
-        // Szybkie wyszukiwanie
         if(elements.quickSearchBtn) elements.quickSearchBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'flex'; elements.lookupBarcodeInput.focus(); });
         if(elements.closeQuickSearchModalBtn) elements.closeQuickSearchModalBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'none'; });
         if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('input', handleLookupSearch);
