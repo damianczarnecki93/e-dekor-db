@@ -1,5 +1,4 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config();
 
@@ -8,16 +7,22 @@ const app = express();
 // Middleware do parsowania JSON
 app.use(express.json());
 
-// Łączenie z bazą danych MongoDB
-const dbURI = process.env.MONGO_URI;
-mongoose.connect(dbURI)
-    .then(() => console.log('Połączono z MongoDB...'))
-    .catch(err => console.error('Nie udało się połączyć z MongoDB...', err));
+// Logika tras API - na razie uproszczona, aby nie powodować błędów
+// Zwracamy przykładowe dane, żeby sprawdzić, czy API w ogóle odpowiada
+app.post('/api/auth/login', (req, res) => {
+    const { username } = req.body;
+    // Symulacja pomyślnego logowania
+    res.json({
+        token: 'fake-token-for-testing',
+        user: { id: '123', username: username, role: 'user' }
+    });
+});
 
-// Definicja tras API
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/data', require('./routes/data'));
-app.use('/api/admin', require('./routes/admin'));
+app.get('/api/auth/verify', (req, res) => {
+    // Symulacja pomyślnej weryfikacji
+    res.json({ id: '123', username: 'testuser', role: 'user' });
+});
+
 
 // Serwowanie plików statycznych z folderu 'client'
 app.use(express.static(path.join(__dirname, 'client')));
@@ -28,4 +33,4 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Serwer uruchomiony na porcie ${PORT}`));
+app.listen(PORT, () => console.log(`Serwer diagnostyczny uruchomiony na porcie ${PORT}`));
