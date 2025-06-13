@@ -67,12 +67,20 @@
         thead th:last-child { border-top-right-radius: 12px; }
         tbody td { padding: 15px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         #totalOrderValue { text-align: right; font-size: 1.2em; font-weight: 600; margin-top: 20px; padding: 12px 20px; border-radius: 12px; color: var(--success-color); border: 1px solid var(--success-color); background-color: rgba(52, 199, 89, 0.05); }
+        .admin-user-list .user-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color); }
+        .admin-user-list .user-info { display: flex; flex-direction: column; }
+        .admin-user-list .user-info .status { font-size: 0.8em; opacity: 0.7; }
+        .admin-user-list .user-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .admin-user-list .user-actions button { padding: 5px 10px; font-size: 0.8em; }
         .search-container { position: relative; width: 100%; }
         .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1000; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
         .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
         #lookupResultSingle { margin-top: 20px; border-radius: 12px; border: 1px solid var(--border-color); padding: 0 15px; }
         .lookup-result-item { padding: 15px 0; }
+        #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 2000; }
+        .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .toast.show { opacity: 1; transform: translateY(0); }
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(5px); background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1050; padding: 15px; }
         .modal-content { background-color: var(--surface-color); padding: 30px; border-radius: 16px; width: 100%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -83,7 +91,7 @@
             body { padding: 80px 5px 80px 5px; }
             .container { padding: 20px 15px; }
             .controls-grid > * { flex-basis: 100%; }
-            .col-desc, .col-ean { display: none; }
+            .col-code, .col-ean { display: none; }
             .export-controls { grid-template-columns: 1fr; }
             #totalOrderValue { font-size: 1rem; padding: 10px; }
             .bottom-scroll-bar button, .top-right-menu .btn-icon { width: 40px; height: 40px; }
@@ -152,6 +160,7 @@
         <div class="app-header">
             <img src="logo.jpg" alt="Logo Firmy" class="header-logo">
         </div>
+
         <div class="controls-grid">
             <input type="text" id="clientNameInput" placeholder="Nazwa klienta..." disabled>
             <input type="text" id="additionalInfoInput" placeholder="Informacje dodatkowe...">
@@ -161,7 +170,7 @@
                 <input type="text" id="listBarcode_Input" placeholder="Wpisz EAN, kod lub nazwę..." disabled>
                 <div id="listBuilderSearchResults" class="search-results-list" style="display: none;"></div>
             </div>
-            <input type="number" id="quantityInput" value="1" min="1" inputmode="numeric" disabled readonly>
+            <input type="number" id="quantityInput" value="1" min="1" disabled>
             <button id="addToListBtn" class="btn-primary" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
         </div>
         <table>
@@ -224,12 +233,12 @@
                         <input type="text" id="inventoryEanInput" placeholder="Wpisz EAN, kod lub nazwę...">
                         <div id="inventorySearchResults" class="search-results-list" style="display: none;"></div>
                     </div>
-                    <input type="number" id="inventoryQuantityInput" value="1" min="1" readonly>
+                    <input type="number" id="inventoryQuantityInput" value="1" min="1">
                     <button id="inventoryAddBtn" class="btn-primary"><i class="fa-solid fa-plus"></i> Dodaj</button>
                 </div>
                 <div style="flex-grow: 1; overflow-y: auto; margin-top: 15px; border: 1px solid var(--border-color); border-radius: 12px;">
                     <table>
-                        <thead><tr><th>Kod produktu</th><th>Nazwa</th><th>Ilość</th><th>Akcje</th></tr></thead>
+                        <thead><tr><th>Nazwa</th><th>EAN</th><th>Ilość</th><th>Akcje</th></tr></thead>
                         <tbody id="inventoryListBody"></tbody>
                     </table>
                 </div>
@@ -254,7 +263,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="pickingModule" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -262,28 +271,29 @@
                 <button id="closePickingModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
             </div>
             <div class="modal-body">
-                 <div class="search-container">
-                    <input type="text" id="pickingEanInput" placeholder="Wyszukaj lub zeskanuj produkt do skompletowania...">
-                    <div id="pickingSearchResults" class="search-results-list" style="display:none;"></div>
+                 <div class="controls-grid">
+                    <div class="search-container" style="flex: 1 1 300px;">
+                        <input type="text" id="pickingEanInput" placeholder="Wyszukaj lub zeskanuj produkt...">
+                    </div>
                 </div>
-                <div id="picking-status-msg" style="text-align: center; font-weight: 600; margin: 15px 0; padding: 10px; border-radius: 8px;"></div>
+                <div id="pickingStatusMsg" style="text-align: center; font-weight: 600; margin: 15px 0; padding: 10px; border-radius: 8px;"></div>
                 <div style="display: flex; gap: 20px; flex-grow: 1; min-height: 300px;">
                     <div style="width: 50%; display: flex; flex-direction: column;">
                         <h3>Do zebrania:</h3>
-                        <div id="picking-target-list" style="flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
+                        <div id="pickingTargetList" style="flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
                     </div>
                     <div style="width: 50%; display: flex; flex-direction: column;">
                         <h3>Skompletowano:</h3>
-                        <div id="picking-scanned-list" style="flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
+                        <div id="pickingScannedList" style="flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
                     </div>
                 </div>
                 <div class="controls-grid" style="margin-top: 15px;">
-                    <button id="picking-verify-btn" class="btn-primary">Weryfikacja</button>
+                    <button id="pickingVerifyBtn" class="btn-primary">Weryfikacja</button>
                 </div>
             </div>
         </div>
     </div>
-
+    
     <div id="toast-container"></div>
 
     <div id="print-area" style="display: none !important;">
@@ -297,27 +307,6 @@
             </thead>
             <tbody id="print-table-body"></tbody>
         </table>
-    </div>
-
-    <div id="numpad-modal" class="modal">
-        <div class="modal-content" style="max-width: 320px; padding: 20px;">
-            <div id="numpad-display" style="width: 100%; padding: 10px; font-size: 1.8em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color);"></div>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                <button class="numpad-key btn-icon" data-key="1">1</button>
-                <button class="numpad-key btn-icon" data-key="2">2</button>
-                <button class="numpad-key btn-icon" data-key="3">3</button>
-                <button class="numpad-key btn-icon" data-key="4">4</button>
-                <button class="numpad-key btn-icon" data-key="5">5</button>
-                <button class="numpad-key btn-icon" data-key="6">6</button>
-                <button class="numpad-key btn-icon" data-key="7">7</button>
-                <button class="numpad-key btn-icon" data-key="8">8</button>
-                <button class="numpad-key btn-icon" data-key="9">9</button>
-                <button id="numpad-clear" class="btn-icon" style="font-size: 1em;">C</button>
-                <button class="numpad-key btn-icon" data-key="0">0</button>
-                <button id="numpad-backspace" class="btn-icon"><i class="fa-solid fa-delete-left"></i></button>
-            </div>
-            <button id="numpad-ok" class="btn-primary" style="width: 100%; margin-top: 10px;">OK</button>
-        </div>
     </div>
     
     <footer style="text-align: center; margin-top: 40px; color: var(--text-secondary-color); font-size: 0.9em;">
