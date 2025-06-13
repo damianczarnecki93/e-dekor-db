@@ -46,12 +46,6 @@
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(10px); background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; padding:10px; }
         #loginBox { background: var(--surface-color); padding: 40px; border-radius: 20px; text-align: center; width: 100%; max-width: 400px; }
         #loginBox h2 { margin-top: 0; }
-        .tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 25px; }
-        .tabs button { background: none; padding: 15px; font-size: 1.1em; font-weight: 600; color: var(--text-secondary-color); border-radius: 0; border: none; border-bottom: 4px solid transparent; flex-grow: 1; }
-        .tabs button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.5s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .top-right-menu { position: fixed; top: 15px; right: 15px; z-index: 1011; display: none; gap: 10px; }
         .dropdown { position: relative; display: inline-block; }
         .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--surface-color); min-width: 240px; box-shadow: var(--shadow); z-index: 1; border-radius: 12px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border-color); }
@@ -76,8 +70,6 @@
         .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1000; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
         .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
-        #lookupResultSingle { margin-top: 20px; border-radius: 12px; border: 1px solid var(--border-color); padding: 0 15px; }
-        .lookup-result-item { padding: 15px 0; }
         #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 2000; }
         .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .toast.show { opacity: 1; transform: translateY(0); }
@@ -87,12 +79,6 @@
         .modal-header h2 { border: none; padding: 0; margin: 0; }
         .modal-body { flex-grow: 1; overflow-y: auto; }
         
-        #numpad-modal .modal-content { max-width: 320px; padding: 20px; }
-        #numpad-display { width: 100%; padding: 10px; font-size: 1.8em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color); }
-        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .numpad-grid button { padding: 20px; font-size: 1.2em; font-weight: 600; }
-        #numpad-ok { width: 100%; margin-top: 10px; }
-
         @media (max-width: 768px) {
             body { padding: 80px 5px 80px 5px; }
             .container { padding: 20px 15px; }
@@ -121,6 +107,7 @@
 <body>
     
     <div class="top-right-menu" id="topBar">
+        <button id="quickSearchBtn" class="btn-icon" title="Szybkie wyszukiwanie"><i class="fa-solid fa-search"></i></button>
         <button id="darkModeToggle" class="btn-icon"><i class="fa-solid fa-moon"></i></button>
         <div class="dropdown">
             <button id="menuToggleBtn" class="btn-primary btn-icon"><i class="fa-solid fa-bars"></i></button>
@@ -166,56 +153,41 @@
             <img src="logo.jpg" alt="Logo Firmy" class="header-logo">
         </div>
 
-        <div class="tabs">
-            <button id="tabLookupBtn" class="active"><i class="fa-solid fa-search"></i> Wyszukaj</button>
-            <button id="tabListBuilderBtn"><i class="fa-solid fa-list"></i> Zamówienie</button>
+        <div class="controls-grid">
+            <input type="text" id="clientNameInput" placeholder="Nazwa klienta..." disabled>
+            <input type="text" id="additionalInfoInput" placeholder="Informacje dodatkowe...">
         </div>
-
-        <div id="lookupMode" class="tab-content active">
-            <div class="search-container">
-                <input type="text" id="lookupBarcodeInput" placeholder="Wpisz EAN, kod lub nazwę produktu..." disabled>
-                <div id="lookupResultList" class="search-results-list" style="display: none;"></div>
+        <div class="controls-grid">
+            <div class="search-container" style="flex: 1 1 300px;">
+                <input type="text" id="listBarcode_Input" placeholder="Wpisz EAN, kod lub nazwę..." disabled>
+                <div id="listBuilderSearchResults" class="search-results-list" style="display: none;"></div>
             </div>
-            <div id="lookupResultSingle" style="margin-top: 20px;"></div>
+            <input type="number" id="quantityInput" value="1" min="1" inputmode="numeric" disabled readonly>
+            <button id="addToListBtn" class="btn-primary" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
         </div>
-
-        <div id="listBuilderMode" class="tab-content">
-            <div class="controls-grid">
-                <input type="text" id="clientNameInput" placeholder="Nazwa klienta..." disabled>
-                <input type="text" id="additionalInfoInput" placeholder="Informacje dodatkowe...">
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-code">Kod produktu</th>
+                    <th class="col-desc">Nazwa</th>
+                    <th class="col-ean">EAN</th>
+                    <th>Ilość</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody id="scannedListBody"></tbody>
+        </table>
+        <div id="totalOrderValue">Total: 0.00 PLN</div>
+        <div class="export-section">
+            <div class="controls-grid" style="gap: 10px; margin-top: 15px;">
+                 <button id="newListBtn" class="btn-primary" style="background-color: var(--warning-color); flex-grow: 1;">Nowa lista</button>
+                 <button id="saveListBtn" class="btn-primary" disabled style="flex-grow: 1;"><i class="fa-solid fa-save"></i> Zapisz listę</button>
             </div>
-            <div class="controls-grid">
-                <div class="search-container" style="flex: 1 1 300px;">
-                    <input type="text" id="listBarcode_Input" placeholder="Wpisz EAN, kod lub nazwę..." disabled>
-                    <div id="listBuilderSearchResults" class="search-results-list" style="display: none;"></div>
-                </div>
-                <input type="number" id="quantityInput" value="1" min="1" inputmode="numeric" disabled readonly>
-                <button id="addToListBtn" class="btn-primary" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th class="col-code">Kod produktu</th>
-                        <th class="col-desc">Nazwa</th>
-                        <th class="col-ean">EAN</th>
-                        <th>Ilość</th>
-                        <th>Akcje</th>
-                    </tr>
-                </thead>
-                <tbody id="scannedListBody"></tbody>
-            </table>
-            <div id="totalOrderValue">Total: 0.00 PLN</div>
-            <div class="export-section">
-                <div class="controls-grid" style="gap: 10px; margin-top: 15px;">
-                     <button id="newListBtn" class="btn-primary" style="background-color: var(--warning-color); flex-grow: 1;">Nowa lista</button>
-                     <button id="saveListBtn" class="btn-primary" disabled style="flex-grow: 1;"><i class="fa-solid fa-save"></i> Zapisz listę</button>
-                </div>
-                <div class="export-controls" style="margin-top: 15px;">
-                    <button id="printListBtn" class="btn btn-print" disabled><i class="fa-solid fa-print"></i> Drukuj</button>
-                    <button id="exportCsvBtn" class="btn btn-csv" disabled><i class="fa-solid fa-file-csv"></i> Optima</button>
-                    <button id="exportExcelBtn" class="btn btn-excel" disabled><i class="fa-solid fa-file-excel"></i> Excel</button>
-                    <button id="clearListBtn" class="btn-danger" disabled><i class="fa-solid fa-eraser"></i> Wyczyść</button>
-                </div>
+            <div class="export-controls" style="margin-top: 15px;">
+                <button id="printListBtn" class="btn btn-print" disabled><i class="fa-solid fa-print"></i> Drukuj</button>
+                <button id="exportCsvBtn" class="btn btn-csv" disabled><i class="fa-solid fa-file-csv"></i> Optima</button>
+                <button id="exportExcelBtn" class="btn btn-excel" disabled><i class="fa-solid fa-file-excel"></i> Excel</button>
+                <button id="clearListBtn" class="btn-danger" disabled><i class="fa-solid fa-eraser"></i> Wyczyść</button>
             </div>
         </div>
         
@@ -225,20 +197,36 @@
         </div>
     </div>
     
+    <div id="quickSearchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Szybkie wyszukiwanie</h2>
+                <button id="closeQuickSearchModalBtn" class="btn-icon" style="background:none; box-shadow:none;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="search-container">
+                    <input type="text" id="lookupBarcodeInput" placeholder="Wpisz EAN, kod lub nazwę...">
+                    <div id="lookupResultList" class="search-results-list" style="display: none;"></div>
+                </div>
+                <div id="lookupResultSingle" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="inventoryModule" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2><i class="fa-solid fa-boxes-packing"></i> Inwentaryzacja</h2>
-                <button id="closeInventoryModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+                <button id="closeInventoryModalBtn" class="btn-icon" style="background: none; box-shadow: none;">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="controls-grid">
-                    <input type="text" id="inventoryEanInput" placeholder="Wpisz EAN, kod lub nazwę..." disabled>
-                    <input type="number" id="inventoryQuantityInput" value="1" min="1" inputmode="numeric" disabled readonly>
-                    <button id="inventoryAddBtn" class="btn-primary" disabled><i class="fa-solid fa-plus"></i> Dodaj</button>
-                </div>
-                <div class="search-container">
-                    <div id="inventorySearchResults" class="search-results-list" style="display: none;"></div>
+                    <div class="search-container" style="flex-grow: 1;">
+                        <input type="text" id="inventoryEanInput" placeholder="Wpisz EAN, kod lub nazwę...">
+                        <div id="inventorySearchResults" class="search-results-list" style="display: none;"></div>
+                    </div>
+                    <input type="number" id="inventoryQuantityInput" value="1" min="1" readonly>
+                    <button id="inventoryAddBtn" class="btn-primary"><i class="fa-solid fa-plus"></i> Dodaj</button>
                 </div>
                 <div style="flex-grow: 1; overflow-y: auto; margin-top: 15px; border: 1px solid var(--border-color); border-radius: 12px;">
                     <table>
@@ -246,7 +234,6 @@
                         <tbody id="inventoryListBody"></tbody>
                     </table>
                 </div>
-                <button id="inventoryExportCsvBtn" class="btn btn-csv" style="width:100%; margin-top: 15px;" disabled><i class="fa-solid fa-file-download"></i> Eksportuj do CSV</button>
             </div>
         </div>
     </div>
@@ -255,7 +242,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2><i class="fa-solid fa-save"></i> Zapisane zamówienia</h2>
-                <button id="closeSavedListsModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+                <button id="closeSavedListsModalBtn" class="btn-icon" style="background: none; box-shadow: none;">&times;</button>
             </div>
             <div class="modal-body">
                 <div style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);">
@@ -273,41 +260,26 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="picking-order-name">Kompletacja zamówienia</h2>
-                <button id="closePickingModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+                <button id="closePickingModalBtn" class="btn-icon" style="background: none; box-shadow: none;">&times;</button>
             </div>
             <div class="modal-body">
-                 <div class="search-container">
-                    <input type="text" id="picking-ean-input" placeholder="Wyszukaj lub zeskanuj produkt do skompletowania...">
-                    <div id="picking-search-results" class="search-results-list" style="display:none;"></div>
+                <div class="search-container">
+                    <input type="text" id="pickingEanInput" placeholder="Wyszukaj lub zeskanuj produkt do skompletowania...">
                 </div>
-                <div id="picking-status-msg" style="text-align: center; font-weight: 600; margin: 15px 0; padding: 10px; border-radius: 8px;"></div>
+                <div id="pickingStatusMsg" style="text-align: center; font-weight: 600; margin: 15px 0; padding: 10px; border-radius: 8px;"></div>
                 <div style="display: flex; gap: 20px; flex-grow: 1; min-height: 300px;">
                     <div style="width: 50%; display: flex; flex-direction: column;">
                         <h3>Do zebrania:</h3>
-                        <div id="picking-target-list" style="flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
+                        <div id="pickingTargetList" style="flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
                     </div>
                     <div style="width: 50%; display: flex; flex-direction: column;">
                         <h3>Skompletowano:</h3>
-                        <div id="picking-scanned-list" style="flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
+                        <div id="pickingScannedList" style="flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
                     </div>
                 </div>
                 <div class="controls-grid" style="margin-top: 15px;">
-                    <button id="picking-verify-btn" class="btn-primary">Weryfikacja</button>
+                    <button id="pickingVerifyBtn" class="btn-primary">Weryfikacja</button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="pickingSummaryModal" class="modal">
-        <div class="modal-content">
-             <div class="modal-header">
-                <h2>Podsumowanie kompletacji</h2>
-                <button id="closePickingSummaryModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
-            </div>
-            <div id="pickingSummaryBody" class="modal-body"></div>
-            <div class="controls-grid" style="margin-top: 15px;">
-                <button id="picking-accept-btn" class="btn-primary">Akceptuj i zamknij</button>
-                <button id="picking-export-csv-btn" class="btn-csv">Eksportuj CSV</button>
             </div>
         </div>
     </div>
@@ -320,9 +292,7 @@
             <p id="print-additional-info"></p>
         </div>
         <table id="print-content-table">
-            <thead>
-                <tr><th>Kod produktu</th><th>Nazwa</th><th>Ilość</th></tr>
-            </thead>
+            <thead><tr><th>Kod produktu</th><th>Nazwa</th><th>Ilość</th></tr></thead>
             <tbody id="print-table-body"></tbody>
         </table>
     </div>
@@ -330,7 +300,7 @@
     <div id="numpad-modal" class="modal">
         <div class="modal-content" style="max-width: 320px; padding: 20px;">
             <div id="numpad-display" style="width: 100%; padding: 10px; font-size: 1.8em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color);"></div>
-            <div class="numpad-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
                 <button class="numpad-key btn-icon" data-key="1">1</button>
                 <button class="numpad-key btn-icon" data-key="2">2</button>
                 <button class="numpad-key btn-icon" data-key="3">3</button>
