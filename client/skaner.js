@@ -15,10 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
         registerError: document.getElementById('registerError'),
         showRegister: document.getElementById('showRegister'),
         showLogin: document.getElementById('showLogin'),
-        tabLookupBtn: document.getElementById('tabLookupBtn'),
-        tabListBuilderBtn: document.getElementById('tabListBuilderBtn'),
-        lookupMode: document.getElementById('lookupMode'),
-        listBuilderMode: document.getElementById('listBuilderMode'),
+        
+        // Główne UI i Nawigacja
         topBar: document.getElementById('topBar'),
         bottomBar: document.getElementById('bottomBar'),
         darkModeToggle: document.getElementById('darkModeToggle'),
@@ -33,29 +31,39 @@ document.addEventListener('DOMContentLoaded', () => {
         menuSavedLists: document.getElementById('menuSavedLists'),
         scrollTopBtn: document.getElementById('scrollTopBtn'),
         scrollBottomBtn: document.getElementById('scrollBottomBtn'),
-        lookupBarcodeInput: document.getElementById('lookupBarcodeInput'),
-        lookupResultList: document.getElementById('lookupResultList'),
-        lookupResultSingle: document.getElementById('lookupResultSingle'),
-        quickSearchModal: document.getElementById('quickSearchModal'),
-        closeQuickSearchModalBtn: document.getElementById('closeQuickSearchModalBtn'),
+
+        // Główne okno aplikacji
         listBarcodeInput: document.getElementById('listBarcode_Input'),
         listBuilderSearchResults: document.getElementById('listBuilderSearchResults'),
         quantityInput: document.getElementById('quantityInput'),
         addToListBtn: document.getElementById('addToListBtn'),
-        saveListBtn: document.getElementById('saveListBtn'),
-        newListBtn: document.getElementById('newListBtn'),
         scannedListBody: document.getElementById('scannedListBody'),
         clientNameInput: document.getElementById('clientNameInput'),
         additionalInfoInput: document.getElementById('additionalInfoInput'),
         totalOrderValue: document.getElementById('totalOrderValue'),
+        saveListBtn: document.getElementById('saveListBtn'),
+        newListBtn: document.getElementById('newListBtn'),
         exportCsvBtn: document.getElementById('exportCsvBtn'),
         exportExcelBtn: document.getElementById('exportExcelBtn'),
         printListBtn: document.getElementById('printListBtn'),
         clearListBtn: document.getElementById('clearListBtn'),
-        importCsvInput: document.getElementById('importCsvInput'),
+        
+        // Import CSV
         importCsvBtn: document.getElementById('importCsvBtn'),
+        importCsvInput: document.getElementById('importCsvInput'),
+        
+        // Panel Admina
         adminPanel: document.getElementById('adminPanel'),
         allUsersList: document.getElementById('allUsersList'),
+
+        // Szybkie wyszukiwanie (Modal)
+        quickSearchModal: document.getElementById('quickSearchModal'),
+        closeQuickSearchModalBtn: document.getElementById('closeQuickSearchModalBtn'),
+        lookupBarcodeInput: document.getElementById('lookupBarcodeInput'),
+        lookupResultList: document.getElementById('lookupResultList'),
+        lookupResultSingle: document.getElementById('lookupResultSingle'),
+        
+        // Inwentaryzacja (Modal)
         inventoryModule: document.getElementById('inventoryModule'),
         closeInventoryModalBtn: document.getElementById('closeInventoryModalBtn'),
         inventoryEanInput: document.getElementById('inventoryEanInput'),
@@ -64,15 +72,18 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryListBody: document.getElementById('inventoryListBody'),
         inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
         inventorySearchResults: document.getElementById('inventorySearchResults'),
+        
+        // Zapisane listy (Modal)
         savedListsModal: document.getElementById('savedListsModal'),
         closeSavedListsModalBtn: document.getElementById('closeSavedListsModalBtn'),
         savedListsContainer: document.getElementById('savedListsContainer'),
+
+        // Kompletacja (Modal)
         pickingModule: document.getElementById('pickingModule'),
         closePickingModalBtn: document.getElementById('closePickingModalBtn'),
         pickingOrderName: document.getElementById('picking-order-name'),
-        pickingEanInput: document.getElementById('picking-ean-input'),
+        pickingEanInput: document.getElementById('pickingEanInput'),
         pickingSearchResults: document.getElementById('picking-search-results'),
-        pickingStatusMsg: document.getElementById('picking-status-msg'),
         pickingTargetList: document.getElementById('picking-target-list'),
         pickingScannedList: document.getElementById('picking-scanned-list'),
         pickingVerifyBtn: document.getElementById('picking-verify-btn'),
@@ -81,6 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
         pickingSummaryBody: document.getElementById('pickingSummaryBody'),
         pickingAcceptBtn: document.getElementById('picking-accept-btn'),
         pickingExportCsvBtn: document.getElementById('picking-export-csv-btn'),
+        
+        // Inne
         toastContainer: document.getElementById('toast-container'),
         printArea: document.getElementById('print-area'),
         printClientName: document.getElementById('print-client-name'),
@@ -94,12 +107,11 @@ document.addEventListener('DOMContentLoaded', () => {
         numpadKeys: document.querySelectorAll('.numpad-key'),
     };
 
-    let productDatabase = [], scannedItems = [], inventoryItems = [], activeTab = 'lookup';
+    let productDatabase = [], scannedItems = [], inventoryItems = [];
     let currentPickingOrder = null;
     let pickedItems = [];
     let numpadTarget = null;
     let numpadCallback = null;
-    const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
     // =================================================================
     // INICJALIZACJA I LOGOWANIE
@@ -122,17 +134,13 @@ document.addEventListener('DOMContentLoaded', () => {
         attachAllEventListeners();
     };
     
-    // POPRAWKA: Przywrócono brakującą funkcję, która uniemożliwiała logowanie
     const checkLoginStatus = async () => {
         const token = localStorage.getItem('token');
         if (!token) return;
         try {
             const response = await fetch('/api/auth/verify', { method: 'GET', headers: { 'x-auth-token': token } });
-            if (response.ok) {
-                showApp(await response.json());
-            } else {
-                localStorage.removeItem('token');
-            }
+            if (response.ok) showApp(await response.json());
+            else localStorage.removeItem('token');
         } catch (error) { console.error('Błąd weryfikacji tokenu:', error); }
     };
     
@@ -163,74 +171,91 @@ document.addEventListener('DOMContentLoaded', () => {
     // GŁÓWNA FUNKCJA PODPINANIA LISTENERÓW
     // =================================================================
     function attachAllEventListeners() {
-        if (elements.loginBtn) elements.loginBtn.addEventListener('click', attemptLogin);
-        if (elements.loginPassword) elements.loginPassword.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
-        if (elements.registerBtn) elements.registerBtn.addEventListener('click', handleRegistration);
-        if (elements.showRegister) elements.showRegister.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'none'; elements.registerForm.style.display = 'block'; });
-        if (elements.showLogin) elements.showLogin.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'block'; elements.registerForm.style.display = 'none'; });
+        // Logowanie i Rejestracja
+        elements.loginBtn.addEventListener('click', attemptLogin);
+        elements.loginPassword.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
+        elements.registerBtn.addEventListener('click', handleRegistration);
+        elements.showRegister.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'none'; elements.registerForm.style.display = 'block'; });
+        elements.showLogin.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'block'; elements.registerForm.style.display = 'none'; });
         
-        if(elements.tabLookupBtn) elements.tabLookupBtn.addEventListener('click', () => switchTab('lookup'));
-        if(elements.tabListBuilderBtn) elements.tabListBuilderBtn.addEventListener('click', () => switchTab('listBuilder'));
-        
-        if (elements.menuToggleBtn) elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
+        // Główne Menu
+        elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
         window.addEventListener('click', () => { if (elements.dropdownMenu.classList.contains('show')) elements.dropdownMenu.classList.remove('show'); });
+        elements.menuAdminBtn.addEventListener('click', (e) => { e.preventDefault(); elements.adminPanel.style.display = 'block'; loadAllUsers(); });
+        elements.menuInventoryBtn.addEventListener('click', (e) => { e.preventDefault(); elements.inventoryModule.style.display = 'flex'; });
+        elements.menuLogoutBtn.addEventListener('click', (e) => { e.preventDefault(); localStorage.clear(); location.reload(); });
+        elements.menuChangePassword.addEventListener('click', (e) => { e.preventDefault(); handleChangePassword(); });
+        elements.menuSavedLists.addEventListener('click', (e) => { e.preventDefault(); showSavedLists(); });
+        elements.scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0 }));
+        elements.scrollBottomBtn.addEventListener('click', () => window.scrollTo({ top: document.body.scrollHeight }));
+        elements.darkModeToggle.addEventListener('click', () => setDarkMode(!document.body.classList.contains('dark-mode')));
         
-        if (elements.menuAdminBtn) elements.menuAdminBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('admin'); loadAllUsers(); });
-        if (elements.menuInventoryBtn) elements.menuInventoryBtn.addEventListener('click', (e) => { e.preventDefault(); elements.inventoryModule.style.display = 'flex'; });
-        if (elements.menuLogoutBtn) elements.menuLogoutBtn.addEventListener('click', (e) => { e.preventDefault(); localStorage.clear(); location.reload(); });
-        if (elements.menuChangePassword) elements.menuChangePassword.addEventListener('click', (e) => { e.preventDefault(); handleChangePassword(); });
-        if (elements.menuSavedLists) elements.menuSavedLists.addEventListener('click', (e) => { e.preventDefault(); showSavedLists(); });
-        if (elements.scrollTopBtn) elements.scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0 }));
-        if (elements.scrollBottomBtn) elements.scrollBottomBtn.addEventListener('click', () => window.scrollTo({ top: document.body.scrollHeight }));
-        
-        if (elements.darkModeToggle) elements.darkModeToggle.addEventListener('click', () => setDarkMode(!document.body.classList.contains('dark-mode')));
-        
-        if(elements.listBarcodeInput) elements.listBarcodeInput.addEventListener('input', handleListBuilderSearch);
-        if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) { addProductToList(targetLi.dataset.ean); } });
-        if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList());
-        
-        // Szybkie wyszukiwanie
-        if(elements.quickSearchBtn) elements.quickSearchBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'flex'; elements.lookupBarcodeInput.focus(); });
-        if(elements.closeQuickSearchModalBtn) elements.closeQuickSearchModalBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'none'; });
-        if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('input', handleLookupSearch);
-        if(elements.lookupResultList) elements.lookupResultList.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
-        
-        if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
-        if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => clearCurrentList(true));
-        if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
-        if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) { await saveCurrentList(); } } clearCurrentList(false); });
-        
-        if(elements.importCsvBtn) elements.importCsvBtn.addEventListener('click', () => elements.importCsvInput.click());
-        if(elements.importCsvInput) elements.importCsvInput.addEventListener('change', handleFileImport);
-        
-        if(elements.allUsersList) elements.allUsersList.addEventListener('click', handleAdminAction);
-        
-        if (elements.closeInventoryModalBtn) elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
-        if(elements.inventoryAddBtn) elements.inventoryAddBtn.addEventListener('click', handleInventoryAdd);
-        if(elements.inventoryEanInput) elements.inventoryEanInput.addEventListener('input', handleInventorySearch);
-        if(elements.inventorySearchResults) elements.inventorySearchResults.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.ean) { elements.inventoryEanInput.value = li.dataset.ean; elements.inventorySearchResults.style.display = 'none'; }});
-        if(elements.inventoryListBody) elements.inventoryListBody.addEventListener('click', handleDeleteInventoryItem);
-        
-        if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
-        if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', handleSavedListAction);
+        // Główne Zamówienie
+        elements.listBarcodeInput.addEventListener('input', handleListBuilderSearch);
+        elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) { addProductToList(targetLi.dataset.ean); } });
+        elements.addToListBtn.addEventListener('click', () => addProductToList());
+        elements.scannedListBody.addEventListener('click', handleScannedListClick);
+        elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) { await saveCurrentList(); } } clearCurrentList(false); });
+        elements.saveListBtn.addEventListener('click', saveCurrentList);
+        elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
+        elements.clearListBtn.addEventListener('click', () => clearCurrentList(true));
+        elements.exportCsvBtn.addEventListener('click', exportToCsvOptima);
+        elements.exportExcelBtn.addEventListener('click', exportToExcelDetailed);
+        elements.importCsvBtn.addEventListener('click', () => elements.importCsvInput.click());
+        elements.importCsvInput.addEventListener('change', handleFileImport);
 
-        if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
-        if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('input', handlePickingSearch);
-        if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { pickItemFromList(li.dataset.ean); } });
-        if (elements.pickingTargetList) elements.pickingTargetList.addEventListener('click', e => { const itemDiv = e.target.closest('.pick-item'); if(itemDiv?.dataset.ean) { pickItemFromList(itemDiv.dataset.ean); } });
-        if (elements.pickingScannedList) elements.pickingScannedList.addEventListener('click', handlePickedItemClick);
-        if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
-        if (elements.closePickingSummaryModalBtn) elements.closePickingSummaryModalBtn.addEventListener('click', () => elements.pickingSummaryModal.style.display = 'none');
-        if (elements.pickingAcceptBtn) elements.pickingAcceptBtn.addEventListener('click', () => { elements.pickingSummaryModal.style.display = 'none'; showToast('Zmiany zaakceptowane.'); });
-        if (elements.pickingExportCsvBtn) elements.pickingExportCsvBtn.addEventListener('click', exportPickedToCsv);
+        // Szybkie wyszukiwanie
+        elements.quickSearchBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'flex'; elements.lookupBarcodeInput.focus(); });
+        elements.closeQuickSearchModalBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'none'; });
+        elements.lookupBarcodeInput.addEventListener('input', handleLookupSearch);
+        elements.lookupResultList.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
         
-        attachNumpadListeners();
+        // Panel Admina
+        elements.allUsersList.addEventListener('click', handleAdminAction);
+        
+        // Inwentaryzacja
+        elements.closeInventoryModalBtn.addEventListener('click', () => { elements.inventoryModule.style.display = 'none'; });
+        elements.inventoryAddBtn.addEventListener('click', handleInventoryAdd);
+        elements.inventoryEanInput.addEventListener('input', handleInventorySearch);
+        elements.inventorySearchResults.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.ean) { elements.inventoryEanInput.value = li.dataset.ean; elements.inventorySearchResults.style.display = 'none'; }});
+        elements.inventoryListBody.addEventListener('click', handleDeleteInventoryItem);
+        
+        // Zapisane Listy
+        elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
+        elements.savedListsContainer.addEventListener('click', handleSavedListAction);
+        
+        // Kompletacja
+        elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
+        elements.pickingEanInput.addEventListener('input', handlePickingSearch);
+        elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { pickItemFromList(li.dataset.ean); } });
+        elements.pickingTargetList.addEventListener('click', e => { const itemDiv = e.target.closest('.pick-item'); if(itemDiv?.dataset.ean) { pickItemFromList(itemDiv.dataset.ean); } });
+        elements.pickingScannedList.addEventListener('click', handlePickedItemClick);
+        elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
+        elements.closePickingSummaryModalBtn.addEventListener('click', () => elements.pickingSummaryModal.style.display = 'none');
+        elements.pickingAcceptBtn.addEventListener('click', () => { elements.pickingSummaryModal.style.display = 'none'; showToast('Zmiany zaakceptowane.'); });
+        elements.pickingExportCsvBtn.addEventListener('click', exportPickedToCsv);
+        
+        // Klawiatura Numeryczna
+        elements.numpadKeys.forEach(key => key.addEventListener('click', () => { const display = elements.numpadDisplay; if (display.textContent === '0' || !/^\d+$/.test(display.textContent)) display.textContent = ''; display.textContent += key.dataset.key; }));
+        elements.numpadClear.addEventListener('click', () => { elements.numpadDisplay.textContent = '0'; });
+        elements.numpadBackspace.addEventListener('click', () => { const display = elements.numpadDisplay; display.textContent = display.textContent.slice(0, -1) || '0'; });
+        elements.numpadOk.addEventListener('click', handleNumpadOK);
     }
     
-    // ... (reszta kodu, który został w całości przepisany i jest teraz kompletny)
+    // =================================================================
+    // POZOSTAŁE FUNKCJE
+    // =================================================================
 
-    
-    // ... reszta funkcji ...
+    async function loadDataFromServer() {
+        console.log('Ładowanie bazy produktów...');
+        function fetchAndParseCsv(filename) { return fetch(filename).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); }
+        await Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')])
+            .then(([data1, data2]) => {
+                const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() });
+                productDatabase = [...data1.map(mapData), ...data2.map(mapData)];
+                console.log(`Baza danych załadowana (${productDatabase.length} pozycji).`);
+            }).catch(error => { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); });
+    }
     async function loadDataFromServer() {
         console.log('Ładowanie bazy produktów...');
         function fetchAndParseCsv(filename) { return fetch(filename).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); }
