@@ -86,18 +86,11 @@
         .modal-header h2 { border: none; padding: 0; margin: 0; }
         .modal-body { flex-grow: 1; overflow-y: auto; }
         
-        /* Klawiatura numeryczna */
-        #numpad-modal .numpad-container { padding: 20px; background-color: var(--surface-color); border-radius: 16px; width: 100%; max-width: 300px; }
-        #numpad-display { width: 100%; padding: 10px; font-size: 1.5em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color); }
-        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .numpad-grid button { padding: 20px; font-size: 1.2em; font-weight: 600; }
-        #numpad-ok { width: 100%; margin-top: 10px; }
-
         @media (max-width: 768px) {
             body { padding: 80px 5px 80px 5px; }
             .container { padding: 20px 15px; }
             .controls-grid > * { flex-basis: 100%; }
-            .col-code, .col-ean { display: none; }
+            .col-desc, .col-ean { display: none; }
             .export-controls { grid-template-columns: 1fr; }
             #totalOrderValue { font-size: 1rem; padding: 10px; }
             .bottom-scroll-bar button, .top-right-menu .btn-icon { width: 40px; height: 40px; }
@@ -112,9 +105,9 @@
             #print-header { margin-bottom: 20px; }
             #print-header h2 { font-size: 14pt; font-weight: bold; }
             #print-header p { font-size: 11pt; }
-            #print-content-table { width: 100%; border-collapse: collapse; font-size: 10pt; font-family: Arial, sans-serif; }
-            #print-content-table th, #print-content-table td { border: 1px solid #000; padding: 8px; text-align: left; }
-            #print-content-table th { background-color: #eee !important; font-weight: bold; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            #print-table { width: 100%; border-collapse: collapse; font-size: 10pt; font-family: Arial, sans-serif; }
+            #print-table th, #print-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+            #print-table th { background-color: #eee !important; font-weight: bold; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
 </head>
@@ -276,6 +269,12 @@
                 <button id="closePickingModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
             </div>
             <div class="modal-body">
+                <div class="controls-grid">
+                    <div class="search-container" style="flex-grow: 1;">
+                        <input type="text" id="picking-ean-input" placeholder="Wyszukaj lub zeskanuj produkt...">
+                        <div id="picking-search-results" class="search-results-list" style="display:none;"></div>
+                    </div>
+                </div>
                 <div id="picking-status-msg" style="text-align: center; font-weight: 600; margin-bottom: 15px; padding: 10px; border-radius: 8px;"></div>
                 <div style="display: flex; gap: 20px; flex-grow: 1; min-height: 300px;">
                     <div style="width: 50%; display: flex; flex-direction: column;">
@@ -290,6 +289,20 @@
                 <div class="controls-grid" style="margin-top: 15px;">
                     <button id="picking-verify-btn" class="btn-primary">Weryfikacja</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="pickingSummaryModal" class="modal">
+        <div class="modal-content">
+             <div class="modal-header">
+                <h2>Podsumowanie kompletacji</h2>
+                <button id="closePickingSummaryModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+            </div>
+            <div id="pickingSummaryBody" class="modal-body"></div>
+            <div class="controls-grid" style="margin-top: 15px;">
+                <button id="picking-accept-btn" class="btn-primary">Akceptuj i zamknij</button>
+                <button id="picking-export-csv-btn" class="btn-csv">Eksportuj CSV</button>
             </div>
         </div>
     </div>
@@ -310,23 +323,23 @@
     </div>
 
     <div id="numpad-modal" class="modal">
-        <div class="numpad-container">
-            <div id="numpad-display"></div>
-            <div class="numpad-grid">
-                <button class="numpad-key" data-key="1">1</button>
-                <button class="numpad-key" data-key="2">2</button>
-                <button class="numpad-key" data-key="3">3</button>
-                <button class="numpad-key" data-key="4">4</button>
-                <button class="numpad-key" data-key="5">5</button>
-                <button class="numpad-key" data-key="6">6</button>
-                <button class="numpad-key" data-key="7">7</button>
-                <button class="numpad-key" data-key="8">8</button>
-                <button class="numpad-key" data-key="9">9</button>
-                <button id="numpad-clear" style="font-size: 1em;">C</button>
-                <button class="numpad-key" data-key="0">0</button>
-                <button id="numpad-backspace"><i class="fa-solid fa-delete-left"></i></button>
+        <div style="background: var(--surface-color); padding: 20px; border-radius: 16px; width: 100%; max-width: 300px;">
+            <div id="numpad-display" style="width: 100%; padding: 10px; font-size: 1.5em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color);"></div>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                <button class="numpad-key btn-icon" data-key="1">1</button>
+                <button class="numpad-key btn-icon" data-key="2">2</button>
+                <button class="numpad-key btn-icon" data-key="3">3</button>
+                <button class="numpad-key btn-icon" data-key="4">4</button>
+                <button class="numpad-key btn-icon" data-key="5">5</button>
+                <button class="numpad-key btn-icon" data-key="6">6</button>
+                <button class="numpad-key btn-icon" data-key="7">7</button>
+                <button class="numpad-key btn-icon" data-key="8">8</button>
+                <button class="numpad-key btn-icon" data-key="9">9</button>
+                <button id="numpad-clear" class="btn-icon" style="font-size: 1em;">C</button>
+                <button class="numpad-key btn-icon" data-key="0">0</button>
+                <button id="numpad-backspace" class="btn-icon"><i class="fa-solid fa-delete-left"></i></button>
             </div>
-            <button id="numpad-ok" class="btn-primary">OK</button>
+            <button id="numpad-ok" class="btn-primary" style="width: 100%; margin-top: 10px;">OK</button>
         </div>
     </div>
     
