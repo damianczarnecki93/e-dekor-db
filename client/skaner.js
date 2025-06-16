@@ -200,6 +200,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
         if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', handleSavedListAction);
+
+        if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
+        if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('input', handlePickingSearch);
+        if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { pickItemFromList(li.dataset.ean); } });
+        if (elements.pickingTargetList) elements.pickingTargetList.addEventListener('click', e => { const itemDiv = e.target.closest('.pick-item'); if(itemDiv?.dataset.ean) { pickItemFromList(itemDiv.dataset.ean); } });
+        if (elements.pickingScannedList) elements.pickingScannedList.addEventListener('click', handlePickedItemClick);
+        if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
     }
     
     // =================================================================
@@ -289,6 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchTerm = event.target.value.trim();
         elements.listBuilderSearchResults.style.display = 'none';
         if (!searchTerm) return;
+        
         const results = performSearch(searchTerm);
         if (results.length > 0) {
             let listHtml = '<ul>';
@@ -473,6 +481,9 @@ document.addEventListener('DOMContentLoaded', () => {
         event.target.value = '';
     }
     
+    // =================================================================
+    // PANEL ADMINA
+    // =================================================================
     async function loadAllUsers() {
         const userListDiv = elements.allUsersList;
         if(!userListDiv) return;
@@ -543,6 +554,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleDeleteInventoryItem(e) {
         const btn = e.target.closest('.delete-inv-item-btn');
         if (btn) { inventoryItems.splice(btn.dataset.index, 1); renderInventoryList(); }
+        if(e.target.classList.contains('quantity-in-table')) {
+            e.preventDefault();
+            openNumpad(e.target, (newValue) => {
+                inventoryItems[e.target.dataset.index].quantity = newValue;
+                renderInventoryList();
+            });
+        }
     }
 
     function renderInventoryList() { 
@@ -564,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleNumpadOK() {
         const value = parseInt(elements.numpadDisplay.textContent, 10) || 0;
         if (numpadTarget) {
-            if (value >= 0) { 
+            if (value >= 0) {
                 if (numpadCallback) {
                     numpadCallback(value);
                 } else {
@@ -666,15 +684,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function verifyPicking() {
-        // ... (logika weryfikacji)
-    }
+        let shortages = [], surpluses = [];
+        const allEans = new Set([...currentPickingOrder.items.map(i => i.ean), ...pickedItems.map(i => i.ean)]);
+        allEans.forEach(ean => {
+            const targetItem = currentPickingOrder.items.find(i => i.ean === ean);
+            const pickedItem = pickedItems.find(i => i.ean === ean);
+            const pickedQty = pickedItem ? pickedItem.quantity : 0;
+            const targetQty = targetItem ? targetItem.quantity : 0;
+            const name = targetItem?.description || pickedItem?.description || `Produkt spoza listy (${ean})`;
 
+            if (pickedQty < targetQty) shortages.push(`${name}: brakuje ${targetQty - pickedQty}`);
+            else if (pickedQty > targetQty) surpluses.push(`${name}: nadwyżka ${pickedQty - targetQty}`);
+        });
+        let summaryHtml = '<h3>Podsumowanie</h3>';
+        if (shortages.length === 0 && surpluses.length === 0) {
+            summaryHtml += '<p style="color: var(--success-color);">Zamówienie jest kompletne i zgodne.</p>';
+        } else {
+            if (shortages.length > 0) summaryHtml += `<p style="color: var(--danger-color);">Niedobory:</p><ul>${shortages.map(s => `<li>${s}</li>`).join('')}</ul>`;
+            if (surpluses.length > 0) summaryHtml += `<p style="color: var(--warning-color);">Nadwyżki:</p><ul>${surpluses.map(s => `<li>${s}</li>`).join('')}</ul>`;
+            if (!confirm("Wykryto rozbieżności w zamówieniu. Czy chcesz je zaakceptować i kontynuować?")) return;
+        }
+        elements.pickingSummaryBody.innerHTML = summaryHtml;
+        elements.pickingSummaryModal.style.display = 'flex';
+    }
+    
     function exportPickedToCsv() {
         if (pickedItems.length === 0) return;
         const csvContent = pickedItems.map(item => `${item.ean};${item.quantity}`).join('\n');
         downloadFile(csvContent, 'text/csv;charset=utf-8;', `${currentPickingOrder.listName}_skompletowane.csv`);
     }
 
-    // Wywołanie startowe
+    // Uruchomienie aplikacji
     checkLoginStatus();
 });
