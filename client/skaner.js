@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // KROK 1: Definicja wszystkich elementów DOM
     const elements = {
         loginOverlay: document.getElementById('loginOverlay'),
         appContainer: document.getElementById('appContainer'),
@@ -16,8 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
         registerError: document.getElementById('registerError'),
         showRegister: document.getElementById('showRegister'),
         showLogin: document.getElementById('showLogin'),
-        
-        // Główne UI i Nawigacja
         topBar: document.getElementById('topBar'),
         bottomBar: document.getElementById('bottomBar'),
         darkModeToggle: document.getElementById('darkModeToggle'),
@@ -32,15 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
         menuSavedLists: document.getElementById('menuSavedLists'),
         scrollTopBtn: document.getElementById('scrollTopBtn'),
         scrollBottomBtn: document.getElementById('scrollBottomBtn'),
-
-        // Szybkie wyszukiwanie (Modal)
         quickSearchModal: document.getElementById('quickSearchModal'),
         closeQuickSearchModalBtn: document.getElementById('closeQuickSearchModalBtn'),
         lookupBarcodeInput: document.getElementById('lookupBarcodeInput'),
         lookupResultList: document.getElementById('lookupResultList'),
         lookupResultSingle: document.getElementById('lookupResultSingle'),
-        
-        // Główne Zamówienie
         mainContent: document.getElementById('main-content'),
         adminPanel: document.getElementById('adminPanel'),
         allUsersList: document.getElementById('allUsersList'),
@@ -58,12 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
         exportExcelBtn: document.getElementById('exportExcelBtn'),
         printListBtn: document.getElementById('printListBtn'),
         clearListBtn: document.getElementById('clearListBtn'),
-        
-        // Import CSV
-        importCsvBtn: document.getElementById('importCsvBtn'),
         importCsvInput: document.getElementById('importCsvInput'),
-        
-        // Inwentaryzacja (Modal)
+        importCsvBtn: document.getElementById('importCsvBtn'),
         inventoryModule: document.getElementById('inventoryModule'),
         closeInventoryModalBtn: document.getElementById('closeInventoryModalBtn'),
         inventoryEanInput: document.getElementById('inventoryEanInput'),
@@ -72,13 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryListBody: document.getElementById('inventoryListBody'),
         inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
         inventorySearchResults: document.getElementById('inventorySearchResults'),
-        
-        // Zapisane listy (Modal)
         savedListsModal: document.getElementById('savedListsModal'),
         closeSavedListsModalBtn: document.getElementById('closeSavedListsModalBtn'),
         savedListsContainer: document.getElementById('savedListsContainer'),
-
-        // Kompletacja (Modal)
         pickingModule: document.getElementById('pickingModule'),
         closePickingModalBtn: document.getElementById('closePickingModalBtn'),
         pickingOrderName: document.getElementById('picking-order-name'),
@@ -87,16 +72,29 @@ document.addEventListener('DOMContentLoaded', () => {
         pickingTargetList: document.getElementById('picking-target-list'),
         pickingScannedList: document.getElementById('picking-scanned-list'),
         pickingVerifyBtn: document.getElementById('picking-verify-btn'),
-        
-        // Inne
+        pickingSummaryModal: document.getElementById('pickingSummaryModal'),
+        closePickingSummaryModalBtn: document.getElementById('closePickingSummaryModalBtn'),
+        pickingSummaryBody: document.getElementById('pickingSummaryBody'),
+        pickingAcceptBtn: document.getElementById('picking-accept-btn'),
+        pickingExportCsvBtn: document.getElementById('picking-export-csv-btn'),
         toastContainer: document.getElementById('toast-container'),
         printArea: document.getElementById('print-area'),
         printClientName: document.getElementById('print-client-name'),
         printAdditionalInfo: document.getElementById('print-additional-info'),
         printTableBody: document.getElementById('print-table-body'),
+        numpadModal: document.getElementById('numpad-modal'),
+        numpadDisplay: document.getElementById('numpad-display'),
+        numpadOk: document.getElementById('numpad-ok'),
+        numpadClear: document.getElementById('numpad-clear'),
+        numpadBackspace: document.getElementById('numpad-backspace'),
+        numpadKeys: document.querySelectorAll('.numpad-key'),
     };
 
     let productDatabase = [], scannedItems = [], inventoryItems = [];
+    let currentPickingOrder = null;
+    let pickedItems = [];
+    let numpadTarget = null;
+    let numpadCallback = null;
     const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
     // =================================================================
@@ -116,6 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userData.role === 'admin') {
             if (elements.menuAdminBtn) elements.menuAdminBtn.style.display = 'flex';
         }
+        await loadActiveList();
         attachAllEventListeners();
     };
     
@@ -190,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
         if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { if (confirm("Czy chcesz zapisać bieżące zamówienie przed utworzeniem nowego?")) { await saveCurrentList(); } } clearCurrentList(false); });
         
-        if(elements.importCsvBtn) elements.importCsvBtn.addEventListener('click', () => elements.importCsvInput.click());
         if(elements.importCsvInput) elements.importCsvInput.addEventListener('change', handleFileImport);
         
         if(elements.allUsersList) elements.allUsersList.addEventListener('click', handleAdminAction);
@@ -203,11 +201,31 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
         if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', handleSavedListAction);
+
+        if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
+        if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('input', handlePickingSearch);
+        if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { pickItemFromList(li.dataset.ean); } });
+        if (elements.pickingTargetList) elements.pickingTargetList.addEventListener('click', e => { const itemDiv = e.target.closest('.pick-item'); if(itemDiv?.dataset.ean) { pickItemFromList(itemDiv.dataset.ean); } });
+        if (elements.pickingScannedList) elements.pickingScannedList.addEventListener('click', handlePickedItemClick);
+        if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
+        if (elements.closePickingSummaryModalBtn) elements.closePickingSummaryModalBtn.addEventListener('click', () => elements.pickingSummaryModal.style.display = 'none');
+        if (elements.pickingAcceptBtn) elements.pickingAcceptBtn.addEventListener('click', () => { elements.pickingSummaryModal.style.display = 'none'; showToast('Zmiany zaakceptowane.'); });
+        if (elements.pickingExportCsvBtn) elements.pickingExportCsvBtn.addEventListener('click', exportPickedToCsv);
+        
+        attachNumpadListeners();
     }
     
-    // =================================================================
-    // ŁADOWANIE DANYCH
-    // =================================================================
+    // ... (pozostały kod)
+    
+    checkLoginStatus(); // Wywołanie na końcu, aby uruchomić aplikację
+});
+```
+
+(Kontynuacja pliku `skaner.js` poniżej - wklej ten blok kodu bezpośrednio pod poprzednim, wewnątrz `DOMContentLoaded`)
+
+```javascript
+// ... (kontynuacja pliku skaner.js)
+
     async function loadDataFromServer() {
         console.log('Ładowanie bazy produktów...');
         function fetchAndParseCsv(filename) { return fetch(filename).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); }
@@ -219,9 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }).catch(error => { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); });
     }
 
-    // =================================================================
-    // NAWIGACJA I UI
-    // =================================================================
     function showAdminPanel() {
         elements.mainContent.style.display = 'none';
         elements.adminPanel.style.display = 'block';
@@ -232,44 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function showToast(message) { const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = message; elements.toastContainer.appendChild(toast); setTimeout(() => { toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }, 10); }
 
-    // =================================================================
-    // WYSZUKIWANIE
-    // =================================================================
     function performSearch(searchTerm) { if (!searchTerm) return []; const term = searchTerm.toLowerCase(); return productDatabase.filter(p => (p.kod_kreskowy?.toLowerCase().includes(term)) || (p.nazwa_produktu?.toLowerCase().includes(term)) || (p.opis?.toLowerCase().includes(term))); }
     
-    function handleLookupSearch(event) {
-        const searchTerm = event.target.value.trim();
-        elements.lookupResultList.innerHTML = '';
-        elements.lookupResultList.style.display = 'none';
-        elements.lookupResultSingle.innerHTML = '';
-        if (!searchTerm) return;
-        const results = performSearch(searchTerm);
-        if (results.length === 1) {
-            displaySingleProductInLookup(results[0]);
-        } else if (results.length > 1) {
-            displayProductListInLookup(results);
-        } else {
-            elements.lookupResultSingle.innerHTML = '<p style="padding: 15px;">Nie znaleziono produktu.</p>';
-        }
-    }
-    
-    function displaySingleProductInLookup(product) {
-        let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div></div>`;
-        elements.lookupResultSingle.innerHTML = html;
-        elements.lookupResultList.style.display = 'none';
-    }
-
-    function displayProductListInLookup(products) {
-        let listHtml = '<ul>';
-        products.forEach(p => { listHtml += `<li data-product-json='${JSON.stringify(p)}'>${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
-        listHtml += '</ul>';
-        elements.lookupResultList.innerHTML = listHtml;
-        elements.lookupResultList.style.display = 'block';
-    }
-    
-    // =================================================================
-    // GŁÓWNY MODUŁ ZAMÓWIEŃ
-    // =================================================================
     function addProductToList(code = null, quantity = null) {
         const ean = code || elements.listBarcodeInput.value.trim();
         const qty = quantity || parseInt(elements.quantityInput.value, 10);
@@ -303,6 +282,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    function handleLookupSearch(event) {
+        const searchTerm = event.target.value.trim();
+        elements.lookupResultList.innerHTML = '';
+        elements.lookupResultList.style.display = 'none';
+        elements.lookupResultSingle.innerHTML = '';
+        if (!searchTerm) return;
+        const results = performSearch(searchTerm);
+        if (results.length === 1) {
+            displaySingleProductInLookup(results[0]);
+        } else if (results.length > 1) {
+            displayProductListInLookup(results);
+        } else {
+            elements.lookupResultSingle.innerHTML = '<p style="padding: 15px;">Nie znaleziono produktu.</p>';
+        }
+    }
+    
+    function displaySingleProductInLookup(product) {
+        let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div></div>`;
+        elements.lookupResultSingle.innerHTML = html;
+        elements.lookupResultList.style.display = 'none';
+    }
+
+    function displayProductListInLookup(products) {
+        let listHtml = '<ul>';
+        products.forEach(p => { listHtml += `<li data-product-json='${JSON.stringify(p)}'>${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+        listHtml += '</ul>';
+        elements.lookupResultList.innerHTML = listHtml;
+        elements.lookupResultList.style.display = 'block';
+    }
+    
     function renderScannedList() {
         elements.scannedListBody.innerHTML = '';
         const canOperate = scannedItems.length > 0;
@@ -320,7 +329,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = e.target;
         if (target.classList.contains('quantity-in-table')) {
             e.preventDefault();
-            // Logika klawiatury numerycznej zostanie podpięta w `attachNumpadListeners`
         } else if (target.closest('.delete-btn')) {
             const deleteButton = target.closest('.delete-btn');
             scannedItems.splice(deleteButton.dataset.index, 1); 
@@ -400,12 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const lists = await response.json();
             
-            container.innerHTML = `<div style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);">
-                                     <button id="importCsvBtn" class="btn btn-primary" style="background-color: var(--info-color); width: 100%;">
-                                         <i class="fa-solid fa-file-import"></i> Importuj zamówienie z pliku CSV
-                                     </button>
-                                     <input type="file" id="importCsvInput" accept=".csv" style="display: none;">
-                                   </div><h3>Zapisane listy:</h3>`;
+            container.innerHTML = `<div style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);"><button id="importCsvBtn" class="btn btn-primary" style="background-color: var(--info-color); width: 100%;"><i class="fa-solid fa-file-import"></i> Importuj zamówienie z pliku CSV</button><input type="file" id="importCsvInput" accept=".csv" style="display: none;"></div><h3>Zapisane listy:</h3>`;
             
             container.querySelector('#importCsvBtn').addEventListener('click', () => container.querySelector('#importCsvInput').click());
             container.querySelector('#importCsvInput').addEventListener('change', handleFileImport);
@@ -482,9 +485,6 @@ document.addEventListener('DOMContentLoaded', () => {
         event.target.value = '';
     }
     
-    // =================================================================
-    // PANEL ADMINA
-    // =================================================================
     async function loadAllUsers() {
         const userListDiv = elements.allUsersList;
         if(!userListDiv) return;
@@ -521,9 +521,6 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (target.classList.contains('change-role-btn')) { if (confirm(`Zmienić rolę ${username} na ${role}?`)) handleUserAction(`/api/admin/change-role/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newRole: role }) }); }
     }
     
-    // =================================================================
-    // MODUŁ INWENTARYZACJI
-    // =================================================================
     function handleInventoryAdd() {
         const ean = elements.inventoryEanInput.value.trim();
         const quantity = parseInt(elements.inventoryQuantityInput.value, 10);
@@ -570,9 +567,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // =================================================================
-    // MODUŁ KLAWIATURY NUMERYCZNEJ
-    // =================================================================
     function openNumpad(targetElement, callbackOnOk) {
         numpadTarget = targetElement;
         numpadCallback = callbackOnOk;
@@ -583,11 +577,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleNumpadOK() {
         const value = parseInt(elements.numpadDisplay.textContent, 10) || 0;
         if (numpadTarget) {
-            numpadTarget.value = value;
-            numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        if (numpadCallback) {
-            numpadCallback(value);
+            if (value >= 0) { // Pozwala na wpisanie 0
+                if (numpadCallback) {
+                    numpadCallback(value);
+                } else {
+                    numpadTarget.value = value;
+                    numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
         }
         elements.numpadModal.style.display = 'none';
     }
@@ -595,7 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function attachNumpadListeners() {
         elements.numpadKeys.forEach(key => key.addEventListener('click', () => {
             const display = elements.numpadDisplay;
-            if (display.textContent === '0' || !/^\d+$/.test(display.textContent)) display.textContent = '';
+            if (display.textContent === '0') display.textContent = '';
             display.textContent += key.dataset.key;
         }));
         elements.numpadClear.addEventListener('click', () => { elements.numpadDisplay.textContent = '0'; });
@@ -605,13 +602,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         elements.numpadOk.addEventListener('click', handleNumpadOK);
         
-        elements.quantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
-        elements.inventoryQuantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
+        elements.quantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target, (val) => { e.target.value = val; }); });
+        elements.inventoryQuantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target, (val) => { e.target.value = val; }); });
     }
 
-    // =================================================================
-    // MODUŁ KOMPLETACJI
-    // =================================================================
     async function startPicking(listId, listName) {
         try {
             const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
@@ -682,15 +676,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function verifyPicking() {
-        // ... (logika weryfikacji)
-    }
+        let shortages = [], surpluses = [];
+        const allEans = new Set([...currentPickingOrder.items.map(i => i.ean), ...pickedItems.map(i => i.ean)]);
+        allEans.forEach(ean => {
+            const targetItem = currentPickingOrder.items.find(i => i.ean === ean);
+            const pickedItem = pickedItems.find(i => i.ean === ean);
+            const pickedQty = pickedItem ? pickedItem.quantity : 0;
+            const targetQty = targetItem ? targetItem.quantity : 0;
+            const name = targetItem?.description || pickedItem?.description || `Produkt spoza listy (${ean})`;
 
+            if (pickedQty < targetQty) shortages.push(`${name}: brakuje ${targetQty - pickedQty}`);
+            else if (pickedQty > targetQty) surpluses.push(`${name}: nadwyżka ${pickedQty - targetQty}`);
+        });
+        let summaryHtml = '<h3>Podsumowanie</h3>';
+        if (shortages.length === 0 && surpluses.length === 0) {
+            summaryHtml += '<p style="color: var(--success-color);">Zamówienie jest kompletne i zgodne.</p>';
+        } else {
+            if (shortages.length > 0) summaryHtml += `<p style="color: var(--danger-color);">Niedobory:</p><ul>${shortages.map(s => `<li>${s}</li>`).join('')}</ul>`;
+            if (surpluses.length > 0) summaryHtml += `<p style="color: var(--warning-color);">Nadwyżki:</p><ul>${surpluses.map(s => `<li>${s}</li>`).join('')}</ul>`;
+            if (!confirm("Wykryto rozbieżności w zamówieniu. Czy chcesz je zaakceptować i kontynuować?")) return;
+        }
+        elements.pickingSummaryBody.innerHTML = summaryHtml;
+        elements.pickingSummaryModal.style.display = 'flex';
+    }
+    
     function exportPickedToCsv() {
         if (pickedItems.length === 0) return;
         const csvContent = pickedItems.map(item => `${item.ean};${item.quantity}`).join('\n');
         downloadFile(csvContent, 'text/csv;charset=utf-8;', `${currentPickingOrder.listName}_skompletowane.csv`);
     }
 
-    // Uruchomienie aplikacji
+    // Inicjalizacja Aplikacji
     checkLoginStatus();
 });
