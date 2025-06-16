@@ -3,48 +3,313 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Logowania</title>
+    <title>Panel sprzedaży</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f0f0; }
-        .box { padding: 20px; border: 1px solid #ccc; border-radius: 8px; background-color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }
-        input { display: block; margin-bottom: 10px; padding: 8px; width: 250px; }
-        button { padding: 10px 15px; cursor: pointer; }
-        #appContainer { display: none; }
-        #loginError, #registerError { color: red; min-height: 1.2em; }
-        .form-switcher { margin-top: 15px; font-size: 0.9em; cursor: pointer; color: blue; text-decoration: underline; }
+        :root {
+            --font-family: 'Poppins', sans-serif;
+            --primary-color: #3478F6; --primary-hover: #2962FF;
+            --success-color: #34C759; --danger-color: #FF3B30; --warning-color: #FF9500;
+            --print-color: #5856D6; --excel-color: #007D4B; --csv-color: #27ae60;
+            --text-color: #1d1d1f; --text-light-color: #ffffff; --text-secondary-color: #6e6e73;
+            --bg-color: #f5f5f7; --surface-color: #ffffff;
+            --border-color: #d2d2d7; --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+        body.dark-mode {
+            --primary-color: #0A84FF; --primary-hover: #3498db;
+            --success-color: #30D158; --danger-color: #FF453A;
+            --text-color: #f5f5f7; --text-secondary-color: #8d8d92;
+            --bg-color: #161617; --surface-color: #1d1d1f; --border-color: #424245;
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 30px 10px 90px 10px; transition: background-color 0.3s, color 0.3s; }
+        .container { width: 100%; max-width: 1100px; margin: 0 auto; background: var(--surface-color); padding: 30px 40px; border-radius: 20px; box-shadow: var(--shadow); }
+        .app-header { text-align: center; margin-bottom: 30px; }
+        .header-logo { max-height: 45px; }
+        body.dark-mode .header-logo { filter: invert(1); }
+        button, .btn { cursor: pointer; border-radius: 10px; border: none; padding: 12px 22px; font-weight: 600; font-size: 1em; font-family: var(--font-family); transition: all 0.2s ease; background-color: #e5e5ea; color: var(--text-color); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        body.dark-mode button { background-color: #3a3a3c; color: var(--text-color); }
+        button:hover, .btn:hover { transform: translateY(-2px); }
+        button:disabled { cursor: not-allowed; background-color: #e5e5ea !important; color: #8e8e93 !important; transform: none; opacity: 0.6; }
+        .btn-primary { background-color: var(--primary-color); color: var(--text-light-color); }
+        .btn-danger { background-color: var(--danger-color); color: var(--text-light-color); }
+        .btn-print { background-color: var(--print-color); color: var(--text-light-color); }
+        .btn-excel { background-color: var(--excel-color); color: var(--text-light-color); }
+        .btn-csv { background-color: var(--csv-color); color: var(--text-light-color); }
+        .btn-icon { padding: 0; width: 45px; height: 45px; font-size: 1.1em; border-radius: 50%; }
+        input[type="text"], input[type="number"], input[type="password"] { padding: 12px 15px; font-size: 1em; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); border-radius: 10px; width: 100%; transition: all 0.2s ease; }
+        input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(52, 120, 246, 0.25); }
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(10px); background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; padding:10px; }
+        #loginBox { background: var(--surface-color); padding: 40px; border-radius: 20px; text-align: center; width: 100%; max-width: 400px; }
+        #loginBox h2 { margin-top: 0; }
+        .top-right-menu { position: fixed; top: 15px; right: 15px; z-index: 1011; display: none; gap: 10px; }
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--surface-color); min-width: 240px; box-shadow: var(--shadow); z-index: 1; border-radius: 12px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border-color); }
+        .dropdown-content .dropdown-header { padding: 10px 18px; font-weight: 600; color: var(--text-secondary-color); background-color: var(--bg-color); }
+        .dropdown-content a { color: var(--text-color); padding: 14px 18px; text-decoration: none; display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--border-color); cursor: pointer; }
+        .dropdown-content a:hover { background-color: var(--primary-color); color: var(--text-light-color); }
+        .dropdown-content.show { display: block; }
+        .bottom-scroll-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--surface-color); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1010; padding: 10px; display: none; justify-content: center; gap: 20px; }
+        .bottom-scroll-bar button { background: none; border: 1px solid var(--border-color); color: var(--text-secondary-color); width: 50px; height: 50px; border-radius: 50%; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 20px; font-size: 1em; }
+        thead th { background-color: var(--bg-color); padding: 15px; text-align: left; font-weight: 600; color: var(--text-secondary-color); border-bottom: 1px solid var(--border-color); }
+        thead th:first-child { border-top-left-radius: 12px; }
+        thead th:last-child { border-top-right-radius: 12px; }
+        tbody td { padding: 15px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        #totalOrderValue { text-align: right; font-size: 1.2em; font-weight: 600; margin-top: 20px; padding: 12px 20px; border-radius: 12px; color: var(--success-color); border: 1px solid var(--success-color); background-color: rgba(52, 199, 89, 0.05); }
+        .admin-user-list .user-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color); }
+        .admin-user-list .user-info { display: flex; flex-direction: column; }
+        .admin-user-list .user-info .status { font-size: 0.8em; opacity: 0.7; }
+        .admin-user-list .user-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .admin-user-list .user-actions button { padding: 5px 10px; font-size: 0.8em; }
+        .search-container { position: relative; width: 100%; }
+        .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1000; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
+        .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
+        .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
+        #lookupResultSingle { margin-top: 20px; border-radius: 12px; border: 1px solid var(--border-color); padding: 0 15px; }
+        .lookup-result-item { padding: 15px 0; }
+        #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 2000; }
+        .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(5px); background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1050; padding: 15px; }
+        .modal-content { background-color: var(--surface-color); padding: 30px; border-radius: 16px; width: 100%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h2 { border: none; padding: 0; margin: 0; }
+        .modal-body { flex-grow: 1; overflow-y: auto; }
+        
+        @media (max-width: 768px) {
+            body { padding: 80px 5px 80px 5px; }
+            .container { padding: 20px 15px; }
+            .controls-grid > * { flex-basis: 100%; }
+            .col-desc, .col-ean { display: none; }
+            .export-controls { grid-template-columns: 1fr; }
+            #totalOrderValue { font-size: 1rem; padding: 10px; }
+            .bottom-scroll-bar button, .top-right-menu .btn-icon { width: 40px; height: 40px; }
+            button, .btn { padding: 10px 15px; font-size: 0.9em; }
+        }
+        
+        @media print {
+            body { padding: 0; margin: 0; }
+            body > *:not(#print-area) { display: none !important; }
+            #print-area, #print-area * { display: block !important; visibility: visible !important; }
+            @page { margin: 1.5cm; size: A4; }
+            #print-header { margin-bottom: 20px; }
+            #print-header h2 { font-size: 14pt; font-weight: bold; }
+            #print-header p { font-size: 11pt; }
+            #print-content-table { width: 100%; border-collapse: collapse; font-size: 10pt; font-family: Arial, sans-serif; }
+            #print-content-table th, #print-content-table td { border: 1px solid #000; padding: 8px; text-align: left; }
+            #print-content-table th { background-color: #eee !important; font-weight: bold; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
     </style>
 </head>
 <body>
+    
+    <div class="top-right-menu" id="topBar">
+        <button id="quickSearchBtn" class="btn-icon" title="Szybkie wyszukiwanie"><i class="fa-solid fa-search"></i></button>
+        <button id="darkModeToggle" class="btn-icon"><i class="fa-solid fa-moon"></i></button>
+        <div class="dropdown">
+            <button id="menuToggleBtn" class="btn-primary btn-icon"><i class="fa-solid fa-bars"></i></button>
+            <div id="dropdownMenu" class="dropdown-content">
+                <div class="dropdown-header"><span id="menuUsername"></span></div>
+                <a id="menuChangePassword"><i class="fa-solid fa-key"></i> Zmień hasło</a>
+                <a id="menuSavedLists"><i class="fa-solid fa-save"></i> Zapisane zamówienia</a>
+                <a id="menuInventoryBtn"><i class="fa-solid fa-clipboard-list"></i> Inwentaryzacja</a>
+                <a id="menuAdminBtn" style="display: none;"><i class="fa-solid fa-user-shield"></i> Panel Admina</a>
+                <a id="menuLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Wyloguj</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-scroll-bar" id="bottomBar">
+        <button id="scrollTopBtn" title="Przewiń do góry"><i class="fa-solid fa-arrow-up"></i></button>
+        <button id="scrollBottomBtn" title="Przewiń na dół"><i class="fa-solid fa-arrow-down"></i></button>
+    </div>
 
     <div id="loginOverlay">
-        <div class="box">
+        <div id="loginBox">
             <div id="loginForm">
-                <h2>Logowanie</h2>
-                <input type="text" id="loginUsername" placeholder="Login">
-                <input type="password" id="loginPassword" placeholder="Hasło">
-                <button id="loginBtn">Zaloguj się</button>
+                <img src="logo.jpg" alt="Logo Firmy" class="header-logo">
+                <input type="text" id="loginUsername" placeholder="Login" style="margin-top: 20px;">
+                <input type="password" id="loginPassword" placeholder="Hasło" style="margin-top: 15px;">
+                <button id="loginBtn" class="btn-primary" style="width: 100%; margin-top: 20px;">Zaloguj się</button>
                 <p id="loginError"></p>
-                <p class="form-switcher" id="showRegister">Nie masz konta? Zarejestruj się</p>
+                <p>Nie masz konta? <a href="#" id="showRegister">Zarejestruj się</a></p>
             </div>
             <div id="registerForm" style="display: none;">
                 <h2>Rejestracja</h2>
                 <input type="text" id="registerUsername" placeholder="Wybierz login">
-                <input type="password" id="registerPassword" placeholder="Wybierz hasło">
-                <button id="registerBtn">Zarejestruj się</button>
+                <input type="password" id="registerPassword" placeholder="Wybierz hasło" style="margin-top: 15px;">
+                <button id="registerBtn" class="btn-primary" style="width: 100%; margin-top: 20px;">Zarejestruj się</button>
                 <p id="registerError"></p>
-                <p class="form-switcher" id="showLogin">Masz już konto? Zaloguj się</p>
+                <p>Masz już konto? <a href="#" id="showLogin">Zaloguj się</a></p>
             </div>
         </div>
     </div>
 
-    <div id="appContainer">
-        <div class="box">
-            <h1>Witaj!</h1>
-            <p>Zalogowano pomyślnie.</p>
-            <p>Użytkownik: <strong id="welcomeUser"></strong></p>
+    <div class="container" id="appContainer" style="display: none;">
+        <div class="app-header">
+            <img src="logo.jpg" alt="Logo Firmy" class="header-logo">
+        </div>
+        
+        <div id="main-content">
+            <div class="controls-grid">
+                <input type="text" id="clientNameInput" placeholder="Nazwa klienta...">
+                <input type="text" id="additionalInfoInput" placeholder="Informacje dodatkowe...">
+            </div>
+            <div class="controls-grid">
+                <div class="search-container" style="flex: 1 1 300px;">
+                    <input type="text" id="listBarcodeInput" placeholder="Wpisz EAN, kod lub nazwę...">
+                    <div id="listBuilderSearchResults" class="search-results-list" style="display: none;"></div>
+                </div>
+                <input type="number" id="quantityInput" value="1" min="1" readonly>
+                <button id="addToListBtn" class="btn-primary"><i class="fa-solid fa-plus"></i> Dodaj</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-code">Kod produktu</th>
+                        <th class="col-desc">Nazwa</th>
+                        <th class="col-ean">EAN</th>
+                        <th>Ilość</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="scannedListBody"></tbody>
+            </table>
+            <div id="totalOrderValue">Total: 0.00 PLN</div>
+            <div class="export-section">
+                <div class="controls-grid" style="gap: 10px; margin-top: 15px;">
+                     <button id="newListBtn" class="btn-primary" style="background-color: var(--warning-color); flex-grow: 1;">Nowa lista</button>
+                     <button id="saveListBtn" class="btn-primary"><i class="fa-solid fa-save"></i> Zapisz listę</button>
+                </div>
+                <div class="export-controls" style="margin-top: 15px;">
+                    <button id="printListBtn" class="btn btn-print"><i class="fa-solid fa-print"></i> Drukuj</button>
+                    <button id="exportCsvBtn" class="btn btn-csv"><i class="fa-solid fa-file-csv"></i> Optima</button>
+                    <button id="exportExcelBtn" class="btn btn-excel"><i class="fa-solid fa-file-excel"></i> Excel</button>
+                    <button id="clearListBtn" class="btn-danger"><i class="fa-solid fa-eraser"></i> Wyczyść</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="adminPanel" style="display: none;">
+             <h2>Zarządzanie użytkownikami</h2>
+             <div id="allUsersList" class="admin-user-list"></div>
+        </div>
+    </div>
+    
+    <div id="quickSearchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Szybkie wyszukiwanie</h2>
+                <button id="closeQuickSearchModalBtn" class="btn-icon" style="background:none; box-shadow:none; font-size: 1.5em;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="search-container">
+                    <input type="text" id="lookupBarcodeInput" placeholder="Wpisz EAN, kod lub nazwę...">
+                    <div id="lookupResultList" class="search-results-list" style="display: none;"></div>
+                </div>
+                <div id="lookupResultSingle" style="margin-top: 20px;"></div>
+            </div>
         </div>
     </div>
 
+    <div id="inventoryModule" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-boxes-packing"></i> Inwentaryzacja</h2>
+                <button id="closeInventoryModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="controls-grid">
+                    <div class="search-container" style="flex-grow: 1;">
+                        <input type="text" id="inventoryEanInput" placeholder="Wpisz EAN, kod lub nazwę...">
+                        <div id="inventorySearchResults" class="search-results-list" style="display: none;"></div>
+                    </div>
+                    <input type="number" id="inventoryQuantityInput" value="1" min="1" readonly>
+                    <button id="inventoryAddBtn" class="btn-primary"><i class="fa-solid fa-plus"></i> Dodaj</button>
+                </div>
+                <div style="flex-grow: 1; overflow-y: auto; margin-top: 15px; border: 1px solid var(--border-color); border-radius: 12px;">
+                    <table>
+                        <thead><tr><th>Kod produktu</th><th>Nazwa</th><th>Ilość</th><th>Akcje</th></tr></thead>
+                        <tbody id="inventoryListBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="savedListsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-save"></i> Zapisane zamówienia</h2>
+                <button id="closeSavedListsModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);">
+                    <button id="importCsvBtn" class="btn btn-primary" style="background-color: var(--info-color); width: 100%;">
+                        <i class="fa-solid fa-file-import"></i> Importuj zamówienie z pliku CSV
+                    </button>
+                    <input type="file" id="importCsvInput" accept=".csv" style="display: none;">
+                </div>
+                <div id="savedListsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="pickingModule" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="picking-order-name">Kompletacja zamówienia</h2>
+                <button id="closePickingModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+            </div>
+            <div class="modal-body">
+                 <div class="search-container">
+                    <input type="text" id="pickingEanInput" placeholder="Wyszukaj lub zeskanuj produkt do skompletowania...">
+                    <div id="pickingSearchResults" class="search-results-list" style="display:none;"></div>
+                </div>
+                <div id="picking-status-msg" style="text-align: center; font-weight: 600; margin: 15px 0; padding: 10px; border-radius: 8px;"></div>
+                <div style="display: flex; gap: 20px; flex-grow: 1; min-height: 300px;">
+                    <div style="width: 50%; display: flex; flex-direction: column;">
+                        <h3>Do zebrania:</h3>
+                        <div id="pickingTargetList" style="flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
+                    </div>
+                    <div style="width: 50%; display: flex; flex-direction: column;">
+                        <h3>Skompletowano:</h3>
+                        <div id="pickingScannedList" style="flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
+                    </div>
+                </div>
+                <div class="controls-grid" style="margin-top: 15px;">
+                    <button id="pickingVerifyBtn" class="btn-primary">Weryfikacja</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast-container"></div>
+
+    <div id="print-area" style="display: none !important;">
+        <div id="print-header">
+            <h2 id="print-client-name"></h2>
+            <p id="print-additional-info"></p>
+        </div>
+        <table id="print-content-table">
+            <thead>
+                <tr><th>Kod produktu</th><th>Nazwa</th><th>Ilość</th></tr>
+            </thead>
+            <tbody id="print-table-body"></tbody>
+        </table>
+    </div>
+    
+    <footer style="text-align: center; margin-top: 40px; color: var(--text-secondary-color); font-size: 0.9em;">
+        <p>Copyright © 1997-2025 Dekor-Art-Serwis</p>
+        <p>Aplikacja do użytku wewnętrznego</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="skaner.js"></script>
 </body>
 </html>
