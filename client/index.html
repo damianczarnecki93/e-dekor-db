@@ -72,8 +72,8 @@
         .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1000; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
         .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
-        #lookupResultSingle { margin-top: 20px; border-radius: 12px; border: 1px solid var(--border-color); padding: 0 15px; }
-        .lookup-result-item { padding: 15px 0; }
+        #lookupResultSingle { margin-top: 20px; }
+        .lookup-result-item { padding: 15px; border: 1px solid var(--border-color); border-radius: 12px; }
         #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 2000; }
         .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .toast.show { opacity: 1; transform: translateY(0); }
@@ -83,6 +83,12 @@
         .modal-header h2 { border: none; padding: 0; margin: 0; }
         .modal-body { flex-grow: 1; overflow-y: auto; }
         
+        #numpad-modal .modal-content { max-width: 320px; padding: 20px; }
+        #numpad-display { width: 100%; padding: 10px; font-size: 1.8em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color); }
+        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .numpad-grid button { padding: 20px; font-size: 1.2em; font-weight: 600; }
+        #numpad-ok { width: 100%; margin-top: 10px; }
+
         @media (max-width: 768px) {
             body { padding: 80px 5px 80px 5px; }
             .container { padding: 20px 15px; }
@@ -258,6 +264,35 @@
                     <input type="file" id="importCsvInput" accept=".csv" style="display: none;">
                 </div>
                 <div id="savedListsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="pickingModule" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="picking-order-name">Kompletacja zamówienia</h2>
+                <button id="closePickingModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+            </div>
+            <div class="modal-body">
+                 <div class="search-container">
+                    <input type="text" id="pickingEanInput" placeholder="Wyszukaj lub zeskanuj produkt do skompletowania...">
+                    <div id="pickingSearchResults" class="search-results-list" style="display:none;"></div>
+                </div>
+                <div id="picking-status-msg" style="text-align: center; font-weight: 600; margin: 15px 0; padding: 10px; border-radius: 8px;"></div>
+                <div style="display: flex; gap: 20px; flex-grow: 1; min-height: 300px;">
+                    <div style="width: 50%; display: flex; flex-direction: column;">
+                        <h3>Do zebrania:</h3>
+                        <div id="pickingTargetList" style="flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
+                    </div>
+                    <div style="width: 50%; display: flex; flex-direction: column;">
+                        <h3>Skompletowano:</h3>
+                        <div id="pickingScannedList" style="flex-grow: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;"></div>
+                    </div>
+                </div>
+                <div class="controls-grid" style="margin-top: 15px;">
+                    <button id="pickingVerifyBtn" class="btn-primary">Weryfikacja</button>
+                </div>
             </div>
         </div>
     </div>
