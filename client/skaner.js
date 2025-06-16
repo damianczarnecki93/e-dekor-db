@@ -15,73 +15,45 @@ document.addEventListener('DOMContentLoaded', () => {
         registerError: document.getElementById('registerError'),
         showRegister: document.getElementById('showRegister'),
         showLogin: document.getElementById('showLogin'),
-        topBar: document.getElementById('topBar'),
-        bottomBar: document.getElementById('bottomBar'),
-        darkModeToggle: document.getElementById('darkModeToggle'),
-        quickSearchBtn: document.getElementById('quickSearchBtn'),
-        menuToggleBtn: document.getElementById('menuToggleBtn'),
-        dropdownMenu: document.getElementById('dropdownMenu'),
-        menuUsername: document.getElementById('menuUsername'),
-        menuAdminBtn: document.getElementById('menuAdminBtn'),
-        menuInventoryBtn: document.getElementById('menuInventoryBtn'),
-        menuLogoutBtn: document.getElementById('menuLogoutBtn'),
-        menuChangePassword: document.getElementById('menuChangePassword'),
-        menuSavedLists: document.getElementById('menuSavedLists'),
-        scrollTopBtn: document.getElementById('scrollTopBtn'),
-        scrollBottomBtn: document.getElementById('scrollBottomBtn'),
-        quickSearchModal: document.getElementById('quickSearchModal'),
-        closeQuickSearchModalBtn: document.getElementById('closeQuickSearchModalBtn'),
-        lookupBarcodeInput: document.getElementById('lookupBarcodeInput'),
-        lookupResultList: document.getElementById('lookupResultList'),
-        lookupResultSingle: document.getElementById('lookupResultSingle'),
-        mainContent: document.getElementById('main-content'),
-        adminPanel: document.getElementById('adminPanel'),
-        allUsersList: document.getElementById('allUsersList'),
+        statusP: document.getElementById('status'),
+        tabLookupBtn: document.getElementById('tabLookupBtn'),
+        tabListBuilderBtn: document.getElementById('tabListBuilderBtn'),
+        lookupMode: document.getElementById('lookupMode'),
+        listBuilderMode: document.getElementById('listBuilderMode'),
+        startCameraBtn: document.getElementById('startCameraBtn'),
+        cameraScannerSection: document.getElementById('cameraScannerSection'),
+        cameraReader: document.getElementById('camera-reader'),
+        stopCameraBtn: document.getElementById('stopCameraBtn'),
+        lookupBarcodeInput: document.getElementById('lookupBarcode_Input'),
+        lookupResultDiv: document.getElementById('lookupResult'),
         listBarcodeInput: document.getElementById('listBarcode_Input'),
         listBuilderSearchResults: document.getElementById('listBuilderSearchResults'),
         quantityInput: document.getElementById('quantityInput'),
         addToListBtn: document.getElementById('addToListBtn'),
-        saveListBtn: document.getElementById('saveListBtn'),
-        newListBtn: document.getElementById('newListBtn'),
         scannedListBody: document.getElementById('scannedListBody'),
-        clientNameInput: document.getElementById('clientNameInput'),
-        additionalInfoInput: document.getElementById('additionalInfoInput'),
-        totalOrderValue: document.getElementById('totalOrderValue'),
         exportCsvBtn: document.getElementById('exportCsvBtn'),
         exportExcelBtn: document.getElementById('exportExcelBtn'),
         printListBtn: document.getElementById('printListBtn'),
         clearListBtn: document.getElementById('clearListBtn'),
-        importCsvBtn: document.getElementById('importCsvBtn'),
-        importCsvInput: document.getElementById('importCsvInput'),
+        sendEmailBtn: document.getElementById('sendEmailBtn'),
+        clientNameInput: document.getElementById('clientNameInput'),
+        additionalInfoInput: document.getElementById('additionalInfoInput'),
+        totalOrderValue: document.getElementById('totalOrderValue'),
         inventoryModule: document.getElementById('inventoryModule'),
         closeInventoryModalBtn: document.getElementById('closeInventoryModalBtn'),
+        closeInventoryModalBtnBottom: document.getElementById('closeInventoryModalBtnBottom'),
         inventoryEanInput: document.getElementById('inventoryEanInput'),
         inventoryQuantityInput: document.getElementById('inventoryQuantityInput'),
         inventoryAddBtn: document.getElementById('inventoryAddBtn'),
         inventoryListBody: document.getElementById('inventoryListBody'),
         inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
         inventorySearchResults: document.getElementById('inventorySearchResults'),
-        savedListsModal: document.getElementById('savedListsModal'),
-        closeSavedListsModalBtn: document.getElementById('closeSavedListsModalBtn'),
-        savedListsContainer: document.getElementById('savedListsContainer'),
-        pickingModule: document.getElementById('pickingModule'),
-        closePickingModalBtn: document.getElementById('closePickingModalBtn'),
-        pickingOrderName: document.getElementById('picking-order-name'),
-        pickingEanInput: document.getElementById('pickingEanInput'),
-        pickingSearchResults: document.getElementById('picking-search-results'),
-        pickingTargetList: document.getElementById('picking-target-list'),
-        pickingScannedList: document.getElementById('picking-scanned-list'),
-        pickingVerifyBtn: document.getElementById('picking-verify-btn'),
-        toastContainer: document.getElementById('toast-container'),
-        printArea: document.getElementById('print-area'),
-        printClientName: document.getElementById('print-client-name'),
-        printAdditionalInfo: document.getElementById('print-additional-info'),
-        printTableBody: document.getElementById('print-table-body'),
+        tabAdminBtn: document.getElementById('tabAdminBtn'),
+        adminPanel: document.getElementById('adminPanel'),
+        pendingUsersList: document.getElementById('pendingUsersList')
     };
 
-    let productDatabase = [], scannedItems = [], inventoryItems = [];
-    let currentPickingOrder = null;
-    let pickedItems = [];
+    let productDatabase = [], scannedItems = [], inventoryItems = [], html5QrCode = null, activeTab = 'lookup';
     const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
     // =================================================================
@@ -90,19 +62,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const showApp = (userData) => {
         elements.loginOverlay.style.display = 'none';
         elements.appContainer.style.display = 'block';
-        if (elements.topBar) elements.topBar.style.display = 'flex';
-        if (elements.bottomBar) elements.bottomBar.style.display = 'flex';
+        if (document.getElementById('fabInventoryBtn')) document.getElementById('fabInventoryBtn').style.display = 'flex';
         initializeApp(userData);
     };
 
-    const initializeApp = async (userData) => {
-        if(elements.menuUsername) elements.menuUsername.textContent = userData.username;
-        await loadDataFromServer();
-        if (userData.role === 'admin') {
-            if (elements.menuAdminBtn) elements.menuAdminBtn.style.display = 'flex';
+    const initializeApp = (userData) => {
+        loadDataFromServer();
+        loadUserDataFromServer();
+        if (userData && userData.role === 'admin') {
+            if(elements.tabAdminBtn) elements.tabAdminBtn.style.display = 'block';
         }
-        await loadActiveList();
-        attachAllEventListeners();
     };
     
     const checkLoginStatus = async () => {
@@ -110,33 +79,63 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!token) return;
         try {
             const response = await fetch('/api/auth/verify', { method: 'GET', headers: { 'x-auth-token': token } });
-            if (response.ok) showApp(await response.json());
-            else localStorage.removeItem('token');
-        } catch (error) { console.error('Błąd weryfikacji tokenu:', error); }
+            if (response.ok) {
+                const userData = await response.json();
+                showApp(userData);
+            } else {
+                localStorage.removeItem('token');
+            }
+        } catch (error) {
+            console.error('Błąd weryfikacji tokenu:', error);
+        }
     };
     
     async function attemptLogin() {
+        const username = elements.loginUsername.value;
+        const password = elements.loginPassword.value;
         try {
-            const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: elements.loginUsername.value, password: elements.loginPassword.value }) });
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
             const data = await response.json();
-            if (!response.ok) { elements.loginError.textContent = data.msg || 'Wystąpił błąd'; return; }
+            if (!response.ok) {
+                elements.loginError.textContent = data.msg || 'Wystąpił błąd';
+                return;
+            }
             localStorage.setItem('token', data.token);
             showApp(data.user);
-        } catch (error) { elements.loginError.textContent = 'Nie można połączyć się z serwerem.'; }
+        } catch (error) {
+            console.error('Błąd logowania:', error);
+            elements.loginError.textContent = 'Nie można połączyć się z serwerem.';
+        }
     }
 
     async function handleRegistration() {
-        const { registerUsername, registerPassword, registerError, showLogin, loginUsername } = elements;
-        const username = registerUsername.value.trim();
-        const password = registerPassword.value.trim();
-        if (!username || !password) { registerError.textContent = 'Login i hasło są wymagane.'; return; }
+        const username = registerUsernameInput.value.trim();
+        const password = registerPasswordInput.value.trim();
+        if (!username || !password) {
+            registerError.textContent = 'Login i hasło są wymagane.';
+            return;
+        }
         try {
             const response = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
             const data = await response.json();
-            if (!response.ok) { registerError.textContent = data.msg || 'Wystąpił błąd serwera.'; } 
-            else { alert('Rejestracja pomyślna! Konto oczekuje na aktywację.'); showLogin.click(); loginUsername.value = username; elements.loginPassword.value = ''; }
-        } catch (error) { registerError.textContent = 'Nie można połączyć się z serwerem.'; }
+            if (!response.ok) {
+                registerError.textContent = data.msg || 'Wystąpił błąd serwera.';
+            } else {
+                alert('Rejestracja pomyślna! Twoje konto musi zostać aktywowane przez administratora.');
+                elements.showLogin.click();
+                elements.loginUsername.value = username;
+                elements.loginPassword.value = '';
+            }
+        } catch (error) {
+            console.error('Błąd rejestracji:', error);
+            registerError.textContent = 'Nie można połączyć się z serwerem.';
+        }
     }
+
 
     // =================================================================
     // GŁÓWNA FUNKCJA PODPINANIA LISTENERS - NAPRAWIONA
