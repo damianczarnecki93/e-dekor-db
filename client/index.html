@@ -48,12 +48,6 @@
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(10px); background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; padding:10px; }
         #loginBox { background: var(--surface-color); padding: 40px; border-radius: 20px; text-align: center; width: 100%; max-width: 400px; }
         #loginBox h2 { margin-top: 0; }
-        .tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 25px; }
-        .tabs button { background: none; padding: 15px; font-size: 1.1em; font-weight: 600; color: var(--text-secondary-color); border-radius: 0; border: none; border-bottom: 4px solid transparent; flex-grow: 1; }
-        .tabs button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.5s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .top-right-menu { position: fixed; top: 15px; right: 15px; z-index: 1011; display: none; gap: 10px; }
         .dropdown { position: relative; display: inline-block; }
         .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--surface-color); min-width: 240px; box-shadow: var(--shadow); z-index: 1; border-radius: 12px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border-color); }
@@ -78,8 +72,8 @@
         .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1000; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
         .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
-        #lookupResultSingle { margin-top: 20px; }
-        .lookup-result-item { padding: 15px; border: 1px solid var(--border-color); border-radius: 12px; }
+        #lookupResultSingle { margin-top: 20px; border-radius: 12px; border: 1px solid var(--border-color); padding: 0 15px; }
+        .lookup-result-item { padding: 15px 0; }
         #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 2000; }
         .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .toast.show { opacity: 1; transform: translateY(0); }
@@ -89,17 +83,11 @@
         .modal-header h2 { border: none; padding: 0; margin: 0; }
         .modal-body { flex-grow: 1; overflow-y: auto; }
         
-        #numpad-modal .modal-content { max-width: 320px; padding: 20px; }
-        #numpad-display { width: 100%; padding: 10px; font-size: 1.8em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color); }
-        .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .numpad-grid button { padding: 20px; font-size: 1.2em; font-weight: 600; }
-        #numpad-ok { width: 100%; margin-top: 10px; }
-
         @media (max-width: 768px) {
             body { padding: 80px 5px 80px 5px; }
             .container { padding: 20px 15px; }
             .controls-grid > * { flex-basis: 100%; }
-            .col-code, .col-ean { display: none; }
+            .col-desc, .col-ean { display: none; }
             .export-controls { grid-template-columns: 1fr; }
             #totalOrderValue { font-size: 1rem; padding: 10px; }
             .bottom-scroll-bar button, .top-right-menu .btn-icon { width: 40px; height: 40px; }
