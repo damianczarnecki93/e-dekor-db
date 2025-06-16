@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log("[DIAGNOSTYKA] Krok 1: DOMContentLoaded - Skrypt został uruchomiony.");
 
-    // Definicja wszystkich elementów DOM w jednym miejscu
+    // KROK 2: Definicja wszystkich elementów DOM
     const elements = {
         loginOverlay: document.getElementById('loginOverlay'),
         appContainer: document.getElementById('appContainer'),
@@ -94,19 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
         printClientName: document.getElementById('print-client-name'),
         printAdditionalInfo: document.getElementById('print-additional-info'),
         printTableBody: document.getElementById('print-table-body'),
-        numpadModal: document.getElementById('numpad-modal'),
-        numpadDisplay: document.getElementById('numpad-display'),
-        numpadOk: document.getElementById('numpad-ok'),
-        numpadClear: document.getElementById('numpad-clear'),
-        numpadBackspace: document.getElementById('numpad-backspace'),
-        numpadKeys: document.querySelectorAll('.numpad-key'),
     };
 
     let productDatabase = [], scannedItems = [], inventoryItems = [];
-    let currentPickingOrder = null;
-    let pickedItems = [];
-    let numpadTarget = null;
-    let numpadCallback = null;
     const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
     // =================================================================
@@ -211,20 +201,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
         if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', handleSavedListAction);
-
-        if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
-        if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('input', handlePickingSearch);
-        if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { pickItemFromList(li.dataset.ean); } });
-        if (elements.pickingTargetList) elements.pickingTargetList.addEventListener('click', e => { const itemDiv = e.target.closest('.pick-item'); if(itemDiv?.dataset.ean) { pickItemFromList(itemDiv.dataset.ean); } });
-        if (elements.pickingScannedList) elements.pickingScannedList.addEventListener('click', handlePickedItemClick);
-        if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
-        
-        attachNumpadListeners();
     }
     
-    // =================================================================
-    // ŁADOWANIE DANYCH
-    // =================================================================
     async function loadDataFromServer() {
         console.log('Ładowanie bazy produktów...');
         function fetchAndParseCsv(filename) { return fetch(filename).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); }
@@ -236,9 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }).catch(error => { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); });
     }
 
-    // =================================================================
-    // NAWIGACJA I UI
-    // =================================================================
     function showAdminPanel() {
         elements.mainContent.style.display = 'none';
         elements.adminPanel.style.display = 'block';
@@ -249,10 +224,40 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function showToast(message) { const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = message; elements.toastContainer.appendChild(toast); setTimeout(() => { toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }, 10); }
 
-    // =================================================================
-    // WYSZUKIWANIE
-    // =================================================================
     function performSearch(searchTerm) { if (!searchTerm) return []; const term = searchTerm.toLowerCase(); return productDatabase.filter(p => (p.kod_kreskowy?.toLowerCase().includes(term)) || (p.nazwa_produktu?.toLowerCase().includes(term)) || (p.opis?.toLowerCase().includes(term))); }
+    
+    function addProductToList(code = null, quantity = null) {
+        const ean = code || elements.listBarcodeInput.value.trim();
+        const qty = quantity || parseInt(elements.quantityInput.value, 10);
+        if (!ean || isNaN(qty) || qty < 1) return alert("Podaj kod/EAN i prawidłową ilość.");
+        let productData = productDatabase.find(p => p.kod_kreskowy === ean || p.nazwa_produktu === ean);
+        if (!productData) productData = { kod_kreskowy: ean, nazwa_produktu: ean, opis: ean, cena: "0" };
+        const existingItem = scannedItems.find(item => item.ean === productData.kod_kreskowy);
+        if (existingItem) existingItem.quantity += qty;
+        else scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: qty, price: productData.cena });
+        renderScannedList();
+        showToast(`Dodano: ${productData.nazwa_produktu} (Ilość: ${qty})`);
+        elements.listBarcodeInput.value = '';
+        elements.quantityInput.value = '1';
+        elements.listBuilderSearchResults.innerHTML = '';
+        elements.listBuilderSearchResults.style.display = 'none';
+        elements.listBarcodeInput.focus();
+    }
+    
+    function handleListBuilderSearch(event) {
+        const searchTerm = event.target.value.trim();
+        elements.listBuilderSearchResults.style.display = 'none';
+        if (!searchTerm) return;
+        const results = performSearch(searchTerm);
+        if (results.length > 0) {
+            let listHtml = '<ul>';
+            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+            listHtml += `<li class="add-unknown-item" data-ean="${searchTerm}"><i class="fa fa-plus"></i> Dodaj "${searchTerm}" jako nową pozycję</li>`;
+            listHtml += '</ul>';
+            elements.listBuilderSearchResults.innerHTML = listHtml;
+            elements.listBuilderSearchResults.style.display = 'block';
+        }
+    }
     
     function handleLookupSearch(event) {
         const searchTerm = event.target.value.trim();
@@ -282,48 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
         listHtml += '</ul>';
         elements.lookupResultList.innerHTML = listHtml;
         elements.lookupResultList.style.display = 'block';
-    }
-    
-    // =================================================================
-    // GŁÓWNY MODUŁ ZAMÓWIEŃ
-    // =================================================================
-    function addProductToList(code = null, quantity = null) {
-        const ean = code || elements.listBarcodeInput.value.trim();
-        const qty = quantity || parseInt(elements.quantityInput.value, 10);
-        if (!ean || isNaN(qty) || qty < 1) return alert("Podaj kod/EAN i prawidłową ilość.");
-        let productData = productDatabase.find(p => p.kod_kreskowy === ean || p.nazwa_produktu === ean);
-        if (!productData) productData = { kod_kreskowy: ean, nazwa_produktu: ean, opis: ean, cena: "0" };
-        const existingItem = scannedItems.find(item => item.ean === productData.kod_kreskowy);
-        if (existingItem) existingItem.quantity += qty;
-        else scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: qty, price: productData.cena });
-        renderScannedList();
-        showToast(`Dodano: ${productData.nazwa_produktu} (Ilość: ${qty})`);
-        elements.listBarcodeInput.value = '';
-        elements.quantityInput.value = '1';
-        elements.listBuilderSearchResults.innerHTML = '';
-        elements.listBuilderSearchResults.style.display = 'none';
-        elements.listBarcodeInput.focus();
-    }
-    
-    function handleListBuilderSearch(event) {
-        const searchTerm = event.target.value.trim();
-        elements.listBuilderSearchResults.style.display = 'none';
-        if (!searchTerm) return;
-        
-        const results = performSearch(searchTerm);
-        if (isMobile) {
-            addProductToList(searchTerm, 1);
-            return;
-        }
-
-        if (results.length > 0) {
-            let listHtml = '<ul>';
-            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
-            listHtml += `<li class="add-unknown-item" data-ean="${searchTerm}"><i class="fa fa-plus"></i> Dodaj "${searchTerm}" jako nową pozycję</li>`;
-            listHtml += '</ul>';
-            elements.listBuilderSearchResults.innerHTML = listHtml;
-            elements.listBuilderSearchResults.style.display = 'block';
-        }
     }
     
     function renderScannedList() {
@@ -569,6 +532,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleDeleteInventoryItem(e) {
         const btn = e.target.closest('.delete-inv-item-btn');
         if (btn) { inventoryItems.splice(btn.dataset.index, 1); renderInventoryList(); }
+        if(e.target.classList.contains('quantity-in-table')) {
+            e.preventDefault();
+        }
     }
 
     function renderInventoryList() { 
@@ -581,46 +547,118 @@ document.addEventListener('DOMContentLoaded', () => {
     // MODUŁ KLAWIATURY NUMERYCZNEJ
     // =================================================================
     function openNumpad(targetElement, callbackOnOk) {
-        // ... (reszta kodu bez zmian)
+        numpadTarget = targetElement;
+        numpadCallback = callbackOnOk;
+        elements.numpadDisplay.textContent = targetElement.value || '1';
+        elements.numpadModal.style.display = 'flex';
     }
 
     function handleNumpadOK() {
-        // ... (reszta kodu bez zmian)
+        const value = parseInt(elements.numpadDisplay.textContent, 10) || 0;
+        if (numpadTarget) {
+            if (value >= 0) { 
+                if (numpadCallback) {
+                    numpadCallback(value);
+                } else {
+                    numpadTarget.value = value;
+                    numpadTarget.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+        }
+        elements.numpadModal.style.display = 'none';
     }
     
     function attachNumpadListeners() {
-        // ... (reszta kodu bez zmian)
+        elements.numpadKeys.forEach(key => key.addEventListener('click', () => {
+            const display = elements.numpadDisplay;
+            if (display.textContent === '0') display.textContent = '';
+            display.textContent += key.dataset.key;
+        }));
+        elements.numpadClear.addEventListener('click', () => { elements.numpadDisplay.textContent = '0'; });
+        elements.numpadBackspace.addEventListener('click', () => {
+            const display = elements.numpadDisplay;
+            display.textContent = display.textContent.slice(0, -1) || '0';
+        });
+        elements.numpadOk.addEventListener('click', handleNumpadOK);
+        
+        elements.quantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
+        elements.inventoryQuantityInput.addEventListener('click', (e) => { e.preventDefault(); openNumpad(e.target); });
     }
 
     // =================================================================
     // MODUŁ KOMPLETACJI
     // =================================================================
     async function startPicking(listId, listName) {
-        // ... (reszta kodu bez zmian)
+        try {
+            const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if (!response.ok) throw new Error("Błąd wczytywania zamówienia do kompletacji");
+            currentPickingOrder = await response.json();
+            pickedItems = [];
+            elements.pickingOrderName.textContent = `Kompletacja: ${listName}`;
+            renderPickingView();
+            elements.pickingModule.style.display = 'flex';
+        } catch (error) { alert(error.message); }
     }
 
     function renderPickingView() {
-        // ... (reszta kodu bez zmian)
+        if(!currentPickingOrder) return;
+        const toPickItems = currentPickingOrder.items.filter(item => !pickedItems.some(p => p.ean === item.ean));
+        elements.pickingTargetList.innerHTML = toPickItems.map(item => `<div class="pick-item" data-ean="${item.ean}" style="padding: 8px; cursor: pointer; border-bottom: 1px solid var(--border-color);"><strong>${item.name}</strong><br><small>${item.description}</small> (ilość: ${item.quantity})</div>`).join('') || "<p>Wszystko zebrane!</p>";
+        elements.pickingScannedList.innerHTML = pickedItems.map((item, index) => `<div class="picked-item" style="display: flex; justify-content: space-between; align-items: center; padding: 5px;"><span>${item.name} | ${item.description}</span><div><input type="number" value="${item.quantity}" class="picked-quantity-input" data-index="${index}" style="width: 60px; text-align: center;" readonly><button class="unpick-item-btn btn-icon" data-index="${index}" style="background: none; color: var(--danger-color);"><i class="fa-solid fa-arrow-left"></i></button></div></div>`).join('');
     }
 
     function pickItemFromList(ean) {
-        // ... (reszta kodu bez zmian)
+        const item = currentPickingOrder.items.find(i => i.ean === ean);
+        if (item) {
+            openNumpad({ value: item.quantity }, (quantity) => {
+                if (quantity > 0) moveItemToPicked(item, quantity);
+            });
+        }
     }
     
     function moveItemToPicked(item, quantity) {
-        // ... (reszta kodu bez zmian)
+        const itemToMove = { ...item, quantity };
+        pickedItems.push(itemToMove);
+        renderPickingView();
     }
     
     function handlePickedItemClick(e) {
-        // ... (reszta kodu bez zmian)
+        const target = e.target.closest('button.unpick-item-btn, input.picked-quantity-input');
+        if (!target) return;
+        const index = target.dataset.index;
+        if (target.classList.contains('unpick-item-btn')) {
+            pickedItems.splice(index, 1);
+            renderPickingView();
+        } else if (target.classList.contains('picked-quantity-input')) {
+            e.preventDefault();
+            openNumpad(target, (newQuantity) => {
+                if(newQuantity >= 0) {
+                   if (newQuantity === 0) pickedItems.splice(index, 1);
+                   else pickedItems[index].quantity = newQuantity;
+                   renderPickingView();
+                }
+            });
+        }
     }
 
     function handlePickingSearch(event) {
-        // ... (reszta kodu bez zmian)
+        const searchTerm = event.target.value.trim();
+        const resultsDiv = elements.pickingSearchResults;
+        resultsDiv.innerHTML = '';
+        resultsDiv.style.display = 'none';
+        if(!searchTerm) return;
+        const results = performSearch(searchTerm).filter(p => !pickedItems.some(pi => pi.ean === p.kod_kreskowy));
+        if(results.length > 0) {
+            let listHtml = '<ul>';
+            results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; });
+            listHtml += '</ul>';
+            resultsDiv.innerHTML = listHtml;
+            resultsDiv.style.display = 'block';
+        }
     }
     
     function verifyPicking() {
-        // ... (reszta kodu bez zmian)
+        // ... (logika weryfikacji)
     }
 
     function exportPickedToCsv() {
@@ -629,6 +667,6 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadFile(csvContent, 'text/csv;charset=utf-8;', `${currentPickingOrder.listName}_skompletowane.csv`);
     }
 
-    // Inicjalizacja Aplikacji
+    // Wywołanie startowe
     checkLoginStatus();
 });
