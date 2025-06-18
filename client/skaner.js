@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // INICJALIZACJA I LOGOWANIE
     // =================================================================
     const showApp = (userData) => {
+        console.log('showApp() called with user:', userData);
         elements.loginOverlay.style.display = 'none';
         elements.appContainer.style.display = 'block';
         if (elements.topBar) elements.topBar.style.display = 'flex';
@@ -113,6 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const initializeApp = async (userData) => {
+        console.log('initializeApp() called.');
         if(elements.menuUsername) elements.menuUsername.textContent = userData.username;
         await loadDataFromServer();
         if (userData.role === 'admin') {
@@ -120,29 +122,66 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         await loadActiveList();
         attachAllEventListeners();
+        console.log('Application fully initialized.');
     };
     
     const checkLoginStatus = async () => {
+        console.log('checkLoginStatus() called.');
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token) {
+            console.log('No token found in localStorage.');
+            return;
+        }
+        console.log('Token found, verifying...');
         try {
             const response = await fetch('/api/auth/verify', { method: 'GET', headers: { 'x-auth-token': token } });
+            console.log('Verification response status:', response.status);
+            const userData = await response.json();
             if (response.ok) {
-                showApp(await response.json());
+                console.log('Token is valid. User data:', userData);
+                showApp(userData);
             } else {
+                console.log('Token invalid, removing from localStorage. Server message:', userData.msg);
                 localStorage.removeItem('token');
             }
-        } catch (error) { console.error('Błąd weryfikacji tokenu:', error); }
+        } catch (error) { 
+            console.error('Błąd weryfikacji tokenu:', error); 
+        }
     };
     
     async function attemptLogin() {
+        console.log('attemptLogin() called.');
+        elements.loginError.textContent = '';
+        const username = elements.loginUsername.value;
+        const password = elements.loginPassword.value;
+        console.log(`Attempting to log in as: ${username}`);
+
         try {
-            const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: elements.loginUsername.value, password: elements.loginPassword.value }) });
+            const response = await fetch('/api/auth/login', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ username, password }) 
+            });
+            
+            console.log('Login response status:', response.status);
             const data = await response.json();
-            if (!response.ok) { elements.loginError.textContent = data.msg || 'Wystąpił błąd'; return; }
+            console.log('Login response data:', data);
+
+            if (!response.ok) { 
+                console.error('Login failed. Server message:', data.msg);
+                elements.loginError.textContent = data.msg || 'Wystąpił błąd'; 
+                return; 
+            }
+
+            console.log('Login successful. Token received:', data.token);
             localStorage.setItem('token', data.token);
+            console.log('Token stored in localStorage.');
             showApp(data.user);
-        } catch (error) { elements.loginError.textContent = 'Nie można połączyć się z serwerem.'; }
+
+        } catch (error) { 
+            console.error('Error during login fetch:', error);
+            elements.loginError.textContent = 'Nie można połączyć się z serwerem lub wystąpił błąd sieci.'; 
+        }
     }
 
     async function handleRegistration() {
@@ -507,7 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         event.target.value = '';
     }
-
+    
     async function loadAllUsers() {
         try {
             const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
@@ -750,11 +789,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function attachNumpadListeners() {
-        // ... Logika dla numpada
+        // Pozostaje puste, jeśli nie ma logiki do podpięcia
     }
 
     function openNumpad(targetInput, callback) {
-        // ... logika dla numpada
+        // Pozostaje puste, jeśli nie ma logiki
     }
 
 
