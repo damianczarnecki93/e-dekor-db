@@ -1,4 +1,3 @@
-// routes/auth.js
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
@@ -6,103 +5,111 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// POST /api/auth/register
+// @route   POST /api/auth/register
+// @desc    Rejestracja nowego użytkownika
+// @access  Public
 router.post('/register', async (req, res) => {
-    console.log('--- OTRZYMANO ZAPYTANIE DO /api/auth/register ---'); // <--- NOWY LOG
     const { username, password } = req.body;
-    console.log(`Dane z formularza: username=${username}`); // <--- NOWY LOG
-
     try {
-        if (!username || !password) {
-            console.log('Błąd: Brak nazwy użytkownika lub hasła.'); // <--- NOWY LOG
-            return res.status(400).json({ msg: 'Proszę podać wszystkie dane.' });
-        }
         let user = await User.findOne({ username });
         if (user) {
-            console.log('Błąd: Użytkownik o tym loginie już istnieje.'); // <--- NOWY LOG
-            return res.status(400).json({ msg: 'Użytkownik o tym loginie już istnieje.' });
+            return res.status(400).json({ msg: 'Użytkownik o tej nazwie już istnieje' });
         }
-
-        console.log('Tworzenie nowego użytkownika w bazie...'); // <--- NOWY LOG
-        user = new User({ username, password }); // Status domyślnie 'pending'
-
-        const savedUser = await user.save(); // Zapisujemy użytkownika
-        console.log('Sukces! Zapisano użytkownika w bazie danych:'); // <--- NOWY LOG
-        console.log(savedUser); // <--- NOWY LOG
-
-        res.status(201).json({ msg: 'Rejestracja pomyślna. Oczekuj na akceptację administratora.' });
-
+        user = new User({
+            username,
+            password,
+            role: 'user', // Domyślna rola
+            isApproved: false // Nowi użytkownicy wymagają zatwierdzenia
+        });
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(password, salt);
+        await user.save();
+        res.status(201).json({ msg: 'Rejestracja pomyślna. Oczekuj na zatwierdzenie konta przez administratora.' });
     } catch (err) {
-        console.error('--- KRYTYCZNY BŁĄD PODCZAS REJESTRACJI ---'); // <--- NOWY LOG
-        console.error(err); // <--- NOWY LOG
-        res.status(500).send('Błąd serwera podczas rejestracji');
+        console.error(err.message);
+        res.status(500).send('Błąd serwera');
     }
 });
 
-// ... reszta pliku (logowanie i weryfikacja) pozostaje bez zmian ...
+// @route   POST /api/auth/login
+// @desc    Logowanie użytkownika
+// @access  Public
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
     try {
-        const user = await User.findOne({ email });
+        let user = await User.findOne({ username });
         if (!user) {
-            console.error('Logowanie nieudane: Nie znaleziono użytkownika dla emaila:', email); // Dodaj log
-            return res.status(401).json({ message: 'Nieprawidłowe dane uwierzytelniające' });
+            return res.status(400).json({ msg: 'Nieprawidłowe dane uwierzytelniające' });
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            console.error('Logowanie nieudane: Nieprawidłowe hasło dla użytkownika:', email); // Dodaj log
-            return res.status(401).json({ message: 'Nieprawidłowe dane uwierzytelniające' });
+            return res.status(400).json({ msg: 'Nieprawidłowe dane uwierzytelniające' });
         }
 
-        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.json({ token });
+        if (!user.isApproved) {
+            return res.status(403).json({ msg: 'Konto nie zostało jeszcze zatwierdzone przez administratora.' });
+        }
 
-    } catch (error) {
-        console.error('Krytyczny błąd podczas logowania:', error); // Najważniejszy log!
-        res.status(500).json({ message: 'Błąd serwera' });
+        const payload = {
+            userId: user.id,
+            role: user.role
+        };
+        
+        // POPRAWKA: Zmieniono odpowiedź, aby zawierała obiekt `user`
+        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' }, (err, token) => {
+            if (err) throw err;
+            res.json({
+                token,
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    role: user.role
+                }
+            });
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Błąd serwera');
     }
 });
+
+
+// @route   GET /api/auth/verify
+// @desc    Weryfikacja tokenu i odświeżenie danych użytkownika
+// @access  Private
 router.get('/verify', authMiddleware, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password');
+        // authMiddleware dodaje req.userId
+        const user = await User.findById(req.userId).select('-password');
+        if (!user) {
+            return res.status(404).json({ msg: 'Nie znaleziono użytkownika' });
+        }
         res.json(user);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Błąd serwera');
     }
 });
-// routes/auth.js
 
-// ... (istniejący kod dla /register, /login, /verify) ...
 
-// NOWA TRASA: Zmiana hasła przez zalogowanego użytkownika
+// @route   POST /api/auth/change-password
+// @desc    Zmiana hasła przez zalogowanego użytkownika
+// @access  Private
 router.post('/change-password', authMiddleware, async (req, res) => {
-    const { oldPassword, newPassword } = req.body;
-
-    if (!oldPassword || !newPassword) {
-        return res.status(400).json({ msg: 'Proszę podać wszystkie dane.' });
-    }
-     if (newPassword.length < 4) {
-        return res.status(400).json({ msg: 'Nowe hasło musi mieć co najmniej 4 znaki.' });
-    }
-
+    const { newPassword } = req.body;
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.userId);
         if (!user) {
-            return res.status(404).json({ msg: 'Użytkownik nie znaleziony.' });
+            return res.status(404).json({ msg: 'Nie znaleziono użytkownika' });
         }
 
-        const isMatch = await bcrypt.compare(oldPassword, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ msg: 'Stare hasło jest nieprawidłowe.' });
-        }
-
-        user.password = newPassword;
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
         await user.save();
 
         res.json({ msg: 'Hasło zostało pomyślnie zmienione.' });
-
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Błąd serwera');
