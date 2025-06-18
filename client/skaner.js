@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
         numpadKeys: document.querySelectorAll('.numpad-key'),
     };
 
-    let productDatabase = [], scannedItems = [], inventoryItems = [], activeTab = 'lookup';
+    let productDatabase = [], scannedItems = [], inventoryItems = [], activeTab = 'listBuilder';
     let currentPickingOrder = null;
     let pickedItems = [];
     let numpadTarget = null;
@@ -276,17 +276,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function switchTab(newTab) {
         activeTab = newTab;
-        [elements.lookupMode, elements.listBuilderMode, elements.adminPanel].forEach(el => { if(el) el.style.display = 'none'; });
-        [elements.tabLookupBtn, elements.tabListBuilderBtn].forEach(el => { if(el) el.classList.remove('active'); });
-
-        if (newTab === 'lookup' && elements.lookupMode) {
-            elements.lookupMode.style.display = 'block';
-            if(elements.tabLookupBtn) elements.tabLookupBtn.classList.add('active');
-        } else if (newTab === 'listBuilder' && elements.listBuilderMode) {
-            elements.listBuilderMode.style.display = 'block';
-            if(elements.tabListBuilderBtn) elements.tabListBuilderBtn.classList.add('active');
-        } else if (newTab === 'admin' && elements.adminPanel) {
-            elements.adminPanel.style.display = 'block';
+        const mainContent = document.getElementById('main-content');
+        if(mainContent) mainContent.style.display = 'none';
+        if(elements.adminPanel) elements.adminPanel.style.display = 'none';
+        
+        if (newTab === 'listBuilder') {
+            if(mainContent) mainContent.style.display = 'block';
+        } else if (newTab === 'admin') {
+            if(elements.adminPanel) elements.adminPanel.style.display = 'block';
         }
     }
 
@@ -900,7 +897,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function openNumpad(targetInput, callback) {
-        if (!isMobile) return; // Numpad tylko na mobile
+        if (!isMobile) return;
         numpadTarget = targetInput;
         numpadCallback = callback;
         elements.numpadDisplay.value = targetInput.value;
