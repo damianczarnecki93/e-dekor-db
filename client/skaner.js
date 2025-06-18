@@ -122,7 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
         attachAllEventListeners();
     };
     
-    // POPRAWKA: Przywrócono brakującą funkcję, która uniemożliwiała logowanie
     const checkLoginStatus = async () => {
         const token = localStorage.getItem('token');
         if (!token) return;
@@ -227,10 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
         attachNumpadListeners();
     }
     
-    // ... (reszta kodu, który został w całości przepisany i jest teraz kompletny)
-
-    
-    // ... reszta funkcji ...
     async function loadDataFromServer() {
         console.log('Ładowanie bazy produktów...');
         function fetchAndParseCsv(filename) { return fetch(filename).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); }
@@ -244,18 +239,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function switchTab(newTab) {
         activeTab = newTab;
-        [elements.lookupMode, elements.listBuilderMode, elements.adminPanel].forEach(el => el.classList.remove('active'));
-        [elements.tabLookupBtn, elements.tabListBuilderBtn].forEach(el => el.classList.remove('active'));
-        if (newTab === 'lookup') { elements.lookupMode.classList.add('active'); elements.tabLookupBtn.classList.add('active'); } 
-        else if (newTab === 'listBuilder') { elements.listBuilderMode.classList.add('active'); elements.tabListBuilderBtn.classList.add('active'); } 
-        else if (newTab === 'admin') { elements.adminPanel.classList.add('active'); }
+        [elements.lookupMode, elements.listBuilderMode, elements.adminPanel].forEach(el => { if(el) el.classList.remove('active')});
+        [elements.tabLookupBtn, elements.tabListBuilderBtn].forEach(el => { if(el) el.classList.remove('active')});
+
+        if (newTab === 'lookup' && elements.lookupMode) { elements.lookupMode.classList.add('active'); if(elements.tabLookupBtn) elements.tabLookupBtn.classList.add('active'); } 
+        else if (newTab === 'listBuilder' && elements.listBuilderMode) { elements.listBuilderMode.classList.add('active'); if(elements.tabListBuilderBtn) elements.tabListBuilderBtn.classList.add('active'); } 
+        else if (newTab === 'admin' && elements.adminPanel) { elements.adminPanel.classList.add('active'); }
     }
     
-    function setDarkMode(isDark) { const iconElement = elements.darkModeToggle.querySelector('i'); if (isDark) { document.body.classList.add('dark-mode'); iconElement.classList.replace('fa-moon', 'fa-sun'); localStorage.setItem('theme', 'dark'); } else { document.body.classList.remove('dark-mode'); iconElement.classList.replace('fa-sun', 'fa-moon'); localStorage.setItem('theme', 'light'); } }
+    function setDarkMode(isDark) { 
+        const iconElement = elements.darkModeToggle.querySelector('i'); 
+        if (isDark) { 
+            document.body.classList.add('dark-mode'); 
+            iconElement.classList.replace('fa-moon', 'fa-sun'); 
+            localStorage.setItem('theme', 'dark'); 
+        } else { 
+            document.body.classList.remove('dark-mode'); 
+            iconElement.classList.replace('fa-sun', 'fa-moon'); 
+            localStorage.setItem('theme', 'light'); 
+        } 
+    }
     
-    function performSearch(searchTerm) { if (!searchTerm) return []; const term = searchTerm.toLowerCase(); return productDatabase.filter(p => (p.kod_kreskowy?.toLowerCase().includes(term)) || (p.nazwa_produktu?.toLowerCase().includes(term)) || (p.opis?.toLowerCase().includes(term))); }
+    function performSearch(searchTerm) { 
+        if (!searchTerm) return []; 
+        const term = searchTerm.toLowerCase(); 
+        return productDatabase.filter(p => (p.kod_kreskowy?.toLowerCase().includes(term)) || (p.nazwa_produktu?.toLowerCase().includes(term)) || (p.opis?.toLowerCase().includes(term))); 
+    }
     
-    function showToast(message) { const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = message; elements.toastContainer.appendChild(toast); setTimeout(() => { toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }, 10); }
+    function showToast(message) { 
+        const toast = document.createElement('div'); 
+        toast.className = 'toast'; 
+        toast.textContent = message; 
+        elements.toastContainer.appendChild(toast); 
+        setTimeout(() => { 
+            toast.classList.add('show'); 
+            setTimeout(() => { 
+                toast.classList.remove('show'); 
+                toast.addEventListener('transitionend', () => toast.remove()); 
+            }, 3000); 
+        }, 10); 
+    }
 
     function addProductToList(code = null, quantity = null) {
         const ean = code || elements.listBarcodeInput.value.trim();
@@ -484,19 +507,60 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         event.target.value = '';
     }
+
+    async function loadAllUsers() {
+        try {
+            const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if (!response.ok) throw new Error('Nie można załadować użytkowników');
+            const users = await response.json();
+            elements.allUsersList.innerHTML = users.map(user => `
+                <div class="user-item">
+                    <div class="user-info">
+                        <strong>${user.username}</strong>
+                        <span class="status">Rola: ${user.role} | Status: ${user.isApproved ? 'Zatwierdzony' : 'Oczekujący'}</span>
+                    </div>
+                    <div class="user-actions">
+                        ${!user.isApproved ? `<button class="approve-user-btn" data-userid="${user._id}" data-username="${user.username}">Zatwierdź</button>` : ''}
+                        <button class="edit-user-btn" data-userid="${user._id}" data-username="${user.username}">Zmień hasło</button>
+                        <button class="change-role-btn" data-userid="${user._id}" data-username="${user.username}" data-role="${user.role === 'admin' ? 'user' : 'admin'}">Zmień na ${user.role === 'admin' ? 'User' : 'Admin'}</button>
+                        <button class="delete-user-btn" data-userid="${user._id}" data-username="${user.username}">Usuń</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            elements.allUsersList.innerHTML = `<p style="color:red;">${error.message}</p>`;
+        }
+    }
     
-    async function loadAllUsers() { /*... kod z poprzedniej odpowiedzi ...*/ }
-    async function handleUserAction(url, options, successMsg) { /*... kod z poprzedniej odpowiedzi ...*/ }
-    async function handleChangePassword() { /*... kod z poprzedniej odpowiedzi ...*/ }
+    async function handleUserAction(url, options) {
+        try {
+            const response = await fetch(url, options);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.msg || 'Błąd operacji');
+            showToast(data.msg || 'Operacja zakończona sukcesem!');
+            await loadAllUsers(); 
+        } catch (error) {
+            alert(`Błąd: ${error.message}`);
+        }
+    }
+
+    async function handleChangePassword() {
+        const newPassword = prompt("Wprowadź nowe hasło:");
+        if (!newPassword) return;
+        try {
+            const response = await fetch('/api/auth/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') },
+                body: JSON.stringify({ newPassword })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.msg || "Błąd zmiany hasła");
+            alert("Hasło zostało zmienione.");
+        } catch (error) {
+            alert(`Błąd: ${error.message}`);
+        }
+    }
     
-    // ... (reszta kodu jest w następnym bloku)
-});
-// ... (kontynuacja pliku skaner.js)
-
-document.addEventListener('DOMContentLoaded', () => {
-
-    // ... (cały kod z poprzedniego bloku, aż do tego miejsca) ...
-
     function handleAdminAction(e) {
         const target = e.target.closest('button'); 
         if (!target) return;
@@ -626,14 +690,73 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function verifyPicking() {
-        // ... (logika weryfikacji bez zmian)
+        if (!currentPickingOrder) return;
+        const summary = {
+            missing: [],
+            extra: [],
+            incorrectQuantity: []
+        };
+
+        const targetMap = new Map(currentPickingOrder.items.map(item => [item.ean, item.quantity]));
+        const pickedMap = new Map(pickedItems.map(item => [item.ean, item.quantity]));
+
+        for (const [ean, quantity] of targetMap.entries()) {
+            if (!pickedMap.has(ean)) {
+                summary.missing.push({ ...currentPickingOrder.items.find(i=>i.ean===ean), expected: quantity });
+            } else if (pickedMap.get(ean) !== quantity) {
+                summary.incorrectQuantity.push({ ...currentPickingOrder.items.find(i=>i.ean===ean), expected: quantity, actual: pickedMap.get(ean) });
+            }
+        }
+
+        for (const [ean, quantity] of pickedMap.entries()) {
+            if (!targetMap.has(ean)) {
+                summary.extra.push({ ...pickedItems.find(i=>i.ean===ean), actual: quantity });
+            }
+        }
+
+        displayPickingSummary(summary);
     }
+    
+    function displayPickingSummary(summary) {
+        let html = '<h4>Podsumowanie kompletacji</h4>';
+        if (summary.missing.length === 0 && summary.extra.length === 0 && summary.incorrectQuantity.length === 0) {
+            html += '<p style="color: var(--success-color);">Wszystkie pozycje zgodne!</p>';
+        } else {
+            if (summary.missing.length > 0) {
+                html += '<h5>Brakujące produkty:</h5><ul>';
+                summary.missing.forEach(item => { html += `<li>${item.name} | ${item.description} (oczekiwano: ${item.expected})</li>`; });
+                html += '</ul>';
+            }
+            if (summary.incorrectQuantity.length > 0) {
+                html += '<h5>Niezgodne ilości:</h5><ul>';
+                summary.incorrectQuantity.forEach(item => { html += `<li>${item.name} | ${item.description} (oczekiwano: ${item.expected}, skompletowano: ${item.actual})</li>`; });
+                html += '</ul>';
+            }
+            if (summary.extra.length > 0) {
+                html += '<h5>Dodatkowe produkty:</h5><ul>';
+                summary.extra.forEach(item => { html += `<li>${item.name} | ${item.description} (skompletowano: ${item.actual})</li>`; });
+                html += '</ul>';
+            }
+        }
+        elements.pickingSummaryBody.innerHTML = html;
+        elements.pickingSummaryModal.style.display = 'flex';
+    }
+
 
     function exportPickedToCsv() {
         if (pickedItems.length === 0) return;
         const csvContent = pickedItems.map(item => `${item.ean};${item.quantity}`).join('\n');
         downloadFile(csvContent, 'text/csv;charset=utf-8;', `${currentPickingOrder.listName}_skompletowane.csv`);
     }
+
+    function attachNumpadListeners() {
+        // ... Logika dla numpada
+    }
+
+    function openNumpad(targetInput, callback) {
+        // ... logika dla numpada
+    }
+
 
     // Inicjalizacja Aplikacji
     checkLoginStatus();
