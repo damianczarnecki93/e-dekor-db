@@ -18,8 +18,8 @@ router.post('/register', async (req, res) => {
         user = new User({
             username,
             password,
-            role: 'user', 
-            isApproved: false 
+            role: 'user',
+            isApproved: false
         });
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(password, salt);
@@ -47,9 +47,12 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ msg: 'Nieprawidłowe dane uwierzytelniające' });
         }
 
-        if (!user.isApproved) {
+        // --- POPRAWKA ---
+        // Konto 'admin' nie wymaga zatwierdzenia. Dla innych użytkowników sprawdzamy flagę isApproved.
+        if (user.username !== 'admin' && !user.isApproved) {
             return res.status(403).json({ msg: 'Konto nie zostało jeszcze zatwierdzone przez administratora.' });
         }
+        // --- KONIEC POPRAWKI ---
 
         const payload = {
             userId: user.id,
