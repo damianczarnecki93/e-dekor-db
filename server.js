@@ -44,8 +44,7 @@ if (!MONGODB_URI) {
 
 // Połączenie z bazą danych, a NASTĘPNIE uruchomienie serwera
 mongoose.connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
+    // Usunięto przestarzałe opcje: useNewUrlParser i useUnifiedTopology
 })
 .then(() => {
     console.log('Połączono z MongoDB pomyślnie.');
