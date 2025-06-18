@@ -41,28 +41,26 @@ router.post('/register', async (req, res) => {
 
 // ... reszta pliku (logowanie i weryfikacja) pozostaje bez zmian ...
 router.post('/login', async (req, res) => {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
     try {
-        const user = await User.findOne({ username });
+        const user = await User.findOne({ email });
         if (!user) {
-            return res.status(400).json({ msg: 'Nieprawidłowy login lub hasło.' });
+            console.error('Logowanie nieudane: Nie znaleziono użytkownika dla emaila:', email); // Dodaj log
+            return res.status(401).json({ message: 'Nieprawidłowe dane uwierzytelniające' });
         }
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            return res.status(400).json({ msg: 'Nieprawidłowy login lub hasło.' });
+            console.error('Logowanie nieudane: Nieprawidłowe hasło dla użytkownika:', email); // Dodaj log
+            return res.status(401).json({ message: 'Nieprawidłowe dane uwierzytelniające' });
         }
-        if (user.status !== 'approved') {
-            return res.status(403).json({ msg: 'Konto nieaktywne lub oczekuje na akceptację.' });
-        }
-        const payload = { user: { id: user.id, role: user.role } };
-        const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' });
-        res.json({
-            token,
-            user: { username: user.username, role: user.role }
-        });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Błąd serwera');
+
+        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        res.json({ token });
+
+    } catch (error) {
+        console.error('Krytyczny błąd podczas logowania:', error); // Najważniejszy log!
+        res.status(500).json({ message: 'Błąd serwera' });
     }
 });
 router.get('/verify', authMiddleware, async (req, res) => {
