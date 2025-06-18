@@ -12,7 +12,7 @@
         :root {
             --font-family: 'Poppins', sans-serif;
             --primary-color: #3478F6; --primary-hover: #2962FF;
-            --success-color: #34C759; --danger-color: #FF3B30; --warning-color: #FF9500;
+            --success-color: #34C759; --danger-color: #FF3B30; --warning-color: #FF9500; --info-color: #5856D6;
             --print-color: #5856D6; --excel-color: #007D4B; --csv-color: #27ae60;
             --text-color: #1d1d1f; --text-light-color: #ffffff; --text-secondary-color: #6e6e73;
             --bg-color: #f5f5f7; --surface-color: #ffffff;
@@ -20,7 +20,7 @@
         }
         body.dark-mode {
             --primary-color: #0A84FF; --primary-hover: #3498db;
-            --success-color: #30D158; --danger-color: #FF453A;
+            --success-color: #30D158; --danger-color: #FF453A; --info-color: #5E5CE6;
             --text-color: #f5f5f7; --text-secondary-color: #8d8d92;
             --bg-color: #161617; --surface-color: #1d1d1f; --border-color: #424245;
         }
@@ -32,7 +32,7 @@
         .header-logo { max-height: 45px; }
         body.dark-mode .header-logo { filter: invert(1); }
         button, .btn { cursor: pointer; border-radius: 10px; border: none; padding: 12px 22px; font-weight: 600; font-size: 1em; font-family: var(--font-family); transition: all 0.2s ease; background-color: #e5e5ea; color: var(--text-color); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-        body.dark-mode button { background-color: #3a3a3c; color: var(--text-color); }
+        body.dark-mode button, body.dark-mode .btn { background-color: #3a3a3c; color: var(--text-color); }
         button:hover, .btn:hover { transform: translateY(-2px); }
         button:disabled { cursor: not-allowed; background-color: #e5e5ea !important; color: #8e8e93 !important; transform: none; opacity: 0.6; }
         .btn-primary { background-color: var(--primary-color); color: var(--text-light-color); }
@@ -48,15 +48,15 @@
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(10px); background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; padding:10px; }
         #loginBox { background: var(--surface-color); padding: 40px; border-radius: 20px; text-align: center; width: 100%; max-width: 400px; }
         #loginBox h2 { margin-top: 0; }
-        .top-right-menu { position: fixed; top: 15px; right: 15px; z-index: 1011; display: none; gap: 10px; }
+        #topBar { position: fixed; top: 15px; right: 15px; z-index: 1011; display: none; gap: 10px; }
         .dropdown { position: relative; display: inline-block; }
-        .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--surface-color); min-width: 240px; box-shadow: var(--shadow); z-index: 1; border-radius: 12px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border-color); }
+        .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--surface-color); min-width: 240px; box-shadow: var(--shadow); z-index: 1012; border-radius: 12px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border-color); }
         .dropdown-content .dropdown-header { padding: 10px 18px; font-weight: 600; color: var(--text-secondary-color); background-color: var(--bg-color); }
-        .dropdown-content a { color: var(--text-color); padding: 14px 18px; text-decoration: none; display: flex; align-items: center; gap: 12px; border-top: 1px solid var(--border-color); cursor: pointer; }
+        .dropdown-content a { color: var(--text-color); padding: 14px 18px; text-decoration: none; display: flex; align-items: center; gap: 12px; cursor: pointer; }
         .dropdown-content a:hover { background-color: var(--primary-color); color: var(--text-light-color); }
         .dropdown-content.show { display: block; }
-        .bottom-scroll-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--surface-color); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1010; padding: 10px; display: none; justify-content: center; gap: 20px; }
-        .bottom-scroll-bar button { background: none; border: 1px solid var(--border-color); color: var(--text-secondary-color); width: 50px; height: 50px; border-radius: 50%; }
+        #bottomBar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--surface-color); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1010; padding: 10px; display: none; justify-content: center; gap: 20px; }
+        #bottomBar button { background: none; border: 1px solid var(--border-color); color: var(--text-secondary-color); width: 50px; height: 50px; border-radius: 50%; }
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 20px; font-size: 1em; }
         thead th { background-color: var(--bg-color); padding: 15px; text-align: left; font-weight: 600; color: var(--text-secondary-color); border-bottom: 1px solid var(--border-color); }
         thead th:first-child { border-top-left-radius: 12px; }
@@ -69,12 +69,12 @@
         .admin-user-list .user-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
         .admin-user-list .user-actions button { padding: 5px 10px; font-size: 0.8em; }
         .search-container { position: relative; width: 100%; }
-        .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1000; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
+        .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1020; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
         .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
         #lookupResultSingle { margin-top: 20px; }
         .lookup-result-item { padding: 15px; border: 1px solid var(--border-color); border-radius: 12px; }
-        #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 2000; }
+        #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 3000; }
         .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .toast.show { opacity: 1; transform: translateY(0); }
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(5px); background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1050; padding: 15px; }
@@ -82,7 +82,6 @@
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .modal-header h2 { border: none; padding: 0; margin: 0; }
         .modal-body { flex-grow: 1; overflow-y: auto; }
-        
         #numpad-modal .modal-content { max-width: 320px; padding: 20px; }
         #numpad-display { width: 100%; padding: 10px; font-size: 1.8em; text-align: right; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--bg-color); }
         .numpad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -95,7 +94,7 @@
             .controls-grid > * { flex-basis: 100%; }
             .col-desc, .col-ean { display: none; }
             #totalOrderValue { font-size: 1rem; padding: 10px; }
-            .bottom-scroll-bar button, .top-right-menu .btn-icon { width: 40px; height: 40px; }
+            #bottomBar button, #topBar .btn-icon { width: 40px; height: 40px; }
             button, .btn { padding: 10px 15px; font-size: 0.9em; }
         }
         
@@ -115,7 +114,7 @@
 </head>
 <body>
     
-    <div class="top-right-menu" id="topBar">
+    <div id="topBar">
         <button id="quickSearchBtn" class="btn-icon" title="Szybkie wyszukiwanie"><i class="fa-solid fa-search"></i></button>
         <button id="darkModeToggle" class="btn-icon"><i class="fa-solid fa-moon"></i></button>
         <div class="dropdown">
@@ -131,7 +130,7 @@
         </div>
     </div>
 
-    <div class="bottom-scroll-bar" id="bottomBar">
+    <div id="bottomBar">
         <button id="scrollTopBtn" title="Przewiń do góry"><i class="fa-solid fa-arrow-up"></i></button>
         <button id="scrollBottomBtn" title="Przewiń na dół"><i class="fa-solid fa-arrow-down"></i></button>
     </div>
@@ -143,7 +142,7 @@
                 <input type="text" id="loginUsername" placeholder="Login" style="margin-top: 20px;">
                 <input type="password" id="loginPassword" placeholder="Hasło" style="margin-top: 15px;">
                 <button id="loginBtn" class="btn-primary" style="width: 100%; margin-top: 20px;">Zaloguj się</button>
-                <p id="loginError"></p>
+                <p id="loginError" style="color: var(--danger-color); height: 1em;"></p>
                 <p>Nie masz konta? <a href="#" id="showRegister">Zarejestruj się</a></p>
             </div>
             <div id="registerForm" style="display: none;">
@@ -151,7 +150,7 @@
                 <input type="text" id="registerUsername" placeholder="Wybierz login">
                 <input type="password" id="registerPassword" placeholder="Wybierz hasło" style="margin-top: 15px;">
                 <button id="registerBtn" class="btn-primary" style="width: 100%; margin-top: 20px;">Zarejestruj się</button>
-                <p id="registerError"></p>
+                <p id="registerError" style="color: var(--danger-color); height: 1em;"></p>
                 <p>Masz już konto? <a href="#" id="showLogin">Zaloguj się</a></p>
             </div>
         </div>
@@ -162,6 +161,10 @@
             <img src="logo.jpg" alt="Logo Firmy" class="header-logo">
         </div>
         
+        <div class="tabs">
+            <button id="tabListBuilderBtn" class="tab-btn active">Listy</button>
+        </div>
+
         <div id="main-content">
             <div class="controls-grid">
                 <input type="text" id="clientNameInput" placeholder="Nazwa klienta...">
@@ -169,7 +172,7 @@
             </div>
             <div class="controls-grid">
                 <div class="search-container" style="flex: 1 1 300px;">
-                    <input type="text" id="listBarcodeInput" placeholder="Wpisz EAN, kod lub nazwę...">
+                    <input type="text" id="listBarcode_Input" placeholder="Wpisz EAN, kod lub nazwę...">
                     <div id="listBuilderSearchResults" class="search-results-list" style="display: none;"></div>
                 </div>
                 <input type="number" id="quantityInput" value="1" min="1" readonly>
@@ -263,6 +266,48 @@
                     <input type="file" id="importCsvInput" accept=".csv" style="display: none;">
                 </div>
                 <div id="savedListsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="pickingModule" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="picking-order-name">Kompletacja: ...</h2>
+                <button id="closePickingModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="search-container">
+                    <input type="text" id="picking-ean-input" placeholder="Skanuj lub wyszukaj EAN...">
+                    <div id="picking-search-results" class="search-results-list" style="display: none;"></div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex-grow: 1;">
+                    <div>
+                        <h4>Do zebrania</h4>
+                        <div id="picking-target-list" style="height: 300px; overflow-y: auto; border: 1px solid var(--border-color); padding: 5px; border-radius: 8px;"></div>
+                    </div>
+                    <div>
+                        <h4>Skompletowano</h4>
+                        <div id="picking-scanned-list" style="height: 300px; overflow-y: auto; border: 1px solid var(--border-color); padding: 5px; border-radius: 8px;"></div>
+                    </div>
+                </div>
+                 <div class="controls-grid" style="gap:10px;">
+                    <button id="picking-verify-btn" class="btn-primary">Weryfikuj</button>
+                    <button id="picking-export-csv-btn" class="btn-csv">Eksportuj CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+     <div id="pickingSummaryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Podsumowanie kompletacji</h2>
+                <button id="closePickingSummaryModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+            </div>
+            <div id="pickingSummaryBody" class="modal-body"></div>
+            <div class="modal-footer" style="text-align: right; margin-top: 20px;">
+                <button id="picking-accept-btn" class="btn-success">Zatwierdź zmiany</button>
             </div>
         </div>
     </div>
