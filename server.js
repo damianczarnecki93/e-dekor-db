@@ -1,36 +1,59 @@
 const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 
 const app = express();
 
-// Middleware do parsowania JSON
+// --- Middleware ---
+// Umożliwia żądania z innych domen (CORS)
+app.use(cors());
+// Umożliwia parsowanie ciała żądania w formacie JSON
 app.use(express.json());
 
-// Logika tras API - na razie uproszczona, aby nie powodować błędów
-// Zwracamy przykładowe dane, żeby sprawdzić, czy API w ogóle odpowiada
-app.post('/api/auth/login', (req, res) => {
-    const { username } = req.body;
-    // Symulacja pomyślnego logowania
-    res.json({
-        token: 'fake-token-for-testing',
-        user: { id: '123', username: username, role: 'user' }
-    });
-});
 
-app.get('/api/auth/verify', (req, res) => {
-    // Symulacja pomyślnej weryfikacji
-    res.json({ id: '123', username: 'testuser', role: 'user' });
-});
+// --- Routing ---
 
-
-// Serwowanie plików statycznych z folderu 'client'
+// 1. Serwowanie plików statycznych z katalogu 'client'
+// Ta reguła musi być przed regułą "catch-all", aby poprawnie serwować pliki JS, CSS, obrazy itp.
 app.use(express.static(path.join(__dirname, 'client')));
 
-// Dla każdej innej trasy, serwuj plik index.html
+// 2. Definicje tras API
+// Te trasy pozwalają na komunikację frontendu z backendem
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/data', require('./routes/data'));
+app.use('/api/admin', require('./routes/admin'));
+
+// 3. Reguła "Catch-all" dla aplikacji jednostronicowej (SPA)
+// Ta reguła powinna być na końcu. Obsługuje ona wszystkie inne żądania GET,
+// zwracając główny plik index.html, co jest kluczowe dla działania routingu po stronie klienta.
 app.get('*', (req, res) => {
     res.sendFile(path.resolve(__dirname, 'client', 'index.html'));
 });
 
+
+// --- Uruchomienie serwera ---
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Serwer diagnostyczny uruchomiony na porcie ${PORT}`));
+const MONGODB_URI = process.env.MONGODB_URI;
+
+// Sprawdzenie, czy MONGODB_URI jest zdefiniowane
+if (!MONGODB_URI) {
+    console.error('BŁĄD: Zmienna środowiskowa MONGODB_URI nie jest ustawiona.');
+    process.exit(1); // Zakończ proces, jeśli brakuje kluczowej konfiguracji
+}
+
+// Połączenie z bazą danych, a NASTĘPNIE uruchomienie serwera
+mongoose.connect(MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
+.then(() => {
+    console.log('Połączono z MongoDB pomyślnie.');
+    app.listen(PORT, () => console.log(`Serwer e-Dekor działa na porcie ${PORT}`));
+})
+.catch(err => {
+    console.error('Krytyczny błąd połączenia z MongoDB:', err);
+    process.exit(1); // Zakończ proces w przypadku błędu połączenia z bazą
+});
