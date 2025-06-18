@@ -15,10 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
         registerError: document.getElementById('registerError'),
         showRegister: document.getElementById('showRegister'),
         showLogin: document.getElementById('showLogin'),
-        tabLookupBtn: document.getElementById('tabLookupBtn'),
-        tabListBuilderBtn: document.getElementById('tabListBuilderBtn'),
-        lookupMode: document.getElementById('lookupMode'),
-        listBuilderMode: document.getElementById('listBuilderMode'),
+        mainContent: document.getElementById('main-content'),
+        adminPanel: document.getElementById('adminPanel'),
         topBar: document.getElementById('topBar'),
         bottomBar: document.getElementById('bottomBar'),
         darkModeToggle: document.getElementById('darkModeToggle'),
@@ -54,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
         clearListBtn: document.getElementById('clearListBtn'),
         importCsvInput: document.getElementById('importCsvInput'),
         importCsvBtn: document.getElementById('importCsvBtn'),
-        adminPanel: document.getElementById('adminPanel'),
         allUsersList: document.getElementById('allUsersList'),
         inventoryModule: document.getElementById('inventoryModule'),
         closeInventoryModalBtn: document.getElementById('closeInventoryModalBtn'),
@@ -86,20 +83,11 @@ document.addEventListener('DOMContentLoaded', () => {
         printClientName: document.getElementById('print-client-name'),
         printAdditionalInfo: document.getElementById('print-additional-info'),
         printTableBody: document.getElementById('print-table-body'),
-        numpadModal: document.getElementById('numpad-modal'),
-        numpadDisplay: document.getElementById('numpad-display'),
-        numpadOk: document.getElementById('numpad-ok'),
-        numpadClear: document.getElementById('numpad-clear'),
-        numpadBackspace: document.getElementById('numpad-backspace'),
-        numpadKeys: document.querySelectorAll('.numpad-key'),
     };
 
-    let productDatabase = [], scannedItems = [], inventoryItems = [], activeTab = 'listBuilder';
+    let productDatabase = [], scannedItems = [], inventoryItems = [];
     let currentPickingOrder = null;
     let pickedItems = [];
-    let numpadTarget = null;
-    let numpadCallback = null;
-    const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
     const showApp = (userData) => {
         elements.loginOverlay.style.display = 'none';
@@ -188,12 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function attachLoginListeners() {
-        if (elements.loginBtn) {
-            elements.loginBtn.addEventListener('click', attemptLogin);
-        }
-        if (elements.loginPassword) {
-            elements.loginPassword.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
-        }
+        if (elements.loginBtn) elements.loginBtn.addEventListener('click', attemptLogin);
+        if (elements.loginPassword) elements.loginPassword.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
         if (elements.registerBtn) elements.registerBtn.addEventListener('click', handleRegistration);
         if (elements.showRegister) elements.showRegister.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'none'; elements.registerForm.style.display = 'block'; });
         if (elements.showLogin) elements.showLogin.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'block'; elements.registerForm.style.display = 'none'; });
@@ -202,13 +186,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function attachAllEventListeners() {
         attachLoginListeners();
         
-        if(elements.tabLookupBtn) elements.tabLookupBtn.addEventListener('click', () => switchTab('lookup'));
-        if(elements.tabListBuilderBtn) elements.tabListBuilderBtn.addEventListener('click', () => switchTab('listBuilder'));
-        
         if (elements.menuToggleBtn) elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
         window.addEventListener('click', () => { if (elements.dropdownMenu && elements.dropdownMenu.classList.contains('show')) elements.dropdownMenu.classList.remove('show'); });
         
-        if (elements.menuAdminBtn) elements.menuAdminBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('admin'); loadAllUsers(); });
+        if (elements.menuAdminBtn) elements.menuAdminBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('admin'); });
         if (elements.menuInventoryBtn) elements.menuInventoryBtn.addEventListener('click', (e) => { e.preventDefault(); elements.inventoryModule.style.display = 'flex'; });
         if (elements.menuLogoutBtn) elements.menuLogoutBtn.addEventListener('click', (e) => { e.preventDefault(); localStorage.clear(); location.reload(); });
         if (elements.menuChangePassword) elements.menuChangePassword.addEventListener('click', (e) => { e.preventDefault(); handleChangePassword(); });
@@ -275,18 +256,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function switchTab(newTab) {
-        activeTab = newTab;
-        const mainContent = document.getElementById('main-content');
-        if(mainContent) mainContent.style.display = 'none';
+        if(elements.mainContent) elements.mainContent.style.display = 'none';
         if(elements.adminPanel) elements.adminPanel.style.display = 'none';
         
         if (newTab === 'listBuilder') {
-            if(mainContent) mainContent.style.display = 'block';
+            if(elements.mainContent) elements.mainContent.style.display = 'block';
         } else if (newTab === 'admin') {
-            if(elements.adminPanel) elements.adminPanel.style.display = 'block';
+            if(elements.adminPanel) {
+                elements.adminPanel.style.display = 'block';
+                loadAllUsers();
+            }
         }
     }
-
+    
     function setDarkMode(isDark) {
         const iconElement = elements.darkModeToggle.querySelector('i');
         if (isDark) {
@@ -652,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="status">Rola: ${user.role} | Status: ${user.isApproved ? 'Zatwierdzony' : 'Oczekujący'}</span>
                     </div>
                     <div class="user-actions">
-                        ${!user.isApproved ? `<button class="approve-user-btn" data-userid="${user._id}" data-username="${user.username}">Zatwierdź</button>` : ''}
+                        ${!user.isApproved ? `<button class="approve-user-btn btn-primary" data-userid="${user._id}" data-username="${user.username}">Zatwierdź</button>` : ''}
                         <button class="edit-user-btn" data-userid="${user._id}" data-username="${user.username}">Zmień hasło</button>
                         <button class="change-role-btn" data-userid="${user._id}" data-username="${user.username}" data-role="${user.role === 'admin' ? 'user' : 'admin'}">Zmień na ${user.role === 'admin' ? 'User' : 'Admin'}</button>
                         <button class="delete-user-btn btn-danger" data-userid="${user._id}" data-username="${user.username}">Usuń</button>
@@ -871,39 +853,12 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.pickingSummaryModal.style.display = 'flex';
     }
 
-
     function exportPickedToCsv() {
         if (pickedItems.length === 0) return;
         const csvContent = pickedItems.map(item => `${item.ean};${item.quantity}`).join('\n');
         downloadFile(csvContent, 'text/csv;charset=utf-8;', `${currentPickingOrder.listName}_skompletowane.csv`);
     }
 
-    function attachNumpadListeners() {
-        elements.numpadKeys.forEach(key => {
-            key.addEventListener('click', () => {
-                elements.numpadDisplay.value += key.textContent;
-            });
-        });
-
-        if(elements.numpadClear) elements.numpadClear.addEventListener('click', () => { elements.numpadDisplay.value = ''; });
-        if(elements.numpadBackspace) elements.numpadBackspace.addEventListener('click', () => { elements.numpadDisplay.value = elements.numpadDisplay.value.slice(0, -1); });
-        
-        if(elements.numpadOk) elements.numpadOk.addEventListener('click', () => {
-            if (numpadCallback) {
-                numpadCallback(parseInt(elements.numpadDisplay.value, 10));
-            }
-            elements.numpadModal.style.display = 'none';
-        });
-    }
-
-    function openNumpad(targetInput, callback) {
-        if (!isMobile) return;
-        numpadTarget = targetInput;
-        numpadCallback = callback;
-        elements.numpadDisplay.value = targetInput.value;
-        elements.numpadModal.style.display = 'flex';
-    }
-    
     // Inicjalizacja Aplikacji
     checkLoginStatus();
 });
