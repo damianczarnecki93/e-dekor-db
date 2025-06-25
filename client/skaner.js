@@ -42,6 +42,9 @@ document.addEventListener('DOMContentLoaded', () => {
         savedListsModal: document.getElementById('savedListsModal'),
         closeSavedListsModalBtn: document.getElementById('closeSavedListsModalBtn'),
         savedListsContainer: document.getElementById('savedListsContainer'),
+        pickingSummaryModal: document.getElementById('pickingSummaryModal'),
+        pickingSummaryBody: document.getElementById('pickingSummaryBody'),
+        closePickingSummaryModalBtn: document.getElementById('closePickingSummaryModalBtn'),
         toastContainer: document.getElementById('toast-container'),
         floatingInputBar: document.getElementById('floating-input-bar'),
         floatingEanInput: document.getElementById('floating-ean-input'),
@@ -75,13 +78,22 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const checkLoginStatus = async () => {
         const token = localStorage.getItem('token');
-        if (!token) { attachLoginListeners(); return; }
+        if (!token) { 
+            elements.loginOverlay.style.display = 'flex';
+            attachLoginListeners(); 
+            return; 
+        }
         try {
             const response = await fetch('/api/auth/verify', { method: 'GET', headers: { 'x-auth-token': token } });
             if (!response.ok) throw new Error('Token verification failed');
             const userData = await response.json();
             showApp(userData);
-        } catch (error) { console.error('Błąd weryfikacji tokenu:', error); localStorage.removeItem('token'); attachLoginListeners(); }
+        } catch (error) { 
+            console.error('Błąd weryfikacji tokenu:', error); 
+            localStorage.removeItem('token'); 
+            elements.loginOverlay.style.display = 'flex';
+            attachLoginListeners(); 
+        }
     };
     
     async function attemptLogin() {
@@ -100,10 +112,25 @@ document.addEventListener('DOMContentLoaded', () => {
     function attachLoginListeners() {
         if (elements.loginBtn) elements.loginBtn.addEventListener('click', attemptLogin);
         if (elements.loginPassword) elements.loginPassword.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
+
+        // Dodajemy obsługę przełączania formularzy
+        if (elements.showRegister) {
+            elements.showRegister.addEventListener('click', (e) => {
+                e.preventDefault();
+                elements.loginForm.style.display = 'none';
+                elements.registerForm.style.display = 'block';
+            });
+        }
+        if (elements.showLogin) {
+            elements.showLogin.addEventListener('click', (e) => {
+                e.preventDefault();
+                elements.registerForm.style.display = 'none';
+                elements.loginForm.style.display = 'block';
+            });
+        }
     }
 
     function attachAllEventListeners() {
-        attachLoginListeners();
         if (elements.menuListBuilderBtn) elements.menuListBuilderBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('listBuilder'); });
         if (elements.menuPickingBtn) elements.menuPickingBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('picking'); });
         if (elements.menuToggleBtn) elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
@@ -127,6 +154,15 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.floatingEanInput.addEventListener('input', debounce(handleFloatingBarSearch, 300));
         }
         if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
+        if (elements.closePickingSummaryModalBtn) elements.closePickingSummaryModalBtn.addEventListener('click', () => { elements.pickingSummaryModal.style.display = 'none'; });
+
+        // Delegacja zdarzeń dla dynamicznie tworzonych elementów
+        document.body.addEventListener('click', (e) => {
+            handleSavedListAction(e);
+            handleDeleteInventoryItem(e);
+            handleAdminAction(e);
+            handlePickedItemClick(e);
+        });
     }
     
     async function loadDataFromServer() { function fetchAndParseCsv(filename) { return fetch(`${filename}?t=${new Date().getTime()}`).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); } try { const [data1, data2] = await Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')]); const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() }); productDatabase = [...data1.map(mapData), ...data2.map(mapData)]; showToast("Baza produktów została zaktualizowana.", "success"); } catch (error) { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); } }
@@ -140,7 +176,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ['mainContent', 'adminPanel', 'inventoryPage', 'pickingPage'].forEach(id => { if(elements[id]) elements[id].style.display = 'none'; });
         if(elements.floatingInputBar) elements.floatingInputBar.style.display = 'none';
 
-        const pageElement = document.getElementById(activePage);
+        const pageIdMap = {
+            listBuilder: 'mainContent',
+            inventory: 'inventoryPage',
+            picking: 'pickingPage',
+            admin: 'adminPanel'
+        };
+        const pageElement = elements[pageIdMap[activePage]];
+
         if (pageElement) {
             pageElement.style.display = 'block';
             if (activePage === 'listBuilder' || activePage === 'inventory') {
@@ -229,6 +272,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         renderScannedList();
+        // Ponowne podpięcie event listenerów, które są wewnątrz renderowanego HTML
+        document.getElementById('saveListBtn').addEventListener('click', saveCurrentList);
     }
     
     function addProductToList(code, quantity = 1) {
@@ -255,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(lastRow) lastRow.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
         const totalValue = scannedItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);
-        document.getElementById('totalOrderValue').textContent = `Total: ${totalValue.toFixed(2)} PLN`;
+        document.getElementById('totalOrderValue').textContent = `Suma: ${totalValue.toFixed(2)} PLN`;
     }
 
     function renderInventoryPage() { 
@@ -296,29 +341,55 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div><h4>Do zebrania</h4><div id="picking-target-list" style="height: 300px; overflow-y: auto; border: 1px solid var(--border-color); padding: 5px; border-radius: 8px;"></div></div>
                     <div><h4>Skompletowano</h4><div id="picking-scanned-list" style="height: 300px; overflow-y: auto; border: 1px solid var(--border-color); padding: 5px; border-radius: 8px;"></div></div>
                 </div>
-                <div style="margin-top:20px; display:flex; gap:10px;"><button id="picking-verify-btn" class="btn-primary" style="flex-grow:1;">Weryfikuj</button><button id="picking-export-csv-btn" class="btn-csv" style="flex-grow:1;">Eksportuj CSV</button></div>
+                <div style="margin-top:20px; display:flex; gap:10px;"><button id="picking-verify-btn" class="btn-primary" style="flex-grow:1;">Weryfikuj</button><button id="picking-export-csv-btn" class="btn" style="flex-grow:1;">Eksportuj CSV</button></div>
             </div>
         `;
     }
     
-    function renderAdminPage() { loadAllUsers(); }
+    function renderAdminPage() {
+        if (!elements.adminPanel) return;
+        elements.adminPanel.innerHTML = `
+            <h2><i class="fa-solid fa-users-cog"></i> Panel Administratora</h2>
+            <div class="admin-section">
+                <h3>Użytkownicy</h3>
+                <div id="allUsersList"></div>
+            </div>
+            <div class="admin-section">
+                 <h3>Zarządzanie bazą produktów</h3>
+                 <div>
+                    <label for="productsFileInput1">Plik produkty.csv:</label>
+                    <input type="file" id="productsFileInput1" accept=".csv">
+                    <button id="uploadProducts1Btn" class="btn">Prześlij produkty.csv</button>
+                 </div>
+                 <div style="margin-top: 15px;">
+                    <label for="productsFileInput2">Plik produkty2.csv:</label>
+                    <input type="file" id="productsFileInput2" accept=".csv">
+                    <button id="uploadProducts2Btn" class="btn">Prześlij produkty2.csv</button>
+                 </div>
+            </div>
+        `;
+        loadAllUsers();
+        document.getElementById('uploadProducts1Btn').addEventListener('click', () => uploadProductFile('produkty.csv', document.getElementById('productsFileInput1')));
+        document.getElementById('uploadProducts2Btn').addEventListener('click', () => uploadProductFile('produkty2.csv', document.getElementById('productsFileInput2')));
+    }
+
     async function loadAllUsers() { try { const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) { throw new Error('Nie można załadować użytkowników'); } const users = await response.json(); const userListEl = document.getElementById('allUsersList'); userListEl.innerHTML = users.map(user => ` <div class="user-item"> <div><strong>${user.username}</strong><br><small>Rola: ${user.role} | Status: ${user.isApproved ? 'Zatwierdzony' : 'Oczekujący'}</small></div> <div class="user-actions"> ${!user.isApproved ? `<button class="approve-user-btn btn-primary" data-userid="${user._id}">Zatwierdź</button>` : ''} <button class="edit-user-btn" data-userid="${user._id}" data-username="${user.username}">Zmień hasło</button> <button class="delete-user-btn btn-danger" data-userid="${user._id}">Usuń</button> </div> </div> `).join(''); } catch (error) { document.getElementById('allUsersList').innerHTML = `<p style="color:red;">${error.message}</p>`; } }
     async function handleUserAction(url, options) { try { const response = await fetch(url, options); const data = await response.json(); if (!response.ok) throw new Error(data.msg || 'Błąd operacji'); showToast(data.msg || 'Operacja zakończona sukcesem!'); await loadAllUsers(); } catch (error) { alert(`Błąd: ${error.message}`); } }
     async function handleChangePassword() { const newPassword = prompt("Wprowadź nowe hasło:"); if (!newPassword) return; try { const response = await fetch('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newPassword }) }); const data = await response.json(); if (!response.ok) throw new Error(data.msg || "Błąd zmiany hasła"); alert("Hasło zostało pomyślnie zmienione."); } catch (error) { alert(`Błąd: ${error.message}`); } }
-    function handleAdminAction(e) { const target = e.target.closest('button'); if (!target) return; const { userid, username, role } = target.dataset; if (target.classList.contains('approve-user-btn')) handleUserAction(`/api/admin/approve-user/${userid}`, { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') } }); else if (target.classList.contains('edit-user-btn')) { const p = prompt(`Nowe hasło dla ${username}:`); if (p) handleUserAction(`/api/admin/edit-password/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newPassword: p }) }); } else if (target.classList.contains('delete-user-btn')) { if (confirm(`Na pewno usunąć ${username}?`)) handleUserAction(`/api/admin/delete-user/${userid}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); } }
+    function handleAdminAction(e) { const target = e.target.closest('button'); if (!target || !target.closest('#adminPanel')) return; const { userid, username } = target.dataset; if (target.classList.contains('approve-user-btn')) handleUserAction(`/api/admin/approve-user/${userid}`, { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') } }); else if (target.classList.contains('edit-user-btn')) { const p = prompt(`Nowe hasło dla ${username}:`); if (p) handleUserAction(`/api/admin/edit-password/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newPassword: p }) }); } else if (target.classList.contains('delete-user-btn')) { if (confirm(`Na pewno usunąć ${username}?`)) handleUserAction(`/api/admin/delete-user/${userid}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); } }
     
-    async function saveCurrentList() { const listId = localStorage.getItem('activeListId'); const listName = listId ? null : prompt("Podaj nazwę dla zapisywanego zamówienia:", document.getElementById('clientNameInput').value || `Zamówienie ${getSafeFilename()}`); if (!listId && !listName) return null; try { const url = listId ? `/api/data/list/${listId}` : '/api/data/savelist'; const method = listId ? 'PUT' : 'POST'; const body = { items: scannedItems, clientName: document.getElementById('clientNameInput').value }; if (listName) body.listName = listName; const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify(body) }); if (!response.ok) { const errData = await response.json(); throw new Error(errData.msg || "Błąd zapisu"); } const savedList = await response.json(); showToast(`Zamówienie zostało zapisane.`); localStorage.setItem('activeListId', savedList._id); return savedList; } catch (error) { alert(`Błąd: ${error.message}`); return null; } }
+    async function saveCurrentList() { const listId = localStorage.getItem('activeListId'); const listName = listId ? null : prompt("Podaj nazwę dla zapisywanego zamówienia:", document.getElementById('clientNameInput').value || `Zamówienie ${new Date().toLocaleDateString()}`); if (!listId && !listName) return null; try { const url = listId ? `/api/data/list/${listId}` : '/api/data/savelist'; const method = listId ? 'PUT' : 'POST'; const body = { items: scannedItems, clientName: document.getElementById('clientNameInput').value }; if (listName) body.listName = listName; const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify(body) }); if (!response.ok) { const errData = await response.json(); throw new Error(errData.msg || "Błąd zapisu"); } const savedList = await response.json(); showToast(`Zamówienie zostało zapisane.`); localStorage.setItem('activeListId', savedList._id); return savedList; } catch (error) { alert(`Błąd: ${error.message}`); return null; } }
     async function loadListById(listId) { try { if(scannedItems.length > 0 && localStorage.getItem('activeListId') !== listId) { await saveCurrentList(); } const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) throw new Error("Błąd wczytywania listy"); const data = await response.json(); scannedItems = data.items; activeListId = listId; localStorage.setItem('activeListId', listId); return data; } catch (error) { alert(error.message); localStorage.removeItem('activeListId'); return null; } }
     async function loadActiveList() { activeListId = localStorage.getItem('activeListId'); if (activeListId) { showToast("Wczytuję ostatnio aktywną listę..."); await loadListById(activeListId); } }
     async function showSavedLists() { elements.savedListsModal.style.display = 'flex'; const container = elements.savedListsContainer; container.innerHTML = '<p>Ładowanie...</p>'; try { const response = await fetch('/api/data/lists', { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) throw new Error("Błąd wczytywania list"); const lists = await response.json(); const importInputId = 'importCsvInputInModal'; container.innerHTML = `<div style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);"> <button id="importCsvBtnInModal" class="btn btn-primary" style="background-color: var(--info-color); width: 100%;"> <i class="fa-solid fa-file-import"></i> Importuj zamówienie z pliku CSV </button> <input type="file" id="${importInputId}" accept=".csv" style="display: none;"> </div><h3>Zapisane listy:</h3>`; container.querySelector('#importCsvBtnInModal').addEventListener('click', () => container.querySelector(`#${importInputId}`).click()); container.querySelector(`#${importInputId}`).addEventListener('change', handleFileImport); if (lists.length === 0) { container.innerHTML += '<p>Brak zapisanych zamówień.</p>'; return; } const listContainer = document.createElement('ul'); listContainer.style.cssText = 'list-style: none; padding: 0;'; lists.forEach(list => { const li = document.createElement('li'); li.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border-color); flex-wrap: wrap; gap: 10px;'; li.innerHTML = `<span>${list.listName} <small>(autor: ${list.user?.username || 'usunięty'}, ost. zapis: ${new Date(list.updatedAt).toLocaleDateString()})</small></span> <div style="display: flex; gap: 5px; flex-wrap: wrap;"> <button class="btn-primary load-list-btn" data-id="${list._id}">Wczytaj</button> <button class="pick-order-btn" data-id="${list._id}" data-name="${list.listName}" style="background-color: var(--warning-color);">Kompletuj</button> <button class="btn-danger delete-list-btn" data-id="${list._id}">Usuń</button> </div>`; listContainer.appendChild(li); }); container.appendChild(listContainer); } catch (error) { container.innerHTML = `<p style="color:var(--danger-color)">${error.message}</p>`; } }
-    async function handleSavedListAction(e) { const target = e.target.closest('button'); if (!target) return; const listId = target.dataset.id; if (target.classList.contains('load-list-btn')) { const loadedList = await loadListById(listId); if (loadedList) { elements.savedListsModal.style.display = 'none'; showToast(`Wczytano listę: ${loadedList.listName}`); switchTab('listBuilder'); } } else if (target.classList.contains('delete-list-btn')) { if (!confirm("Czy na pewno usunąć tę listę?")) return; try { const response = await fetch(`/api/data/list/${listId}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); const data = await response.json(); if (!response.ok) throw new Error(data.msg || "Błąd usuwania listy"); showToast("Lista usunięta."); await showSavedLists(); } catch (error) { alert(error.message); } } else if (target.classList.contains('pick-order-btn')) { elements.savedListsModal.style.display = 'none'; await startPicking(listId, target.dataset.name); } }
+    async function handleSavedListAction(e) { const target = e.target.closest('button'); if (!target || !target.closest('#savedListsContainer')) return; const listId = target.dataset.id; if (target.classList.contains('load-list-btn')) { const loadedList = await loadListById(listId); if (loadedList) { elements.savedListsModal.style.display = 'none'; showToast(`Wczytano listę: ${loadedList.listName}`); switchTab('listBuilder'); } } else if (target.classList.contains('delete-list-btn')) { if (!confirm("Czy na pewno usunąć tę listę?")) return; try { const response = await fetch(`/api/data/list/${listId}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); const data = await response.json(); if (!response.ok) throw new Error(data.msg || "Błąd usuwania listy"); showToast("Lista usunięta."); await showSavedLists(); } catch (error) { alert(error.message); } } else if (target.classList.contains('pick-order-btn')) { elements.savedListsModal.style.display = 'none'; await startPicking(listId, target.dataset.name); switchTab('picking'); } }
     async function handleFileImport(event) { const file = event.target.files[0]; if (!file) return; const listName = prompt("Podaj nazwę dla importowanego zamówienia:", file.name.replace(/\.csv$/i, '')); if (!listName) { event.target.value = ''; return; } Papa.parse(file, { delimiter: ";", skipEmptyLines: true, complete: async (results) => { const itemsMap = new Map(); results.data.forEach(row => { const ean = row[0]?.trim(); const quantity = parseInt(row[1]?.trim(), 10); if (ean && !isNaN(quantity) && quantity > 0) { itemsMap.set(ean, (itemsMap.get(ean) || 0) + quantity); } }); const importedItems = Array.from(itemsMap, ([ean, quantity]) => { let p = productDatabase.find(prod => prod.kod_kreskowy === ean || prod.nazwa_produktu === ean); if (!p) { p = { kod_kreskowy: ean, nazwa_produktu: ean, opis: ean, cena: "0" }; } return { ean: p.kod_kreskowy, name: p.nazwa_produktu, description: p.opis, quantity, price: p.cena }; }); try { const response = await fetch('/api/data/savelist', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ listName, items: importedItems, clientName: listName }) }); const savedList = await response.json(); if (!response.ok) throw new Error(savedList.msg || "Błąd zapisu na serwerze"); scannedItems = savedList.items; document.getElementById('clientNameInput').value = savedList.clientName || savedList.listName; renderScannedList(); showToast(`Zamówienie "${listName}" zostało zaimportowane.`); elements.savedListsModal.style.display = 'none'; switchTab('listBuilder'); } catch (error) { alert(`Błąd: ${error.message}`); } }, error: (err) => { alert(`Błąd parsowania pliku CSV: ${err.message}`); } }); event.target.value = ''; }
     
-    async function startPicking(listId, listName) { try { const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) throw new Error("Błąd wczytywania zamówienia do kompletacji"); currentPickingOrder = await response.json(); pickedItems = []; if (elements.pickingOrderName) elements.pickingOrderName.textContent = `Kompletacja: ${listName}`; renderPickingView(); if (elements.pickingModule) elements.pickingModule.style.display = 'flex'; } catch (error) { alert(error.message); } }
-    function renderPickingView() { if(!currentPickingOrder) return; const toPickItems = currentPickingOrder.items.filter(item => !pickedItems.some(p => p.ean === item.ean)); if (elements.pickingTargetList) elements.pickingTargetList.innerHTML = toPickItems.map(item => `<div class="pick-item" data-ean="${item.ean}" style="padding: 8px; cursor: pointer; border-bottom: 1px solid var(--border-color);"><strong>${item.name}</strong><br><small>${item.description}</small> (ilość: ${item.quantity})</div>`).join('') || "<p>Wszystko zebrane!</p>"; if (elements.pickingScannedList) elements.pickingScannedList.innerHTML = pickedItems.map((item, index) => `<div class="picked-item" style="display: flex; justify-content: space-between; align-items: center; padding: 5px;"><span>${item.name} | ${item.description}</span><div><input type="number" value="${item.quantity}" class="picked-quantity-input" data-index="${index}" style="width: 60px; text-align: center;" readonly><button class="unpick-item-btn btn-icon" data-index="${index}" style="background: none; color: var(--danger-color);"><i class="fa-solid fa-arrow-left"></i></button></div></div>`).join(''); }
+    async function startPicking(listId, listName) { try { const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) throw new Error("Błąd wczytywania zamówienia do kompletacji"); currentPickingOrder = await response.json(); pickedItems = []; document.getElementById('picking-order-name').textContent = `Kompletacja: ${listName}`; document.getElementById('picking-content').style.display = 'block'; renderPickingView(); } catch (error) { alert(error.message); } }
+    function renderPickingView() { if(!currentPickingOrder) return; const toPickItems = currentPickingOrder.items.filter(item => !pickedItems.some(p => p.ean === item.ean)); if (elements.pickingPage.querySelector('#picking-target-list')) elements.pickingPage.querySelector('#picking-target-list').innerHTML = toPickItems.map(item => `<div class="pick-item" data-ean="${item.ean}" style="padding: 8px; cursor: pointer; border-bottom: 1px solid var(--border-color);"><strong>${item.name}</strong><br><small>${item.description}</small> (ilość: ${item.quantity})</div>`).join('') || "<p>Wszystko zebrane!</p>"; if (elements.pickingPage.querySelector('#picking-scanned-list')) elements.pickingPage.querySelector('#picking-scanned-list').innerHTML = pickedItems.map((item, index) => `<div class="picked-item" style="display: flex; justify-content: space-between; align-items: center; padding: 5px;"><span>${item.name} | ${item.description}</span><div><input type="number" value="${item.quantity}" class="picked-quantity-input" data-index="${index}" style="width: 60px; text-align: center;" readonly><button class="unpick-item-btn btn-icon" data-index="${index}" style="background: none; color: var(--danger-color);"><i class="fa-solid fa-arrow-left"></i></button></div></div>`).join(''); }
     function pickItemFromList(ean) { const itemToPick = currentPickingOrder.items.find(i => i.ean === ean); if (!itemToPick) return; const existingPicked = pickedItems.find(i => i.ean === ean); if (existingPicked) { existingPicked.quantity += 1; } else { pickedItems.push({ ...itemToPick, quantity: 1 }); } renderPickingView(); }
-    function handlePickedItemClick(e) { const target = e.target.closest('button.unpick-item-btn, input.picked-quantity-input'); if (!target) return; const index = target.dataset.index; if (target.classList.contains('unpick-item-btn')) { pickedItems.splice(index, 1); renderPickingView(); } else if (target.classList.contains('picked-quantity-input')) { const newQuantity = parseInt(prompt("Zmień ilość:", target.value), 10); if(!isNaN(newQuantity)) { if (newQuantity <= 0) { pickedItems.splice(index, 1); } else { pickedItems[index].quantity = newQuantity; } renderPickingView(); } } }
-    function handlePickingSearch(event) { const searchTerm = event.target.value.trim(); const resultsDiv = elements.pickingSearchResults; resultsDiv.innerHTML = ''; resultsDiv.style.display = 'none'; if(!searchTerm) return; const results = performSearch(searchTerm).filter(p => currentPickingOrder.items.some(pi => pi.ean === p.kod_kreskowy)); if(results.length > 0) { let listHtml = '<ul>'; results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; }); listHtml += '</ul>'; resultsDiv.innerHTML = listHtml; resultsDiv.style.display = 'block'; } }
+    function handlePickedItemClick(e) { const target = e.target.closest('button.unpick-item-btn, input.picked-quantity-input'); if (!target || !target.closest('#pickingPage')) return; const index = target.dataset.index; if (target.classList.contains('unpick-item-btn')) { pickedItems.splice(index, 1); renderPickingView(); } else if (target.classList.contains('picked-quantity-input')) { const newQuantity = parseInt(prompt("Zmień ilość:", target.value), 10); if(!isNaN(newQuantity)) { if (newQuantity <= 0) { pickedItems.splice(index, 1); } else { pickedItems[index].quantity = newQuantity; } renderPickingView(); } } }
+    function handlePickingSearch(event) { const searchTerm = event.target.value.trim(); const resultsDiv = elements.pickingPage.querySelector('#picking-search-results'); resultsDiv.innerHTML = ''; resultsDiv.style.display = 'none'; if(!searchTerm) return; const results = performSearch(searchTerm).filter(p => currentPickingOrder.items.some(pi => pi.ean === p.kod_kreskowy)); if(results.length > 0) { let listHtml = '<ul>'; results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; }); listHtml += '</ul>'; resultsDiv.innerHTML = listHtml; resultsDiv.style.display = 'block'; } }
     function verifyPicking() { if (!currentPickingOrder) return; const summary = { missing: [], extra: [], incorrectQuantity: [] }; const targetMap = new Map(currentPickingOrder.items.map(item => [item.ean, item.quantity])); const pickedMap = new Map(pickedItems.map(item => [item.ean, item.quantity])); for (const [ean, quantity] of targetMap.entries()) { if (!pickedMap.has(ean)) { summary.missing.push({ ...currentPickingOrder.items.find(i=>i.ean===ean), expected: quantity }); } else if (pickedMap.get(ean) !== quantity) { summary.incorrectQuantity.push({ ...currentPickingOrder.items.find(i=>i.ean===ean), expected: quantity, actual: pickedMap.get(ean) }); } } for (const [ean, quantity] of pickedMap.entries()) { if (!targetMap.has(ean)) { summary.extra.push({ ...pickedItems.find(i=>i.ean===ean), actual: quantity }); } } displayPickingSummary(summary); }
     function displayPickingSummary(summary) { let html = '<h4>Podsumowanie kompletacji</h4>'; if (summary.missing.length === 0 && summary.extra.length === 0 && summary.incorrectQuantity.length === 0) { html += '<p style="color: var(--success-color);">Wszystkie pozycje zgodne!</p>'; } else { if (summary.missing.length > 0) { html += '<h5>Brakujące produkty:</h5><ul>'; summary.missing.forEach(item => { html += `<li>${item.name} | ${item.description} (oczekiwano: ${item.expected})</li>`; }); html += '</ul>'; } if (summary.incorrectQuantity.length > 0) { html += '<h5>Niezgodne ilości:</h5><ul>'; summary.incorrectQuantity.forEach(item => { html += `<li>${item.name} | ${item.description} (oczekiwano: ${item.expected}, skompletowano: ${item.actual})</li>`; }); html += '</ul>'; } if (summary.extra.length > 0) { html += '<h5>Dodatkowe produkty:</h5><ul>'; summary.extra.forEach(item => { html += `<li>${item.name} | ${item.description} (skompletowano: ${item.actual})</li>`; }); html += '</ul>'; } } elements.pickingSummaryBody.innerHTML = html; elements.pickingSummaryModal.style.display = 'flex'; }
     function exportPickedToCsv() { if (pickedItems.length === 0) return; const csvContent = pickedItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `${currentPickingOrder.listName}_skompletowane.csv`); }
