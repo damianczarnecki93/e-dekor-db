@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         :root {
             --font-family: 'Poppins', sans-serif;
@@ -66,15 +66,17 @@
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .modal-body { flex-grow: 1; overflow-y: auto; }
         .admin-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+        .scroll-btn { position: fixed; right: 20px; z-index: 1000; width: 44px; height: 44px; border-radius: 50%; display: none; }
+        #scrollTopBtn { bottom: 80px; }
+        #scrollBottomBtn { bottom: 30px; }
     </style>
 </head>
 <body>
-    
-    <div id="topBar" style="display: none;">
+    <div id="topBar">
         <div class="dropdown">
             <button id="menuToggleBtn" class="btn-primary btn-icon"><i class="fa-solid fa-bars"></i></button>
             <div id="dropdownMenu" class="dropdown-content">
-                <div class="dropdown-header"><span id="menuUsername"></span></div>
+                <div class="dropdown-header">Użytkownik: <span id="menuUsername"></span></div>
                 <a id="menuListBuilderBtn"><i class="fa-solid fa-list-check"></i> Listy Zamówień</a>
                 <a id="menuPickingBtn"><i class="fa-solid fa-box-open"></i> Kompletacja</a>
                 <a id="menuInventoryBtn"><i class="fa-solid fa-clipboard-list"></i> Inwentaryzacja</a>
@@ -93,9 +95,17 @@
             <img src="logo.jpg" alt="Logo Firmy" class="header-logo" style="margin-bottom: 20px;">
             <div id="loginForm">
                 <input type="text" id="loginUsername" placeholder="Login" style="margin-bottom: 15px;">
-                <input type="password" id="loginPassword" placeholder="Hasło">
-                <button id="loginBtn" class="btn-primary" style="width: 100%; margin-top: 20px;">Zaloguj się</button>
-                <p id="loginError" style="color: var(--danger-color); height: 1em;"></p>
+                <input type="password" id="loginPassword" placeholder="Hasło" style="margin-bottom: 15px;">
+                <button id="loginBtn" class="btn-primary" style="width: 100%;">Zaloguj się</button>
+                <p id="loginError" style="color: var(--danger-color); height: 1em; margin-top: 10px;"></p>
+                <p><a href="#" id="showRegister">Nie masz konta? Zarejestruj się</a></p>
+            </div>
+            <div id="registerForm" style="display: none;">
+                <input type="text" id="registerUsername" placeholder="Nazwa użytkownika" style="margin-bottom: 15px;">
+                <input type="password" id="registerPassword" placeholder="Hasło" style="margin-bottom: 15px;">
+                <button id="registerBtn" class="btn-primary" style="width: 100%;">Zarejestruj</button>
+                <p id="registerError" style="color: var(--danger-color); height: 1em; margin-top: 10px;"></p>
+                <p><a href="#" id="showLogin">Masz już konto? Zaloguj się</a></p>
             </div>
         </div>
     </div>
@@ -120,6 +130,7 @@
             <div class="modal-body">
                 <div class="search-container">
                     <input type="text" id="lookupBarcodeInput" placeholder="Wpisz EAN, kod lub nazwę...">
+                    <div id="lookupResultSingle"></div>
                     <div id="lookupResultList" style="margin-top:15px; max-height: 400px; overflow-y:auto;"></div>
                 </div>
             </div>
@@ -135,7 +146,17 @@
             <div id="savedListsContainer" class="modal-body"></div>
         </div>
     </div>
-    
+
+    <div id="pickingSummaryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Podsumowanie kompletacji</h2>
+                <button id="closePickingSummaryModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
+            </div>
+            <div id="pickingSummaryBody" class="modal-body"></div>
+        </div>
+    </div>
+
     <div id="toast-container"></div>
     
     <div id="floating-input-bar">
@@ -146,6 +167,9 @@
             </div>
         </div>
     </div>
+
+    <button id="scrollTopBtn" class="scroll-btn btn-icon"><i class="fa-solid fa-arrow-up"></i></button>
+    <button id="scrollBottomBtn" class="scroll-btn btn-icon"><i class="fa-solid fa-arrow-down"></i></button>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="skaner.js"></script>
