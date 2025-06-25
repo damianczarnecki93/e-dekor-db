@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel sprzedaży</title>
+    <title>Panel Sprzedaży - e-Dekor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -38,7 +38,7 @@
         button:disabled { cursor: not-allowed; background-color: #e5e5ea !important; color: #8e8e93 !important; transform: none; opacity: 0.6; box-shadow: none; }
         .btn-primary { background-color: var(--primary-color); color: var(--text-light-color); }
         .btn-danger { background-color: var(--danger-color); color: var(--text-light-color); }
-        .btn-csv { background-color: #27ae60; color: var(--text-light-color); }
+        .btn-icon { padding: 0; width: 40px; height: 40px; font-size: 1.1em; border-radius: 50%; }
         input[type="text"], input[type="number"], input[type="password"], input[type="file"] { padding: 12px 15px; font-size: 1em; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); border-radius: 10px; width: 100%; transition: all 0.2s ease; }
         input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(52, 120, 246, 0.25); }
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(10px); background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 3000; padding:10px; }
@@ -96,7 +96,6 @@
                 <input type="password" id="loginPassword" placeholder="Hasło">
                 <button id="loginBtn" class="btn-primary" style="width: 100%; margin-top: 20px;">Zaloguj się</button>
                 <p id="loginError" style="color: var(--danger-color); height: 1em;"></p>
-                <p>Nie masz konta? <a href="#" id="showRegister">Zarejestruj się</a></p>
             </div>
         </div>
     </div>
@@ -106,38 +105,10 @@
             <img src="logo.jpg" alt="Logo Firmy" class="header-logo">
         </div>
         
-        <div id="main-content" class="page-content" style="display: none; padding-bottom: 120px;">
-             <!-- Treść modułu Listy Zamówień zostanie wstawiona tutaj przez JS -->
-        </div>
-
-        <div id="inventoryPage" class="page-content" style="display: none; padding-bottom: 120px;">
-             <!-- Treść modułu Inwentaryzacji zostanie wstawiona tutaj przez JS -->
-        </div>
-
-        <div id="pickingPage" class="page-content" style="display: none;">
-             <!-- Treść modułu Kompletacji zostanie wstawiona tutaj przez JS -->
-        </div>
-        
-        <div id="adminPanel" class="page-content" style="display: none;">
-             <h2>Panel Administratora</h2>
-             <div class="admin-section">
-                <h3>Zarządzanie użytkownikami</h3>
-                <div id="allUsersList"></div>
-             </div>
-             <div class="admin-section">
-                <h3>Zarządzanie plikami produktów</h3>
-                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
-                    <label for="produktyCsvUpload">produkty.csv:</label>
-                    <input type="file" id="produktyCsvUpload" accept=".csv">
-                    <button id="uploadProduktyCsv" class="btn-primary">Wgraj</button>
-                </div>
-                 <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-                    <label for="produkty2CsvUpload">produkty2.csv:</label>
-                    <input type="file" id="produkty2CsvUpload" accept=".csv">
-                    <button id="uploadProdukty2Csv" class="btn-primary">Wgraj</button>
-                </div>
-             </div>
-        </div>
+        <div id="main-content" class="page-content" style="display: none;"></div>
+        <div id="inventoryPage" class="page-content" style="display: none;"></div>
+        <div id="pickingPage" class="page-content" style="display: none;"></div>
+        <div id="adminPanel" class="page-content" style="display: none;"></div>
     </div>
     
     <div id="quickSearchModal" class="modal">
