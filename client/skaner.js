@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.menuChangePassword) elements.menuChangePassword.addEventListener('click', (e) => { e.preventDefault(); handleChangePassword(); });
         if (elements.menuSavedLists) elements.menuSavedLists.addEventListener('click', (e) => { e.preventDefault(); showSavedLists(); });
         if (elements.darkModeToggle) elements.darkModeToggle.addEventListener('click', () => setDarkMode(!document.body.classList.contains('dark-mode')));
-        if(elements.quickSearchBtn) elements.quickSearchBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'flex'; elements.lookupBarcodeInput.value = ''; elements.lookupResultList.innerHTML = ''; elements.lookupResultSingle.innerHTML = ''; elements.lookupBarcodeInput.focus(); });
+        if(elements.quickSearchBtn) elements.quickSearchBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'flex'; elements.lookupBarcodeInput.focus(); });
         if(elements.closeQuickSearchModalBtn) elements.closeQuickSearchModalBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'none'; });
         if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('input', debounce(handleLookupSearch, 300));
         if(elements.floatingEanInput) {
@@ -125,7 +125,6 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.floatingEanInput.addEventListener('input', debounce(handleFloatingBarSearch, 300));
         }
         if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
-        if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', handleSavedListAction);
         if(elements.allUsersList) elements.allUsersList.addEventListener('click', handleAdminAction);
         if(elements.uploadProduktyCsv) elements.uploadProduktyCsv.addEventListener('click', () => uploadProductFile('produkty.csv', elements.produktyCsvUpload));
         if(elements.uploadProdukty2Csv) elements.uploadProdukty2Csv.addEventListener('click', () => uploadProductFile('produkty2.csv', elements.produkty2CsvUpload));
@@ -185,12 +184,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function handleLookupSearch() {
+        const searchTerm = elements.lookupBarcodeInput.value.trim();
+        elements.lookupResultList.innerHTML = '';
+        if (!searchTerm) return;
+        const results = performSearch(searchTerm);
+        if (results.length > 0) {
+            let listHtml = '<ul>';
+            results.forEach(p => {
+                listHtml += `<li data-product-json='${JSON.stringify(p)}' style="padding: 10px; border-bottom: 1px solid var(--border-color); cursor:pointer;">
+                    <strong>${p.opis}</strong><br><small>${p.nazwa_produktu} | ${p.kod_kreskowy}</small>
+                </li>`;
+            });
+            listHtml += '</ul>';
+            elements.lookupResultList.innerHTML = listHtml;
+        } else {
+            elements.lookupResultList.innerHTML = '<p style="padding: 15px;">Nie znaleziono produktu.</p>';
+        }
+    }
+    
     // LIST BUILDER PAGE
     function renderListBuilderPage() {
-        elements.mainContent.innerHTML = `
+        const page = elements.mainContent;
+        page.innerHTML = `
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-                <input type="text" id="clientNameInput" placeholder="Nazwa klienta..." style="flex-grow: 1;" value="${elements.clientNameInput?.value || ''}">
-                <input type="text" id="additionalInfoInput" placeholder="Informacje dodatkowe..." style="flex-grow: 1;" value="${elements.additionalInfoInput?.value || ''}">
+                <input type="text" id="clientNameInput" placeholder="Nazwa klienta..." style="flex-grow: 1;">
+                <input type="text" id="additionalInfoInput" placeholder="Informacje dodatkowe..." style="flex-grow: 1;">
             </div>
             <table style="table-layout: fixed; width: 100%;">
                 <thead><tr><th style="width: 30%;">Kod produktu</th><th style="width: 40%;">Nazwa</th><th style="width: 15%;">EAN</th><th style="width: 10%;">Ilość</th><th style="width: 5%;">Akcje</th></tr></thead>
@@ -200,41 +219,17 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;">
                  <button id="newListBtn" class="btn" style="background-color: var(--warning-color);">Nowa lista</button>
                  <button id="saveListBtn" class="btn-primary"><i class="fa-solid fa-save"></i> Zapisz</button>
-                 <button id="printListBtn" class="btn"><i class="fa-solid fa-print"></i> Drukuj</button>
                  <button id="exportCsvBtn" class="btn btn-csv"><i class="fa-solid fa-file-csv"></i> Optima</button>
-                 <button id="exportExcelBtn" class="btn" style="background-color: #007D4B; color: white;"><i class="fa-solid fa-file-excel"></i> Excel</button>
                  <button id="clearListBtn" class="btn-danger"><i class="fa-solid fa-eraser"></i> Wyczyść</button>
             </div>
         `;
-        // Re-assign elements and event listeners
-        Object.assign(elements, {
-            clientNameInput: document.getElementById('clientNameInput'),
-            additionalInfoInput: document.getElementById('additionalInfoInput'),
-            scannedListBody: document.getElementById('scannedListBody'),
-            totalOrderValue: document.getElementById('totalOrderValue'),
-            newListBtn: document.getElementById('newListBtn'),
-            saveListBtn: document.getElementById('saveListBtn'),
-            printListBtn: document.getElementById('printListBtn'),
-            exportCsvBtn: document.getElementById('exportCsvBtn'),
-            exportExcelBtn: document.getElementById('exportExcelBtn'),
-            clearListBtn: document.getElementById('clearListBtn'),
-        });
-        
-        elements.scannedListBody.addEventListener('click', (e) => { if(e.target.closest('.delete-btn')) { const index = e.target.closest('.delete-btn').dataset.index; scannedItems.splice(index, 1); renderScannedList(); }});
-        elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { await saveCurrentList(); } clearCurrentList(false); });
-        elements.saveListBtn.addEventListener('click', saveCurrentList);
-        elements.printListBtn.addEventListener('click', () => { alert("Funkcja Drukuj w przygotowaniu."); });
-        elements.exportCsvBtn.addEventListener('click', () => exportToCsvOptima());
-        elements.exportExcelBtn.addEventListener('click', () => exportToExcelDetailed());
-        elements.clearListBtn.addEventListener('click', () => clearCurrentList(true));
-        
         renderScannedList();
     }
-
+    
     function addProductToList(code, quantity = 1) {
         if (!code) return;
         let productData = productDatabase.find(p => p.kod_kreskowy === code || p.nazwa_produktu === code);
-        if (!productData) productData = { kod_kreskowy: code, nazwa_produktu: code, opis: code, cena: "0" };
+        if (!productData) { productData = { kod_kreskowy: code, nazwa_produktu: code, opis: code, cena: "0" }; }
         const existingItem = scannedItems.find(item => item.ean === productData.kod_kreskowy);
         if (existingItem) { existingItem.quantity += quantity; } 
         else { scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity, price: productData.cena }); }
@@ -246,35 +241,54 @@ document.addEventListener('DOMContentLoaded', () => {
         const tableBody = document.getElementById('scannedListBody');
         if (!tableBody) return;
         tableBody.innerHTML = '';
-        const canOperate = scannedItems.length > 0;
-        
         scannedItems.forEach((item, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `<td class="col-code">${item.name}</td><td>${item.description}</td><td class="col-ean">${item.ean}</td><td><input type="number" class="quantity-in-table" value="${item.quantity}" min="1" data-index="${index}"></td><td><button class="delete-btn btn-icon" data-index="${index}"><i class="fa-solid fa-trash-can"></i></button></td>`;
             tableBody.appendChild(row);
         });
-        const lastRow = tableBody.querySelector('tr:last-child');
-        if(lastRow) lastRow.scrollIntoView({ behavior: 'smooth', block: 'end' });
-
         const totalValue = scannedItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);
         document.getElementById('totalOrderValue').textContent = `Total: ${totalValue.toFixed(2)} PLN`;
     }
 
     // INVENTORY PAGE
-    function renderInventoryPage() { renderInventoryList(); }
+    function renderInventoryPage() { 
+        elements.inventoryPage.innerHTML = `
+            <h2><i class="fa-solid fa-boxes-packing"></i> Inwentaryzacja</h2>
+            <div style="overflow-x: auto;">
+                 <table>
+                     <thead><tr><th>Kod produktu</th><th>Nazwa</th><th>Ilość</th><th>Akcje</th></tr></thead>
+                     <tbody id="inventoryListBody"></tbody>
+                 </table>
+            </div>
+            <div style="text-align: right; margin-top: 20px;">
+                 <button id="inventoryExportCsvBtn" class="btn btn-csv"><i class="fa-solid fa-file-csv"></i> Eksportuj CSV</button>
+            </div>
+        `;
+        renderInventoryList(); 
+    }
     function handleInventoryAdd(ean, quantity = 1) { if (!ean) return; const existing = inventoryItems.find(i => i.ean === ean); if (existing) { existing.quantity += quantity; } else { let p = productDatabase.find(prod => prod.kod_kreskowy === ean); if (!p) p = { nazwa_produktu: 'Produkt spoza bazy', opis: ean }; inventoryItems.push({ ean: ean, name: p.nazwa_produktu, quantity }); } renderInventoryList(); showToast(`Dodano do inwentaryzacji: ${ean}`); }
-    function renderInventoryList() { const body = document.getElementById('inventoryListBody'); if(!body) return; body.innerHTML = inventoryItems.map((item, i) => `<tr><td>${item.name}</td><td>${item.ean}</td><td>${item.quantity}</td><td><button class="delete-inv-item-btn btn-icon" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); const lastRow = body.querySelector('tr:last-child'); if(lastRow) lastRow.scrollIntoView({ behavior: 'smooth', block: 'end' }); }
-    function handleDeleteInventoryItem(e) { const btn = e.target.closest('.delete-inv-item-btn'); if (btn) { inventoryItems.splice(btn.dataset.index, 1); renderInventoryList(); } }
-    function exportInventoryToCsv() { if (inventoryItems.length === 0) return; const csvContent = inventoryItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `inwentaryzacja_${new Date().toISOString().slice(0,10)}.csv`); }
+    function renderInventoryList() { const body = document.getElementById('inventoryListBody'); if(!body) return; body.innerHTML = inventoryItems.map((item, i) => `<tr><td>${item.name}</td><td>${item.ean}</td><td>${item.quantity}</td><td><button class="delete-inv-item-btn btn-icon btn-danger" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); }
     
     // PICKING PAGE
-    function renderPickingPage() { /* Logic to let user select an order to pick */ }
+    function renderPickingPage() {
+        elements.pickingPage.innerHTML = `
+            <h2><i class="fa-solid fa-box-open"></i> Kompletacja Zamówienia</h2>
+            <p>Wybierz zamówienie do kompletacji z menu "Zapisane listy".</p>
+        `;
+    }
     
     // ADMIN PAGE
     function renderAdminPage() { loadAllUsers(); }
     async function loadAllUsers() { try { const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) { throw new Error('Nie można załadować użytkowników'); } const users = await response.json(); const userListEl = document.getElementById('allUsersList'); userListEl.innerHTML = users.map(user => ` <div class="user-item"> <div><strong>${user.username}</strong><br><small>Rola: ${user.role} | Status: ${user.isApproved ? 'Zatwierdzony' : 'Oczekujący'}</small></div> <div class="user-actions"> ${!user.isApproved ? `<button class="approve-user-btn btn-primary" data-userid="${user._id}">Zatwierdź</button>` : ''} <button class="edit-user-btn" data-userid="${user._id}" data-username="${user.username}">Zmień hasło</button> <button class="delete-user-btn btn-danger" data-userid="${user._id}">Usuń</button> </div> </div> `).join(''); } catch (error) { document.getElementById('allUsersList').innerHTML = `<p style="color:red;">${error.message}</p>`; } }
 
-    // ... (pozostałe funkcje bez zmian) ...
+    async function saveCurrentList() { const listId = localStorage.getItem('activeListId'); const listName = listId ? null : prompt("Podaj nazwę dla zapisywanego zamówienia:", elements.clientNameInput.value || `Zamówienie ${getSafeFilename()}`); if (!listId && !listName) return null; try { const url = listId ? `/api/data/list/${listId}` : '/api/data/savelist'; const method = listId ? 'PUT' : 'POST'; const body = { items: scannedItems, clientName: elements.clientNameInput.value }; if (listName) body.listName = listName; const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify(body) }); if (!response.ok) { const errData = await response.json(); throw new Error(errData.msg || "Błąd zapisu"); } const savedList = await response.json(); showToast(`Zamówienie zostało zapisane.`); localStorage.setItem('activeListId', savedList._id); return savedList; } catch (error) { alert(`Błąd: ${error.message}`); return null; } }
+    async function loadListById(listId) { try { if(scannedItems.length > 0 && localStorage.getItem('activeListId') !== listId) { await saveCurrentList(); } const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) throw new Error("Błąd wczytywania listy"); const data = await response.json(); scannedItems = data.items; elements.clientNameInput.value = data.clientName || data.listName; renderScannedList(); localStorage.setItem('activeListId', listId); return data; } catch (error) { alert(error.message); localStorage.removeItem('activeListId'); return null; } }
+    async function loadActiveList() { const activeListId = localStorage.getItem('activeListId'); if (activeListId) { showToast("Wczytuję ostatnio aktywną listę..."); await loadListById(activeListId); } }
+    async function showSavedLists() { elements.savedListsModal.style.display = 'flex'; const container = elements.savedListsContainer; container.innerHTML = '<p>Ładowanie...</p>'; try { const response = await fetch('/api/data/lists', { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) throw new Error("Błąd wczytywania list"); const lists = await response.json(); const importInputId = 'importCsvInputInModal'; container.innerHTML = `<div style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);"> <button id="importCsvBtnInModal" class="btn btn-primary" style="background-color: var(--info-color); width: 100%;"> <i class="fa-solid fa-file-import"></i> Importuj zamówienie z pliku CSV </button> <input type="file" id="${importInputId}" accept=".csv" style="display: none;"> </div><h3>Zapisane listy:</h3>`; container.querySelector('#importCsvBtnInModal').addEventListener('click', () => container.querySelector(`#${importInputId}`).click()); container.querySelector(`#${importInputId}`).addEventListener('change', handleFileImport); if (lists.length === 0) { container.innerHTML += '<p>Brak zapisanych zamówień.</p>'; return; } const listContainer = document.createElement('ul'); listContainer.style.cssText = 'list-style: none; padding: 0;'; lists.forEach(list => { const li = document.createElement('li'); li.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border-color); flex-wrap: wrap; gap: 10px;'; li.innerHTML = `<span>${list.listName} <small>(autor: ${list.user?.username || 'usunięty'}, ost. zapis: ${new Date(list.updatedAt).toLocaleDateString()})</small></span> <div style="display: flex; gap: 5px; flex-wrap: wrap;"> <button class="btn-primary load-list-btn" data-id="${list._id}">Wczytaj</button> <button class="pick-order-btn" data-id="${list._id}" data-name="${list.listName}" style="background-color: var(--warning-color);">Kompletuj</button> <button class="btn-danger delete-list-btn" data-id="${list._id}">Usuń</button> </div>`; listContainer.appendChild(li); }); container.appendChild(listContainer); } catch (error) { container.innerHTML = `<p style="color:var(--danger-color)">${error.message}</p>`; } }
+    async function handleSavedListAction(e) { const target = e.target.closest('button'); if (!target) return; const listId = target.dataset.id; if (target.classList.contains('load-list-btn')) { const loadedList = await loadListById(listId); if (loadedList) { elements.savedListsModal.style.display = 'none'; showToast(`Wczytano listę: ${loadedList.listName}`); switchTab('listBuilder'); } } else if (target.classList.contains('delete-list-btn')) { if (!confirm("Czy na pewno usunąć tę listę?")) return; try { const response = await fetch(`/api/data/list/${listId}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); const data = await response.json(); if (!response.ok) throw new Error(data.msg || "Błąd usuwania listy"); showToast("Lista usunięta."); await showSavedLists(); } catch (error) { alert(error.message); } } else if (target.classList.contains('pick-order-btn')) { elements.savedListsModal.style.display = 'none'; await startPicking(listId, target.dataset.name); } }
+    async function handleFileImport(event) { const file = event.target.files[0]; if (!file) return; const listName = prompt("Podaj nazwę dla importowanego zamówienia:", file.name.replace(/\.csv$/i, '')); if (!listName) { event.target.value = ''; return; } Papa.parse(file, { delimiter: ";", skipEmptyLines: true, complete: async (results) => { const itemsMap = new Map(); results.data.forEach(row => { const ean = row[0]?.trim(); const quantity = parseInt(row[1]?.trim(), 10); if (ean && !isNaN(quantity) && quantity > 0) { itemsMap.set(ean, (itemsMap.get(ean) || 0) + quantity); } }); const importedItems = Array.from(itemsMap, ([ean, quantity]) => { let p = productDatabase.find(prod => prod.kod_kreskowy === ean || prod.nazwa_produktu === ean); if (!p) { p = { kod_kreskowy: ean, nazwa_produktu: ean, opis: ean, cena: "0" }; } return { ean: p.kod_kreskowy, name: p.nazwa_produktu, description: p.opis, quantity, price: p.cena }; }); try { const response = await fetch('/api/data/savelist', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ listName, items: importedItems, clientName: listName }) }); const savedList = await response.json(); if (!response.ok) throw new Error(savedList.msg || "Błąd zapisu na serwerze"); scannedItems = savedList.items; document.getElementById('clientNameInput').value = savedList.clientName || savedList.listName; renderScannedList(); showToast(`Zamówienie "${listName}" zostało zaimportowane.`); elements.savedListsModal.style.display = 'none'; switchTab('listBuilder'); } catch (error) { alert(`Błąd: ${error.message}`); } }, error: (err) => { alert(`Błąd parsowania pliku CSV: ${err.message}`); } }); event.target.value = ''; }
     
+    // ... (pozostałe funkcje) ...
+
     checkLoginStatus();
 });
