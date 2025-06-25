@@ -131,7 +131,39 @@
         </div>
         
         <div id="main-content" class="page-content" style="display: none;">
-             <!-- Content for List Builder -->
+            <div class="controls-grid" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <input type="text" id="clientNameInput" placeholder="Nazwa klienta..." style="flex-grow: 1;">
+                <input type="text" id="additionalInfoInput" placeholder="Informacje dodatkowe..." style="flex-grow: 1;">
+            </div>
+            <div class="controls-grid" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <div class="search-container" style="flex: 1 1 300px;">
+                    <input type="text" id="listBarcode_Input" placeholder="Wpisz EAN, kod lub nazwę...">
+                    <div id="listBuilderSearchResults" class="search-results-list" style="display: none;"></div>
+                </div>
+                <input type="number" id="quantityInput" value="1" min="1" style="flex: 0 1 80px;">
+                <button id="addToListBtn" class="btn-primary"><i class="fa-solid fa-plus"></i> Dodaj</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-code">Kod produktu</th>
+                        <th class="col-desc">Nazwa</th>
+                        <th class="col-ean">EAN</th>
+                        <th>Ilość</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody id="scannedListBody"></tbody>
+            </table>
+            <div id="totalOrderValue" style="text-align: right; font-size: 1.2em; font-weight: 600; margin-top: 20px;">Total: 0.00 PLN</div>
+            <div class="export-section" style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;">
+                <button id="newListBtn" class="btn" style="background-color: var(--warning-color);">Nowa lista</button>
+                <button id="saveListBtn" class="btn-primary"><i class="fa-solid fa-save"></i> Zapisz</button>
+                <button id="printListBtn" class="btn"><i class="fa-solid fa-print"></i> Drukuj</button>
+                <button id="exportCsvBtn" class="btn"><i class="fa-solid fa-file-csv"></i> Optima</button>
+                <button id="exportExcelBtn" class="btn"><i class="fa-solid fa-file-excel"></i> Excel</button>
+                <button id="clearListBtn" class="btn-danger"><i class="fa-solid fa-eraser"></i> Wyczyść</button>
+            </div>
         </div>
 
         <div id="inventoryPage" class="page-content" style="display: none;">
@@ -149,6 +181,9 @@
                      <thead><tr><th>Kod produktu</th><th>Nazwa</th><th>Ilość</th><th>Akcje</th></tr></thead>
                      <tbody id="inventoryListBody"></tbody>
                  </table>
+             </div>
+             <div class="export-section" style="text-align: right; margin-top: 20px;">
+                 <button id="inventoryExportCsvBtn" class="btn-csv"><i class="fa-solid fa-file-csv"></i> Eksportuj CSV</button>
              </div>
         </div>
         
@@ -237,31 +272,12 @@
             </div>
             <div id="pickingSummaryBody" class="modal-body"></div>
             <div class="modal-footer" style="text-align: right; margin-top: 20px;">
-                <button id="picking-accept-btn" class="btn-success">Zatwierdź zmiany</button>
+                <button id="picking-accept-btn" class="btn-primary">Zatwierdź zmiany</button>
             </div>
         </div>
     </div>
     
     <div id="toast-container"></div>
-
-    <div id="print-area" style="display: none !important;">
-        <div id="print-header">
-            <h2 id="print-client-name"></h2>
-            <p id="print-additional-info"></p>
-        </div>
-        <table id="print-content-table">
-            <thead>
-                <tr><th>Kod produktu</th><th>Nazwa</th><th>Ilość</th></tr>
-            </thead>
-            <tbody id="print-table-body"></tbody>
-        </table>
-    </div>
-    
-    <footer style="text-align: center; margin-top: 40px; color: var(--text-secondary-color); font-size: 0.9em;">
-        <p>Copyright © 1997-2025 Dekor-Art-Serwis</p>
-        <p>Aplikacja do użytku wewnętrznego</p>
-    </footer>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="skaner.js"></script>
 </body>
