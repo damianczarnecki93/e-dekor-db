@@ -28,7 +28,7 @@
         body { font-family: var(--font-family); background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); color: var(--text-color); margin: 0; padding: 20px; transition: background-color 0.3s, color 0.3s; min-height: 100vh; }
         body.dark-mode { background: linear-gradient(135deg, #0d1117 0%, #1d1d1f 100%); }
         .container { width: 100%; max-width: 1200px; margin: 0 auto; }
-        .page-content { background: var(--surface-color); padding: 30px; border-radius: 20px; box-shadow: var(--shadow); border: 1px solid var(--border-color); }
+        .page-content { background: var(--surface-color); padding: 30px 40px; border-radius: 20px; box-shadow: var(--shadow); border: 1px solid var(--border-color); }
         .app-header { text-align: center; margin-bottom: 20px; }
         .header-logo { max-height: 45px; }
         body.dark-mode .header-logo { filter: invert(1); }
@@ -38,7 +38,7 @@
         button:disabled { cursor: not-allowed; background-color: #e5e5ea !important; color: #8e8e93 !important; transform: none; opacity: 0.6; box-shadow: none; }
         .btn-primary { background-color: var(--primary-color); color: var(--text-light-color); }
         .btn-danger { background-color: var(--danger-color); color: var(--text-light-color); }
-        .btn-icon { padding: 0; width: 40px; height: 40px; font-size: 1.1em; border-radius: 50%; }
+        .btn-csv { background-color: #27ae60; color: var(--text-light-color); }
         input[type="text"], input[type="number"], input[type="password"], input[type="file"] { padding: 12px 15px; font-size: 1em; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); border-radius: 10px; width: 100%; transition: all 0.2s ease; }
         input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(52, 120, 246, 0.25); }
         #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(10px); background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 3000; padding:10px; }
@@ -106,16 +106,16 @@
             <img src="logo.jpg" alt="Logo Firmy" class="header-logo">
         </div>
         
-        <div id="main-content" class="page-content" style="display: none;">
-            <!-- Treść modułu Listy Zamówień -->
+        <div id="main-content" class="page-content" style="display: none; padding-bottom: 120px;">
+             <!-- Treść modułu Listy Zamówień zostanie wstawiona tutaj przez JS -->
         </div>
 
-        <div id="inventoryPage" class="page-content" style="display: none;">
-             <!-- Treść modułu Inwentaryzacja -->
+        <div id="inventoryPage" class="page-content" style="display: none; padding-bottom: 120px;">
+             <!-- Treść modułu Inwentaryzacji zostanie wstawiona tutaj przez JS -->
         </div>
 
         <div id="pickingPage" class="page-content" style="display: none;">
-             <!-- Treść modułu Kompletacja -->
+             <!-- Treść modułu Kompletacji zostanie wstawiona tutaj przez JS -->
         </div>
         
         <div id="adminPanel" class="page-content" style="display: none;">
@@ -151,7 +151,6 @@
                     <input type="text" id="lookupBarcodeInput" placeholder="Wpisz EAN, kod lub nazwę...">
                     <div id="lookupResultList" style="margin-top:15px; max-height: 400px; overflow-y:auto;"></div>
                 </div>
-                <div id="lookupResultSingle" style="margin-top: 20px;"></div>
             </div>
         </div>
     </div>
