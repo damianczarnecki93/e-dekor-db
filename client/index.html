@@ -25,7 +25,8 @@
         }
         * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
-        body { font-family: var(--font-family); background: linear-gradient(135deg, var(--bg-color) 0%, var(--surface-color) 100%); color: var(--text-color); margin: 0; padding: 20px; transition: background-color 0.3s, color 0.3s; min-height: 100vh; }
+        body { font-family: var(--font-family); background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); color: var(--text-color); margin: 0; padding: 20px; transition: background-color 0.3s, color 0.3s; min-height: 100vh; }
+        body.dark-mode { background: linear-gradient(135deg, #0d1117 0%, #1d1d1f 100%); }
         .container { width: 100%; max-width: 1200px; margin: 0 auto; }
         .page-content { background: var(--surface-color); padding: 30px; border-radius: 20px; box-shadow: var(--shadow); border: 1px solid var(--border-color); }
         .app-header { text-align: center; margin-bottom: 20px; }
@@ -58,12 +59,13 @@
         .search-container { position: relative; width: 100%; }
         .search-results-list { position: absolute; bottom: 105%; left: 0; width: 100%; z-index: 1020; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
         #toast-container { position: fixed; top: 20px; left: 20px; z-index: 4000; }
-        .toast { background: linear-gradient(45deg, #1d1d1f, #3a3a3c); color: white; padding: 10px 20px; border-radius: 8px; margin-bottom: 10px; font-size: 0.9em; opacity: 0; transition: all 0.5s ease; transform: translateY(-20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .toast { background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 8px; margin-bottom: 10px; font-size: 0.9em; opacity: 0; transition: all 0.5s ease; transform: translateY(-20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         .toast.show { opacity: 1; transform: translateY(0); }
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(5px); background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2050; padding: 15px; }
         .modal-content { background-color: var(--surface-color); padding: 30px; border-radius: 16px; width: 100%; max-width: 500px; max-height: 90vh; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .modal-body { flex-grow: 1; overflow-y: auto; }
+        .admin-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); }
     </style>
 </head>
 <body>
@@ -96,14 +98,6 @@
                 <p id="loginError" style="color: var(--danger-color); height: 1em;"></p>
                 <p>Nie masz konta? <a href="#" id="showRegister">Zarejestruj się</a></p>
             </div>
-            <div id="registerForm" style="display: none;">
-                <h2>Rejestracja</h2>
-                <input type="text" id="registerUsername" placeholder="Wybierz login" style="margin-bottom: 15px;">
-                <input type="password" id="registerPassword" placeholder="Wybierz hasło">
-                <button id="registerBtn" class="btn-primary" style="width: 100%; margin-top: 20px;">Zarejestruj się</button>
-                <p id="registerError" style="color: var(--danger-color); height: 1em;"></p>
-                <p>Masz już konto? <a href="#" id="showLogin">Zaloguj się</a></p>
-            </div>
         </div>
     </div>
 
@@ -112,23 +106,23 @@
             <img src="logo.jpg" alt="Logo Firmy" class="header-logo">
         </div>
         
-        <div id="main-content" class="page-content" style="display: none; padding-bottom: 100px;">
-            <!-- Content for List Builder will be here -->
+        <div id="main-content" class="page-content" style="display: none;">
+            <!-- Treść modułu Listy Zamówień -->
         </div>
 
-        <div id="inventoryPage" class="page-content" style="display: none; padding-bottom: 100px;">
-             <!-- Content for Inventory will be here -->
+        <div id="inventoryPage" class="page-content" style="display: none;">
+             <!-- Treść modułu Inwentaryzacja -->
         </div>
 
-        <div id="pickingPage" class="page-content" style="display: none; padding-bottom: 100px;">
-             <!-- Content for Picking will be here -->
+        <div id="pickingPage" class="page-content" style="display: none;">
+             <!-- Treść modułu Kompletacja -->
         </div>
         
         <div id="adminPanel" class="page-content" style="display: none;">
              <h2>Panel Administratora</h2>
              <div class="admin-section">
                 <h3>Zarządzanie użytkownikami</h3>
-                <div id="allUsersList" class="admin-user-list"></div>
+                <div id="allUsersList"></div>
              </div>
              <div class="admin-section">
                 <h3>Zarządzanie plikami produktów</h3>
@@ -155,7 +149,7 @@
             <div class="modal-body">
                 <div class="search-container">
                     <input type="text" id="lookupBarcodeInput" placeholder="Wpisz EAN, kod lub nazwę...">
-                    <div id="lookupResultList" class="search-results-list" style="position: static; max-height: 400px;"></div>
+                    <div id="lookupResultList" style="margin-top:15px; max-height: 400px; overflow-y:auto;"></div>
                 </div>
                 <div id="lookupResultSingle" style="margin-top: 20px;"></div>
             </div>
@@ -163,7 +157,7 @@
     </div>
 
     <div id="savedListsModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
                 <h2><i class="fa-solid fa-save"></i> Zapisane zamówienia</h2>
                 <button id="closeSavedListsModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
@@ -177,10 +171,9 @@
     <div id="floating-input-bar">
         <div class="controls-wrapper">
             <div class="search-container" style="flex-grow: 1;">
-                 <input type="text" id="floating-ean-input" placeholder="Wpisz EAN...">
-                 <div id="floating-search-results" class="search-results-list" style="display:none;"></div>
+                 <input type="text" id="floating-ean-input" placeholder="Wpisz EAN i naciśnij Enter...">
+                 <div id="floating-search-results" class="search-results-list"></div>
             </div>
-            <button id="floating-add-btn" class="btn-primary"><i class="fa-solid fa-plus"></i></button>
         </div>
     </div>
 
