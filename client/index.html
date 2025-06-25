@@ -1,291 +1,259 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel sprzedaży</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <style>
-        :root {
-            --font-family: 'Poppins', sans-serif;
-            --primary-color: #3478F6; --primary-hover: #2962FF;
-            --success-color: #34C759; --danger-color: #FF3B30; --warning-color: #FF9500; --info-color: #5856D6;
-            --text-color: #1d1d1f; --text-light-color: #ffffff; --text-secondary-color: #6e6e73;
-            --bg-color: #f5f5f7; --surface-color: #ffffff;
-            --border-color: #d2d2d7; --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        }
-        body.dark-mode {
-            --primary-color: #0A84FF; --primary-hover: #3498db;
-            --success-color: #30D158; --danger-color: #FF453A; --info-color: #5E5CE6;
-            --text-color: #f5f5f7; --text-secondary-color: #8d8d92;
-            --bg-color: #161617; --surface-color: #1d1d1f; --border-color: #424245;
-        }
-        * { box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 80px 10px 90px 10px; transition: background-color 0.3s, color 0.3s; }
-        .container { width: 100%; max-width: 1100px; margin: 0 auto; }
-        .page-content { background: var(--surface-color); padding: 30px 40px; border-radius: 20px; box-shadow: var(--shadow); }
-        .app-header { text-align: center; margin-bottom: 20px; }
-        .header-logo { max-height: 45px; }
-        body.dark-mode .header-logo { filter: invert(1); }
-        button, .btn { cursor: pointer; border-radius: 10px; border: none; padding: 12px 22px; font-weight: 600; font-size: 1em; font-family: var(--font-family); transition: all 0.2s ease; background-color: #e5e5ea; color: var(--text-color); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-        body.dark-mode button, body.dark-mode .btn { background-color: #3a3a3c; color: var(--text-color); }
-        button:hover, .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        button:disabled { cursor: not-allowed; background-color: #e5e5ea !important; color: #8e8e93 !important; transform: none; opacity: 0.6; box-shadow: none; }
-        .btn-primary { background-color: var(--primary-color); color: var(--text-light-color); }
-        .btn-danger { background-color: var(--danger-color); color: var(--text-light-color); }
-        .btn-csv { background-color: var(--csv-color); color: var(--text-light-color); }
-        input[type="text"], input[type="number"], input[type="password"] { padding: 12px 15px; font-size: 1em; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); border-radius: 10px; width: 100%; transition: all 0.2s ease; }
-        input:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 4px rgba(52, 120, 246, 0.25); }
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(10px); background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 3000; padding:10px; }
-        #loginBox { background: var(--surface-color); padding: 40px; border-radius: 20px; text-align: center; width: 100%; max-width: 400px; }
-        #topBar { position: fixed; top: 15px; right: 15px; z-index: 1011; display: none; gap: 10px; }
-        .dropdown { position: relative; display: inline-block; }
-        .dropdown-content { display: none; position: absolute; right: 0; background-color: var(--surface-color); min-width: 260px; box-shadow: var(--shadow); z-index: 1012; border-radius: 12px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border-color); }
-        .dropdown-content .dropdown-header { padding: 10px 18px; font-weight: 600; color: var(--text-secondary-color); background-color: var(--bg-color); }
-        .dropdown-content a { color: var(--text-color); padding: 14px 18px; text-decoration: none; display: flex; align-items: center; gap: 12px; cursor: pointer; }
-        .dropdown-content a:hover { background-color: var(--primary-color); color: var(--text-light-color); }
-        .dropdown-content.show { display: block; }
-        #bottomBar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--surface-color); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 1010; padding: 10px; display: none; justify-content: center; gap: 20px; }
-        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 20px; font-size: 1em; }
-        thead th { background-color: var(--bg-color); padding: 15px; text-align: left; font-weight: 600; color: var(--text-secondary-color); border-bottom: 1px solid var(--border-color); }
-        thead th:first-child { border-top-left-radius: 12px; }
-        thead th:last-child { border-top-right-radius: 12px; }
-        tbody td { padding: 15px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-        .search-container { position: relative; width: 100%; }
-        .search-results-list { position: absolute; top: 105%; left: 0; width: 100%; z-index: 1020; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; background-color: var(--surface-color); box-shadow: var(--shadow); }
-        .search-results-list li { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
-        .search-results-list li:hover { background-color: var(--primary-color); color: var(--text-light-color); }
-        #toast-container { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 4000; }
-        .toast { background: linear-gradient(45deg, var(--primary-color), var(--primary-hover)); color: white; padding: 15px 25px; border-radius: 10px; margin-bottom: 10px; opacity: 0; transition: all 0.5s ease; transform: translateY(20px); font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .toast.show { opacity: 1; transform: translateY(0); }
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(5px); background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2050; padding: 15px; }
-        .modal-content { background-color: var(--surface-color); padding: 30px; border-radius: 16px; width: 100%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .modal-header h2 { border: none; padding: 0; margin: 0; }
-        .modal-body { flex-grow: 1; overflow-y: auto; }
-        .admin-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); }
-        .admin-user-list .user-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color); }
-        .admin-user-list .user-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+document.addEventListener('DOMContentLoaded', () => {
 
-        @media (max-width: 768px) {
-            body { padding: 80px 5px 80px 5px; }
-            .page-content { padding: 20px 15px; }
-            .controls-grid { flex-direction: column; }
-            .col-desc, .col-ean { display: none; }
-        }
-    </style>
-</head>
-<body>
+    const elements = {
+        loginOverlay: document.getElementById('loginOverlay'),
+        appContainer: document.getElementById('appContainer'),
+        loginUsername: document.getElementById('loginUsername'),
+        loginPassword: document.getElementById('loginPassword'),
+        loginBtn: document.getElementById('loginBtn'),
+        loginError: document.getElementById('loginError'),
+        loginForm: document.getElementById('loginForm'),
+        registerForm: document.getElementById('registerForm'),
+        registerUsername: document.getElementById('registerUsername'),
+        registerPassword: document.getElementById('registerPassword'),
+        registerBtn: document.getElementById('registerBtn'),
+        registerError: document.getElementById('registerError'),
+        showRegister: document.getElementById('showRegister'),
+        showLogin: document.getElementById('showLogin'),
+        mainContent: document.getElementById('main-content'),
+        adminPanel: document.getElementById('adminPanel'),
+        inventoryPage: document.getElementById('inventoryPage'),
+        topBar: document.getElementById('topBar'),
+        bottomBar: document.getElementById('bottomBar'),
+        darkModeToggle: document.getElementById('darkModeToggle'),
+        quickSearchBtn: document.getElementById('quickSearchBtn'),
+        menuToggleBtn: document.getElementById('menuToggleBtn'),
+        dropdownMenu: document.getElementById('dropdownMenu'),
+        menuUsername: document.getElementById('menuUsername'),
+        menuAdminBtn: document.getElementById('menuAdminBtn'),
+        menuListBuilderBtn: document.getElementById('menuListBuilderBtn'),
+        menuInventoryBtn: document.getElementById('menuInventoryBtn'),
+        menuLogoutBtn: document.getElementById('menuLogoutBtn'),
+        menuChangePassword: document.getElementById('menuChangePassword'),
+        menuSavedLists: document.getElementById('menuSavedLists'),
+        scrollTopBtn: document.getElementById('scrollTopBtn'),
+        scrollBottomBtn: document.getElementById('scrollBottomBtn'),
+        lookupBarcodeInput: document.getElementById('lookupBarcodeInput'),
+        lookupResultList: document.getElementById('lookupResultList'),
+        lookupResultSingle: document.getElementById('lookupResultSingle'),
+        quickSearchModal: document.getElementById('quickSearchModal'),
+        closeQuickSearchModalBtn: document.getElementById('closeQuickSearchModalBtn'),
+        listBarcodeInput: document.getElementById('listBarcode_Input'),
+        listBuilderSearchResults: document.getElementById('listBuilderSearchResults'),
+        quantityInput: document.getElementById('quantityInput'),
+        addToListBtn: document.getElementById('addToListBtn'),
+        saveListBtn: document.getElementById('saveListBtn'),
+        newListBtn: document.getElementById('newListBtn'),
+        scannedListBody: document.getElementById('scannedListBody'),
+        clientNameInput: document.getElementById('clientNameInput'),
+        additionalInfoInput: document.getElementById('additionalInfoInput'),
+        totalOrderValue: document.getElementById('totalOrderValue'),
+        exportCsvBtn: document.getElementById('exportCsvBtn'),
+        exportExcelBtn: document.getElementById('exportExcelBtn'),
+        printListBtn: document.getElementById('printListBtn'),
+        clearListBtn: document.getElementById('clearListBtn'),
+        allUsersList: document.getElementById('allUsersList'),
+        inventoryEanInput: document.getElementById('inventoryEanInput'),
+        inventoryQuantityInput: document.getElementById('inventoryQuantityInput'),
+        inventoryAddBtn: document.getElementById('inventoryAddBtn'),
+        inventoryListBody: document.getElementById('inventoryListBody'),
+        inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
+        inventorySearchResults: document.getElementById('inventorySearchResults'),
+        savedListsModal: document.getElementById('savedListsModal'),
+        closeSavedListsModalBtn: document.getElementById('closeSavedListsModalBtn'),
+        savedListsContainer: document.getElementById('savedListsContainer'),
+        pickingModule: document.getElementById('pickingModule'),
+        closePickingModalBtn: document.getElementById('closePickingModalBtn'),
+        pickingOrderName: document.getElementById('picking-order-name'),
+        pickingEanInput: document.getElementById('picking-ean-input'),
+        pickingSearchResults: document.getElementById('picking-search-results'),
+        pickingTargetList: document.getElementById('picking-target-list'),
+        pickingScannedList: document.getElementById('picking-scanned-list'),
+        pickingVerifyBtn: document.getElementById('picking-verify-btn'),
+        pickingSummaryModal: document.getElementById('pickingSummaryModal'),
+        closePickingSummaryModalBtn: document.getElementById('closePickingSummaryModalBtn'),
+        pickingSummaryBody: document.getElementById('pickingSummaryBody'),
+        pickingAcceptBtn: document.getElementById('picking-accept-btn'),
+        pickingExportCsvBtn: document.getElementById('picking-export-csv-btn'),
+        toastContainer: document.getElementById('toast-container'),
+        printArea: document.getElementById('print-area'),
+        printClientName: document.getElementById('print-client-name'),
+        printAdditionalInfo: document.getElementById('print-additional-info'),
+        printTableBody: document.getElementById('print-table-body'),
+        uploadProduktyCsv: document.getElementById('uploadProduktyCsv'),
+        produktyCsvUpload: document.getElementById('produktyCsvUpload'),
+        uploadProdukty2Csv: document.getElementById('uploadProdukty2Csv'),
+        produkty2CsvUpload: document.getElementById('produkty2CsvUpload'),
+    };
+
+    let productDatabase = [], scannedItems = [], inventoryItems = [];
+    let currentPickingOrder = null;
+    let pickedItems = [];
+
+    const showApp = (userData) => {
+        elements.loginOverlay.style.display = 'none';
+        elements.appContainer.style.display = 'block';
+        if (elements.topBar) elements.topBar.style.display = 'flex';
+        if (elements.bottomBar) elements.bottomBar.style.display = 'flex';
+        initializeApp(userData);
+    };
+
+    const initializeApp = async (userData) => {
+        if (!userData) { console.error("initializeApp: Otrzymano nieprawidłowe dane użytkownika."); localStorage.clear(); location.reload(); return; }
+        if(elements.menuUsername) elements.menuUsername.textContent = userData.username;
+        await loadDataFromServer();
+        if (userData.role === 'admin') { if (elements.menuAdminBtn) elements.menuAdminBtn.style.display = 'flex'; }
+        await loadActiveList();
+        attachAllEventListeners(); 
+        switchTab('listBuilder');
+    };
     
-    <div id="topBar" style="display: none;">
-        <button id="quickSearchBtn" class="btn-icon" title="Szybkie wyszukiwanie"><i class="fa-solid fa-search"></i></button>
-        <button id="darkModeToggle" class="btn-icon"><i class="fa-solid fa-moon"></i></button>
-        <div class="dropdown">
-            <button id="menuToggleBtn" class="btn-primary btn-icon"><i class="fa-solid fa-bars"></i></button>
-            <div id="dropdownMenu" class="dropdown-content">
-                <div class="dropdown-header"><span id="menuUsername"></span></div>
-                <a id="menuListBuilderBtn"><i class="fa-solid fa-list-check"></i> Listy Zamówień</a>
-                <a id="menuSavedLists"><i class="fa-solid fa-save"></i> Zapisane zamówienia</a>
-                <a id="menuInventoryBtn"><i class="fa-solid fa-clipboard-list"></i> Inwentaryzacja</a>
-                <a id="menuAdminBtn" style="display: none;"><i class="fa-solid fa-user-shield"></i> Panel Admina</a>
-                <a id="menuChangePassword"><i class="fa-solid fa-key"></i> Zmień hasło</a>
-                <a id="menuLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Wyloguj</a>
-            </div>
-        </div>
-    </div>
+    const checkLoginStatus = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) { attachLoginListeners(); return; }
+        try {
+            const response = await fetch('/api/auth/verify', { method: 'GET', headers: { 'x-auth-token': token } });
+            const userData = await response.json();
+            if (response.ok) { showApp(userData); } else { localStorage.removeItem('token'); attachLoginListeners(); }
+        } catch (error) { console.error('Błąd weryfikacji tokenu:', error); attachLoginListeners(); }
+    };
+    
+    async function attemptLogin() {
+        elements.loginError.textContent = '';
+        const username = elements.loginUsername.value;
+        const password = elements.loginPassword.value;
+        try {
+            const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+            const data = await response.json();
+            if (!response.ok) { elements.loginError.textContent = data.msg || 'Wystąpił błąd logowania.'; return; }
+            localStorage.setItem('token', data.token);
+            showApp(data.user);
+        } catch (error) { console.error('Błąd podczas logowania:', error); elements.loginError.textContent = 'Nie można połączyć się z serwerem lub wystąpił błąd sieci.'; }
+    }
 
-    <div id="bottomBar" style="display: none;">
-        <button id="scrollTopBtn" title="Przewiń do góry"><i class="fa-solid fa-arrow-up"></i></button>
-        <button id="scrollBottomBtn" title="Przewiń na dół"><i class="fa-solid fa-arrow-down"></i></button>
-    </div>
+    async function handleRegistration() {
+        const { registerUsername, registerPassword, registerError, showLogin, loginUsername } = elements;
+        const username = registerUsername.value.trim();
+        const password = registerPassword.value.trim();
+        if (!username || !password) { registerError.textContent = 'Login i hasło są wymagane.'; return; }
+        try {
+            const response = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+            const data = await response.json();
+            if (!response.ok) { registerError.textContent = data.msg || 'Wystąpił błąd serwera.'; } 
+            else { alert('Rejestracja pomyślna! Konto oczekuje na aktywację.'); showLogin.click(); loginUsername.value = username; elements.loginPassword.value = ''; }
+        } catch (error) { registerError.textContent = 'Nie można połączyć się z serwerem.'; }
+    }
+    
+    function attachLoginListeners() {
+        if (elements.loginBtn) elements.loginBtn.addEventListener('click', attemptLogin);
+        if (elements.loginPassword) elements.loginPassword.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
+        if (elements.registerBtn) elements.registerBtn.addEventListener('click', handleRegistration);
+        if (elements.showRegister) elements.showRegister.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'none'; elements.registerForm.style.display = 'block'; });
+        if (elements.showLogin) elements.showLogin.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'block'; elements.registerForm.style.display = 'none'; });
+    }
 
-    <div id="loginOverlay">
-        <div id="loginBox">
-            <div id="loginForm">
-                <img src="logo.jpg" alt="Logo Firmy" class="header-logo">
-                <input type="text" id="loginUsername" placeholder="Login" style="margin-top: 20px;">
-                <input type="password" id="loginPassword" placeholder="Hasło" style="margin-top: 15px;">
-                <button id="loginBtn" class="btn-primary" style="width: 100%; margin-top: 20px;">Zaloguj się</button>
-                <p id="loginError" style="color: var(--danger-color); height: 1em;"></p>
-                <p>Nie masz konta? <a href="#" id="showRegister">Zarejestruj się</a></p>
-            </div>
-            <div id="registerForm" style="display: none;">
-                <h2>Rejestracja</h2>
-                <input type="text" id="registerUsername" placeholder="Wybierz login">
-                <input type="password" id="registerPassword" placeholder="Wybierz hasło" style="margin-top: 15px;">
-                <button id="registerBtn" class="btn-primary" style="width: 100%; margin-top: 20px;">Zarejestruj się</button>
-                <p id="registerError" style="color: var(--danger-color); height: 1em;"></p>
-                <p>Masz już konto? <a href="#" id="showLogin">Zaloguj się</a></p>
-            </div>
-        </div>
-    </div>
-
-    <div class="container" id="appContainer" style="display: none;">
-        <div class="app-header">
-            <img src="logo.jpg" alt="Logo Firmy" class="header-logo">
-        </div>
+    function attachAllEventListeners() {
+        attachLoginListeners();
         
-        <div id="main-content" class="page-content" style="display: none;">
-             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-                <input type="text" id="clientNameInput" placeholder="Nazwa klienta..." style="flex-grow: 1;">
-                <input type="text" id="additionalInfoInput" placeholder="Informacje dodatkowe..." style="flex-grow: 1;">
-            </div>
-            <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                <div class="search-container" style="flex: 1 1 300px;">
-                    <input type="text" id="listBarcode_Input" placeholder="Wpisz EAN, kod lub nazwę...">
-                    <div id="listBuilderSearchResults" class="search-results-list" style="display: none;"></div>
-                </div>
-                <input type="number" id="quantityInput" value="1" min="1" style="flex: 0 1 80px;">
-                <button id="addToListBtn" class="btn-primary"><i class="fa-solid fa-plus"></i> Dodaj</button>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th class="col-code">Kod produktu</th>
-                        <th class="col-desc">Nazwa</th>
-                        <th class="col-ean">EAN</th>
-                        <th>Ilość</th>
-                        <th>Akcje</th>
-                    </tr>
-                </thead>
-                <tbody id="scannedListBody"></tbody>
-            </table>
-            <div id="totalOrderValue" style="text-align: right; font-size: 1.2em; font-weight: 600; margin-top: 20px;">Total: 0.00 PLN</div>
-            <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;">
-                 <button id="newListBtn" class="btn" style="background-color: var(--warning-color);">Nowa lista</button>
-                 <button id="saveListBtn" class="btn-primary"><i class="fa-solid fa-save"></i> Zapisz</button>
-                 <button id="printListBtn" class="btn"><i class="fa-solid fa-print"></i> Drukuj</button>
-                 <button id="exportCsvBtn" class="btn btn-csv"><i class="fa-solid fa-file-csv"></i> Optima</button>
-                 <button id="exportExcelBtn" class="btn" style="background-color: #007D4B; color: white;"><i class="fa-solid fa-file-excel"></i> Excel</button>
-                 <button id="clearListBtn" class="btn-danger"><i class="fa-solid fa-eraser"></i> Wyczyść</button>
-            </div>
-        </div>
-
-        <div id="inventoryPage" class="page-content" style="display: none;">
-             <h2><i class="fa-solid fa-boxes-packing"></i> Inwentaryzacja</h2>
-             <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                 <div class="search-container" style="flex-grow: 1;">
-                     <input type="text" id="inventoryEanInput" placeholder="Wpisz EAN, kod lub nazwę...">
-                     <div id="inventorySearchResults" class="search-results-list" style="display: none;"></div>
-                 </div>
-                 <input type="number" id="inventoryQuantityInput" value="1" min="1" style="flex: 0 1 80px;">
-                 <button id="inventoryAddBtn" class="btn-primary"><i class="fa-solid fa-plus"></i> Dodaj</button>
-             </div>
-             <div style="overflow-x: auto;">
-                 <table>
-                     <thead><tr><th>Kod produktu</th><th>Nazwa</th><th>Ilość</th><th>Akcje</th></tr></thead>
-                     <tbody id="inventoryListBody"></tbody>
-                 </table>
-             </div>
-             <div style="text-align: right; margin-top: 20px;">
-                 <button id="inventoryExportCsvBtn" class="btn btn-csv"><i class="fa-solid fa-file-csv"></i> Eksportuj CSV</button>
-             </div>
-        </div>
+        if (elements.menuListBuilderBtn) elements.menuListBuilderBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('listBuilder'); });
+        if (elements.menuToggleBtn) elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
+        window.addEventListener('click', () => { if (elements.dropdownMenu && elements.dropdownMenu.classList.contains('show')) elements.dropdownMenu.classList.remove('show'); });
         
-        <div id="adminPanel" class="page-content" style="display: none;">
-             <h2>Panel Administratora</h2>
-             <div class="admin-section">
-                <h3>Zarządzanie użytkownikami</h3>
-                <div id="allUsersList" class="admin-user-list"></div>
-             </div>
-             <div class="admin-section">
-                <h3>Zarządzanie plikami produktów</h3>
-                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-                    <label for="produktyCsvUpload">produkty.csv:</label>
-                    <input type="file" id="produktyCsvUpload" accept=".csv">
-                    <button id="uploadProduktyCsv" class="btn-primary">Wgraj</button>
-                </div>
-                 <div style="display: flex; gap: 15px; align-items: center; margin-top:10px; flex-wrap: wrap;">
-                    <label for="produkty2CsvUpload">produkty2.csv:</label>
-                    <input type="file" id="produkty2CsvUpload" accept=".csv">
-                    <button id="uploadProdukty2Csv" class="btn-primary">Wgraj</button>
-                </div>
-             </div>
-        </div>
-    </div>
-    
-    <div id="quickSearchModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Szybkie wyszukiwanie</h2>
-                <button id="closeQuickSearchModalBtn" class="btn-icon" style="background:none; box-shadow:none; font-size: 1.5em;">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="search-container">
-                    <input type="text" id="lookupBarcodeInput" placeholder="Wpisz EAN, kod lub nazwę...">
-                    <div id="lookupResultList" class="search-results-list" style="display: none;"></div>
-                </div>
-                <div id="lookupResultSingle" style="margin-top: 20px;"></div>
-            </div>
-        </div>
-    </div>
+        if (elements.menuAdminBtn) elements.menuAdminBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('admin'); });
+        if (elements.menuInventoryBtn) elements.menuInventoryBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('inventory'); });
+        if (elements.menuLogoutBtn) elements.menuLogoutBtn.addEventListener('click', (e) => { e.preventDefault(); localStorage.clear(); location.reload(); });
+        if (elements.menuChangePassword) elements.menuChangePassword.addEventListener('click', (e) => { e.preventDefault(); handleChangePassword(); });
+        if (elements.menuSavedLists) elements.menuSavedLists.addEventListener('click', (e) => { e.preventDefault(); showSavedLists(); });
+        if (elements.scrollTopBtn) elements.scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        if (elements.scrollBottomBtn) elements.scrollBottomBtn.addEventListener('click', () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }));
+        
+        if (elements.darkModeToggle) elements.darkModeToggle.addEventListener('click', () => setDarkMode(!document.body.classList.contains('dark-mode')));
+        
+        if(elements.listBarcodeInput) elements.listBarcodeInput.addEventListener('input', handleListBuilderSearch);
+        if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) { addProductToList(targetLi.dataset.ean); } });
+        if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList(elements.listBarcodeInput.value));
+        if(elements.scannedListBody) elements.scannedListBody.addEventListener('click', (e) => { if(e.target.closest('.delete-btn')) { const index = e.target.closest('.delete-btn').dataset.index; scannedItems.splice(index, 1); renderScannedList(); }});
+        
+        if(elements.quickSearchBtn) elements.quickSearchBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'flex'; elements.lookupBarcodeInput.focus(); });
+        if(elements.closeQuickSearchModalBtn) elements.closeQuickSearchModalBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'none'; });
+        if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('input', handleLookupSearch);
+        if(elements.lookupResultList) elements.lookupResultList.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
+        
+        if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
+        if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => clearCurrentList(true));
+        if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
+        if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { await saveCurrentList(); } clearCurrentList(false); });
+        
+        const importBtnInModal = document.querySelector('#savedListsModal #importCsvBtn');
+        const importInputInModal = document.querySelector('#savedListsModal #importCsvInput');
+        if(importBtnInModal) importBtnInModal.addEventListener('click', () => importInputInModal.click());
+        if(importInputInModal) importInputInModal.addEventListener('change', handleFileImport);
 
-    <div id="savedListsModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fa-solid fa-save"></i> Zapisane zamówienia</h2>
-                <button id="closeSavedListsModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);">
-                    <button id="importCsvBtn" class="btn btn-primary" style="background-color: var(--info-color); width: 100%;">
-                        <i class="fa-solid fa-file-import"></i> Importuj zamówienie z pliku CSV
-                    </button>
-                    <input type="file" id="importCsvInput" accept=".csv" style="display: none;">
-                </div>
-                <div id="savedListsContainer"></div>
-            </div>
-        </div>
-    </div>
-    
-    <div id="pickingModule" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="picking-order-name">Kompletacja: ...</h2>
-                <button id="closePickingModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
-            </div>
-            <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px;">
-                <div class="search-container">
-                    <input type="text" id="picking-ean-input" placeholder="Skanuj lub wyszukaj EAN...">
-                    <div id="picking-search-results" class="search-results-list" style="display: none;"></div>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex-grow: 1;">
-                    <div>
-                        <h4>Do zebrania</h4>
-                        <div id="picking-target-list" style="height: 300px; overflow-y: auto; border: 1px solid var(--border-color); padding: 5px; border-radius: 8px;"></div>
-                    </div>
-                    <div>
-                        <h4>Skompletowano</h4>
-                        <div id="picking-scanned-list" style="height: 300px; overflow-y: auto; border: 1px solid var(--border-color); padding: 5px; border-radius: 8px;"></div>
-                    </div>
-                </div>
-                 <div class="controls-grid" style="gap:10px; display: flex;">
-                    <button id="picking-verify-btn" class="btn-primary" style="flex-grow: 1;">Weryfikuj</button>
-                    <button id="picking-export-csv-btn" class="btn-csv" style="flex-grow: 1;">Eksportuj CSV</button>
-                </div>
-            </div>
-        </div>
-    </div>
+        if(elements.allUsersList) elements.allUsersList.addEventListener('click', handleAdminAction);
+        if(elements.uploadProduktyCsv) elements.uploadProduktyCsv.addEventListener('click', () => uploadProductFile('produkty.csv', elements.produktyCsvUpload));
+        if(elements.uploadProdukty2Csv) elements.uploadProdukty2Csv.addEventListener('click', () => uploadProductFile('produkty2.csv', elements.produkty2CsvUpload));
+        
+        if(elements.inventoryAddBtn) elements.inventoryAddBtn.addEventListener('click', handleInventoryAdd);
+        if(elements.inventoryEanInput) elements.inventoryEanInput.addEventListener('input', handleInventorySearch);
+        if(elements.inventorySearchResults) elements.inventorySearchResults.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.ean) { elements.inventoryEanInput.value = li.dataset.ean; elements.inventorySearchResults.innerHTML = ''; elements.inventorySearchResults.style.display = 'none'; }});
+        if(elements.inventoryListBody) elements.inventoryListBody.addEventListener('click', handleDeleteInventoryItem);
+        if (elements.inventoryExportCsvBtn) elements.inventoryExportCsvBtn.addEventListener('click', () => exportInventoryToCsv());
+        
+        if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
+        if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', handleSavedListAction);
 
-     <div id="pickingSummaryModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Podsumowanie kompletacji</h2>
-                <button id="closePickingSummaryModalBtn" class="btn-icon" style="background: none; box-shadow: none; font-size: 1.5em;">&times;</button>
-            </div>
-            <div id="pickingSummaryBody" class="modal-body"></div>
-            <div class="modal-footer" style="text-align: right; margin-top: 20px;">
-                <button id="picking-accept-btn" class="btn btn-primary">Zatwierdź zmiany</button>
-            </div>
-        </div>
-    </div>
+        if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
+        if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('input', handlePickingSearch);
+        if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { pickItemFromList(li.dataset.ean); elements.pickingEanInput.value = ''; elements.pickingSearchResults.style.display = 'none'; } });
+        if (elements.pickingTargetList) elements.pickingTargetList.addEventListener('click', e => { const itemDiv = e.target.closest('.pick-item'); if(itemDiv?.dataset.ean) { pickItemFromList(itemDiv.dataset.ean); } });
+        if (elements.pickingScannedList) elements.pickingScannedList.addEventListener('click', handlePickedItemClick);
+        if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
+        if (elements.closePickingSummaryModalBtn) elements.closePickingSummaryModalBtn.addEventListener('click', () => elements.pickingSummaryModal.style.display = 'none');
+        if (elements.pickingAcceptBtn) elements.pickingAcceptBtn.addEventListener('click', () => { elements.pickingSummaryModal.style.display = 'none'; showToast('Zmiany zaakceptowane.', 'success'); });
+        if (elements.pickingExportCsvBtn) elements.pickingExportCsvBtn.addEventListener('click', exportPickedToCsv);
+    }
     
-    <div id="toast-container"></div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <script src="skaner.js"></script>
-</body>
-</html>
+    async function loadDataFromServer() { function fetchAndParseCsv(filename) { return fetch(`${filename}?t=${new Date().getTime()}`).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); } try { const [data1, data2] = await Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')]); const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() }); productDatabase = [...data1.map(mapData), ...data2.map(mapData)]; showToast("Baza produktów została zaktualizowana.", "success"); } catch (error) { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); } }
+    function switchTab(newTab) { if(elements.mainContent) elements.mainContent.style.display = 'none'; if(elements.adminPanel) elements.adminPanel.style.display = 'none'; if(elements.inventoryPage) elements.inventoryPage.style.display = 'none'; if (newTab === 'listBuilder') { if(elements.mainContent) elements.mainContent.style.display = 'block'; } else if (newTab === 'admin') { if(elements.adminPanel) { elements.adminPanel.style.display = 'block'; loadAllUsers(); } } else if (newTab === 'inventory') { if(elements.inventoryPage) elements.inventoryPage.style.display = 'block'; } }
+    function setDarkMode(isDark) { const iconElement = elements.darkModeToggle.querySelector('i'); if (isDark) { document.body.classList.add('dark-mode'); iconElement.classList.replace('fa-moon', 'fa-sun'); localStorage.setItem('theme', 'dark'); } else { document.body.classList.remove('dark-mode'); iconElement.classList.replace('fa-sun', 'fa-moon'); localStorage.setItem('theme', 'light'); } }
+    function performSearch(searchTerm) { if (!searchTerm) return []; const term = searchTerm.toLowerCase(); return productDatabase.filter(p => (p.kod_kreskowy?.toLowerCase().includes(term)) || (p.nazwa_produktu?.toLowerCase().includes(term)) || (p.opis?.toLowerCase().includes(term))); }
+    function showToast(message, type = 'info') { const toast = document.createElement('div'); toast.className = `toast ${type}`; if(type === 'success') toast.style.backgroundColor = 'var(--success-color)'; else if(type === 'error') toast.style.backgroundColor = 'var(--danger-color)'; toast.textContent = message; elements.toastContainer.appendChild(toast); setTimeout(() => { toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }, 10); }
+    function addProductToList(code = null, quantity = 1) { const ean = code || elements.listBarcodeInput.value.trim(); const qty = quantity || parseInt(elements.quantityInput.value, 10); if (!ean || isNaN(qty) || qty < 1) { return; } let productData = productDatabase.find(p => p.kod_kreskowy === ean || p.nazwa_produktu === ean); if (!productData) { productData = { kod_kreskowy: ean, nazwa_produktu: ean, opis: ean, cena: "0" }; } const existingItem = scannedItems.find(item => item.ean === productData.kod_kreskowy); if (existingItem) { existingItem.quantity += qty; } else { scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: qty, price: productData.cena }); } renderScannedList(); showToast(`Dodano: ${productData.nazwa_produktu} (Ilość: ${qty})`); elements.listBarcodeInput.value = ''; elements.quantityInput.value = '1'; elements.listBuilderSearchResults.innerHTML = ''; elements.listBuilderSearchResults.style.display = 'none'; elements.listBarcodeInput.focus(); }
+    function handleListBuilderSearch(event) { const searchTerm = event.target.value.trim(); elements.listBuilderSearchResults.style.display = 'none'; if (!searchTerm) return; const results = performSearch(searchTerm); if (results.length > 0) { let listHtml = '<ul>'; results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; }); listHtml += `<li class="add-unknown-item" data-ean="${searchTerm}"><i class="fa fa-plus"></i> Dodaj "${searchTerm}" jako nową pozycję</li>`; listHtml += '</ul>'; elements.listBuilderSearchResults.innerHTML = listHtml; elements.listBuilderSearchResults.style.display = 'block'; } }
+    function handleLookupSearch(event) { const searchTerm = event.target.value.trim(); elements.lookupResultList.innerHTML = ''; elements.lookupResultList.style.display = 'none'; elements.lookupResultSingle.innerHTML = ''; if (!searchTerm) return; const results = performSearch(searchTerm); if (results.length === 1) { displaySingleProductInLookup(results[0]); } else if (results.length > 1) { displayProductListInLookup(results); } else { elements.lookupResultSingle.innerHTML = '<p style="padding: 15px;">Nie znaleziono produktu.</p>'; elements.lookupResultSingle.style.display = 'block'; } }
+    function displaySingleProductInLookup(product) { let html = `<div class="lookup-result-item"><h2>${product.opis}</h2><div><strong>Kod produktu:</strong> <span>${product.nazwa_produktu}</span></div><div><strong>Kod EAN:</strong> <span>${product.kod_kreskowy}</span></div><div><strong>Cena:</strong> <span style="font-weight: bold; color: var(--success-color);">${parseFloat(product.cena).toFixed(2)} PLN</span></div></div>`; elements.lookupResultSingle.innerHTML = html; elements.lookupResultList.style.display = 'none'; }
+    function displayProductListInLookup(products) { let listHtml = '<ul>'; products.forEach(p => { listHtml += `<li data-product-json='${JSON.stringify(p)}'>${p.opis} <small>(${p.nazwa_produktu})</small></li>`; }); listHtml += '</ul>'; elements.lookupResultList.innerHTML = listHtml; elements.lookupResultList.style.display = 'block'; elements.lookupResultSingle.style.display = 'none'; }
+    function renderScannedList() { elements.scannedListBody.innerHTML = ''; const canOperate = scannedItems.length > 0; [elements.exportCsvBtn, elements.exportExcelBtn, elements.printListBtn, elements.clearListBtn, elements.saveListBtn].forEach(btn => { if(btn) btn.disabled = !canOperate; }); scannedItems.forEach((item, index) => { const row = document.createElement('tr'); row.innerHTML = `<td class="col-code">${item.name}</td><td class="col-desc">${item.description}</td><td class="col-ean">${item.ean}</td><td><input type="number" class="quantity-in-table" value="${item.quantity}" min="1" data-index="${index}"></td><td><button class="delete-btn btn-icon" data-index="${index}"><i class="fa-solid fa-trash-can"></i></button></td>`; elements.scannedListBody.appendChild(row); }); const totalValue = scannedItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0); elements.totalOrderValue.textContent = `Total: ${totalValue.toFixed(2)} PLN`; }
+    function getSafeFilename() { const clientName = elements.clientNameInput.value.trim().replace(/[<>:"/\\|?* ]+/g, '_') || 'zamowienie'; const date = new Date().toISOString().slice(0, 10); return `${clientName}_${date}`; }
+    function exportToCsvOptima() { if (scannedItems.length === 0) return; const csvContent = scannedItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_optima.csv`); }
+    function exportToExcelDetailed() { if (scannedItems.length === 0) return; const headers = '"Kod produktu";"Nazwa";"EAN";"Ilość";"Cena Jednostkowa"'; const rows = scannedItems.map(item => { const priceFormatted = (parseFloat(item.price) || 0).toFixed(2).replace('.', ','); return `"${item.name || ''}";"${(item.description || '').replace(/"/g, '""')}";"${item.ean || ''}";"${item.quantity || 0}";"${priceFormatted}"`; }); const csvContent = `\uFEFF${headers}\n${rows.join('\n')}`; downloadFile(csvContent, 'text/csv;charset=utf-8;', `${getSafeFilename()}_szczegoly.csv`); }
+    function downloadFile(content, mimeType, filename) { const blob = new Blob([content], { type: mimeType }); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = filename; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+    function prepareForPrint() { if (!elements.printTableBody) return; elements.printTableBody.innerHTML = ''; if (scannedItems.length === 0) return; elements.printClientName.textContent = `Klient: ${elements.clientNameInput.value.trim() || 'Nie podano'}`; elements.printAdditionalInfo.textContent = `Info: ${elements.additionalInfoInput.value.trim() || 'Brak'}`; scannedItems.forEach(item => { const row = elements.printTableBody.insertRow(); row.insertCell().textContent = item.name || ''; row.insertCell().textContent = item.description || ''; row.insertCell().textContent = item.quantity; }); }
+    function clearCurrentList(askConfirm = true) { if (askConfirm && scannedItems.length > 0 && !confirm('Czy na pewno chcesz wyczyścić bieżące zamówienie?')) { return; } scannedItems = []; elements.clientNameInput.value = ''; elements.additionalInfoInput.value = ''; localStorage.removeItem('activeListId'); renderScannedList(); showToast("Utworzono nową, czystą listę."); }
+    async function saveCurrentList() { const listId = localStorage.getItem('activeListId'); const listName = listId ? null : prompt("Podaj nazwę dla zapisywanego zamówienia:", elements.clientNameInput.value || `Zamówienie ${getSafeFilename()}`); if (!listId && !listName) return null; try { const url = listId ? `/api/data/list/${listId}` : '/api/data/savelist'; const method = listId ? 'PUT' : 'POST'; const body = { items: scannedItems, clientName: elements.clientNameInput.value }; if (listName) body.listName = listName; const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify(body) }); if (!response.ok) { const errData = await response.json(); throw new Error(errData.msg || "Błąd zapisu"); } const savedList = await response.json(); showToast(`Zamówienie zostało zapisane.`); localStorage.setItem('activeListId', savedList._id); return savedList; } catch (error) { alert(`Błąd: ${error.message}`); return null; } }
+    async function loadListById(listId) { try { if(scannedItems.length > 0 && localStorage.getItem('activeListId') !== listId) { await saveCurrentList(); } const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) throw new Error("Błąd wczytywania listy"); const data = await response.json(); scannedItems = data.items; elements.clientNameInput.value = data.clientName || data.listName; renderScannedList(); localStorage.setItem('activeListId', listId); return data; } catch (error) { alert(error.message); localStorage.removeItem('activeListId'); return null; } }
+    async function loadActiveList() { const activeListId = localStorage.getItem('activeListId'); if (activeListId) { showToast("Wczytuję ostatnio aktywną listę..."); await loadListById(activeListId); } }
+    async function showSavedLists() { elements.savedListsModal.style.display = 'flex'; const container = elements.savedListsContainer; container.innerHTML = '<p>Ładowanie...</p>'; try { const response = await fetch('/api/data/lists', { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) throw new Error("Błąd wczytywania list"); const lists = await response.json(); const importInputId = 'importCsvInputInModal'; container.innerHTML = `<div style="padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);"> <button id="importCsvBtnInModal" class="btn btn-primary" style="background-color: var(--info-color); width: 100%;"> <i class="fa-solid fa-file-import"></i> Importuj zamówienie z pliku CSV </button> <input type="file" id="${importInputId}" accept=".csv" style="display: none;"> </div><h3>Zapisane listy:</h3>`; container.querySelector('#importCsvBtnInModal').addEventListener('click', () => container.querySelector(`#${importInputId}`).click()); container.querySelector(`#${importInputId}`).addEventListener('change', handleFileImport); if (lists.length === 0) { container.innerHTML += '<p>Brak zapisanych zamówień.</p>'; return; } const listContainer = document.createElement('ul'); listContainer.style.cssText = 'list-style: none; padding: 0;'; lists.forEach(list => { const li = document.createElement('li'); li.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid var(--border-color); flex-wrap: wrap; gap: 10px;'; li.innerHTML = `<span>${list.listName} <small>(autor: ${list.user?.username || 'usunięty'}, ost. zapis: ${new Date(list.updatedAt).toLocaleDateString()})</small></span> <div style="display: flex; gap: 5px; flex-wrap: wrap;"> <button class="btn-primary load-list-btn" data-id="${list._id}">Wczytaj</button> <button class="pick-order-btn" data-id="${list._id}" data-name="${list.listName}" style="background-color: var(--warning-color);">Kompletuj</button> <button class="btn-danger delete-list-btn" data-id="${list._id}">Usuń</button> </div>`; listContainer.appendChild(li); }); container.appendChild(listContainer); } catch (error) { container.innerHTML = `<p style="color:var(--danger-color)">${error.message}</p>`; } }
+    async function handleSavedListAction(e) { const target = e.target.closest('button'); if (!target) return; const listId = target.dataset.id; if (target.classList.contains('load-list-btn')) { const loadedList = await loadListById(listId); if (loadedList) { elements.savedListsModal.style.display = 'none'; showToast(`Wczytano listę: ${loadedList.listName}`); switchTab('listBuilder'); } } else if (target.classList.contains('delete-list-btn')) { if (!confirm("Czy na pewno usunąć tę listę?")) return; try { const response = await fetch(`/api/data/list/${listId}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); const data = await response.json(); if (!response.ok) throw new Error(data.msg || "Błąd usuwania listy"); showToast("Lista usunięta."); await showSavedLists(); } catch (error) { alert(error.message); } } else if (target.classList.contains('pick-order-btn')) { elements.savedListsModal.style.display = 'none'; await startPicking(listId, target.dataset.name); } }
+    async function handleFileImport(event) { const file = event.target.files[0]; if (!file) return; const listName = prompt("Podaj nazwę dla importowanego zamówienia:", file.name.replace(/\.csv$/i, '')); if (!listName) { event.target.value = ''; return; } Papa.parse(file, { delimiter: ";", skipEmptyLines: true, complete: async (results) => { const itemsMap = new Map(); results.data.forEach(row => { const ean = row[0]?.trim(); const quantity = parseInt(row[1]?.trim(), 10); if (ean && !isNaN(quantity) && quantity > 0) { itemsMap.set(ean, (itemsMap.get(ean) || 0) + quantity); } }); const importedItems = Array.from(itemsMap, ([ean, quantity]) => { let p = productDatabase.find(prod => prod.kod_kreskowy === ean || prod.nazwa_produktu === ean); if (!p) { p = { kod_kreskowy: ean, nazwa_produktu: ean, opis: ean, cena: "0" }; } return { ean: p.kod_kreskowy, name: p.nazwa_produktu, description: p.opis, quantity, price: p.cena }; }); try { const response = await fetch('/api/data/savelist', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ listName, items: importedItems, clientName: listName }) }); const savedList = await response.json(); if (!response.ok) throw new Error(savedList.msg || "Błąd zapisu na serwerze"); scannedItems = savedList.items; elements.clientNameInput.value = savedList.clientName || savedList.listName; renderScannedList(); showToast(`Zamówienie "${listName}" zostało zaimportowane.`); elements.savedListsModal.style.display = 'none'; switchTab('listBuilder'); } catch (error) { alert(`Błąd: ${error.message}`); } }, error: (err) => { alert(`Błąd parsowania pliku CSV: ${err.message}`); } }); event.target.value = ''; }
+    async function loadAllUsers() { try { const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) { throw new Error('Nie można załadować użytkowników'); } const users = await response.json(); elements.allUsersList.innerHTML = users.map(user => ` <div class="user-item"> <div class="user-info"> <strong>${user.username}</strong> <span class="status">Rola: ${user.role} | Status: ${user.isApproved ? 'Zatwierdzony' : 'Oczekujący'}</span> </div> <div class="user-actions"> ${!user.isApproved ? `<button class="approve-user-btn btn-primary" data-userid="${user._id}" data-username="${user.username}">Zatwierdź</button>` : ''} <button class="edit-user-btn" data-userid="${user._id}" data-username="${user.username}">Zmień hasło</button> <button class="change-role-btn" data-userid="${user._id}" data-username="${user.username}" data-role="${user.role === 'admin' ? 'user' : 'admin'}">Zmień na ${user.role === 'admin' ? 'User' : 'Admin'}</button> <button class="delete-user-btn btn-danger" data-userid="${user._id}" data-username="${user.username}">Usuń</button> </div> </div> `).join(''); } catch (error) { elements.allUsersList.innerHTML = `<p style="color:red;">${error.message}</p>`; } }
+    async function handleUserAction(url, options) { try { const response = await fetch(url, options); const data = await response.json(); if (!response.ok) throw new Error(data.msg || 'Błąd operacji'); showToast(data.msg || 'Operacja zakończona sukcesem!'); await loadAllUsers(); } catch (error) { alert(`Błąd: ${error.message}`); } }
+    async function handleChangePassword() { const newPassword = prompt("Wprowadź nowe hasło:"); if (!newPassword) return; try { const response = await fetch('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newPassword }) }); const data = await response.json(); if (!response.ok) throw new Error(data.msg || "Błąd zmiany hasła"); alert("Hasło zostało pomyślnie zmienione."); } catch (error) { alert(`Błąd: ${error.message}`); } }
+    function handleAdminAction(e) { const target = e.target.closest('button'); if (!target) return; const { userid, username, role } = target.dataset; if (target.classList.contains('approve-user-btn')) handleUserAction(`/api/admin/approve-user/${userid}`, { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') } }); else if (target.classList.contains('edit-user-btn')) { const p = prompt(`Nowe hasło dla ${username}:`); if (p) handleUserAction(`/api/admin/edit-password/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newPassword: p }) }); } else if (target.classList.contains('delete-user-btn')) { if (confirm(`Na pewno usunąć ${username}?`)) handleUserAction(`/api/admin/delete-user/${userid}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } }); } else if (target.classList.contains('change-role-btn')) { if (confirm(`Zmienić rolę ${username} na ${role}?`)) handleUserAction(`/api/admin/change-role/${userid}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') }, body: JSON.stringify({ newRole: role }) }); } }
+    function handleDeleteInventoryItem(e) { const btn = e.target.closest('.delete-inv-item-btn'); if (btn) { inventoryItems.splice(btn.dataset.index, 1); renderInventoryList(); } }
+    function handleInventoryAdd() { const ean = elements.inventoryEanInput.value.trim(); const quantity = parseInt(elements.inventoryQuantityInput.value, 10); if (!ean || !quantity) return; const existing = inventoryItems.find(i => i.ean === ean); if (existing) { existing.quantity += quantity; } else { let productData = productDatabase.find(p => p.kod_kreskowy === ean); if (!productData) productData = { nazwa_produktu: 'Produkt spoza bazy', opis: ean }; inventoryItems.push({ ean: ean, name: productData.nazwa_produktu, quantity: quantity }); } renderInventoryList(); elements.inventoryEanInput.value = ''; elements.inventoryQuantityInput.value = '1'; }
+    function handleInventorySearch(event) { const searchTerm = event.target.value.trim(); const resultsDiv = elements.inventorySearchResults; resultsDiv.style.display = 'none'; resultsDiv.innerHTML = ''; if(!searchTerm) return; const results = performSearch(searchTerm); if(results.length > 0) { let listHtml = '<ul>'; results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; }); listHtml += '</ul>'; resultsDiv.innerHTML = listHtml; resultsDiv.style.display = 'block'; } }
+    function renderInventoryList() { if (elements.inventoryListBody) { elements.inventoryListBody.innerHTML = inventoryItems.map((item, i) => `<tr><td>${item.name}</td><td>${item.ean}</td><td>${item.quantity}</td><td><button class="delete-inv-item-btn btn-icon btn-danger" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td></tr>`).join(''); } }
+    function exportInventoryToCsv() { if (inventoryItems.length === 0) return; const csvContent = inventoryItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `inwentaryzacja_${new Date().toISOString().slice(0,10)}.csv`); }
+    async function startPicking(listId, listName) { try { const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) throw new Error("Błąd wczytywania zamówienia do kompletacji"); currentPickingOrder = await response.json(); pickedItems = []; if (elements.pickingOrderName) elements.pickingOrderName.textContent = `Kompletacja: ${listName}`; renderPickingView(); if (elements.pickingModule) elements.pickingModule.style.display = 'flex'; } catch (error) { alert(error.message); } }
+    function renderPickingView() { if(!currentPickingOrder) return; const toPickItems = currentPickingOrder.items.filter(item => !pickedItems.some(p => p.ean === item.ean)); if (elements.pickingTargetList) elements.pickingTargetList.innerHTML = toPickItems.map(item => `<div class="pick-item" data-ean="${item.ean}" style="padding: 8px; cursor: pointer; border-bottom: 1px solid var(--border-color);"><strong>${item.name}</strong><br><small>${item.description}</small> (ilość: ${item.quantity})</div>`).join('') || "<p>Wszystko zebrane!</p>"; if (elements.pickingScannedList) elements.pickingScannedList.innerHTML = pickedItems.map((item, index) => `<div class="picked-item" style="display: flex; justify-content: space-between; align-items: center; padding: 5px;"><span>${item.name} | ${item.description}</span><div><input type="number" value="${item.quantity}" class="picked-quantity-input" data-index="${index}" style="width: 60px; text-align: center;" readonly><button class="unpick-item-btn btn-icon" data-index="${index}" style="background: none; color: var(--danger-color);"><i class="fa-solid fa-arrow-left"></i></button></div></div>`).join(''); }
+    function pickItemFromList(ean) { const itemToPick = currentPickingOrder.items.find(i => i.ean === ean); if (!itemToPick) return; const existingPicked = pickedItems.find(i => i.ean === ean); if (existingPicked) { existingPicked.quantity += 1; } else { pickedItems.push({ ...itemToPick, quantity: 1 }); } renderPickingView(); }
+    function handlePickedItemClick(e) { const target = e.target.closest('button.unpick-item-btn, input.picked-quantity-input'); if (!target) return; const index = target.dataset.index; if (target.classList.contains('unpick-item-btn')) { pickedItems.splice(index, 1); renderPickingView(); } else if (target.classList.contains('picked-quantity-input')) { const newQuantity = parseInt(prompt("Zmień ilość:", target.value), 10); if(!isNaN(newQuantity)) { if (newQuantity <= 0) { pickedItems.splice(index, 1); } else { pickedItems[index].quantity = newQuantity; } renderPickingView(); } } }
+    function handlePickingSearch(event) { const searchTerm = event.target.value.trim(); const resultsDiv = elements.pickingSearchResults; resultsDiv.innerHTML = ''; resultsDiv.style.display = 'none'; if(!searchTerm) return; const results = performSearch(searchTerm).filter(p => currentPickingOrder.items.some(pi => pi.ean === p.kod_kreskowy)); if(results.length > 0) { let listHtml = '<ul>'; results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; }); listHtml += '</ul>'; resultsDiv.innerHTML = listHtml; resultsDiv.style.display = 'block'; } }
+    function verifyPicking() { if (!currentPickingOrder) return; const summary = { missing: [], extra: [], incorrectQuantity: [] }; const targetMap = new Map(currentPickingOrder.items.map(item => [item.ean, item.quantity])); const pickedMap = new Map(pickedItems.map(item => [item.ean, item.quantity])); for (const [ean, quantity] of targetMap.entries()) { if (!pickedMap.has(ean)) { summary.missing.push({ ...currentPickingOrder.items.find(i=>i.ean===ean), expected: quantity }); } else if (pickedMap.get(ean) !== quantity) { summary.incorrectQuantity.push({ ...currentPickingOrder.items.find(i=>i.ean===ean), expected: quantity, actual: pickedMap.get(ean) }); } } for (const [ean, quantity] of pickedMap.entries()) { if (!targetMap.has(ean)) { summary.extra.push({ ...pickedItems.find(i=>i.ean===ean), actual: quantity }); } } displayPickingSummary(summary); }
+    function displayPickingSummary(summary) { let html = '<h4>Podsumowanie kompletacji</h4>'; if (summary.missing.length === 0 && summary.extra.length === 0 && summary.incorrectQuantity.length === 0) { html += '<p style="color: var(--success-color);">Wszystkie pozycje zgodne!</p>'; } else { if (summary.missing.length > 0) { html += '<h5>Brakujące produkty:</h5><ul>'; summary.missing.forEach(item => { html += `<li>${item.name} | ${item.description} (oczekiwano: ${item.expected})</li>`; }); html += '</ul>'; } if (summary.incorrectQuantity.length > 0) { html += '<h5>Niezgodne ilości:</h5><ul>'; summary.incorrectQuantity.forEach(item => { html += `<li>${item.name} | ${item.description} (oczekiwano: ${item.expected}, skompletowano: ${item.actual})</li>`; }); html += '</ul>'; } if (summary.extra.length > 0) { html += '<h5>Dodatkowe produkty:</h5><ul>'; summary.extra.forEach(item => { html += `<li>${item.name} | ${item.description} (skompletowano: ${item.actual})</li>`; }); html += '</ul>'; } } elements.pickingSummaryBody.innerHTML = html; elements.pickingSummaryModal.style.display = 'flex'; }
+    function exportPickedToCsv() { if (pickedItems.length === 0) return; const csvContent = pickedItems.map(item => `${item.ean};${item.quantity}`).join('\n'); downloadFile(csvContent, 'text/csv;charset=utf-8;', `${currentPickingOrder.listName}_skompletowane.csv`); }
+    async function uploadProductFile(fileName, fileInput) { const file = fileInput.files[0]; if (!file) { alert("Proszę wybrać plik."); return; } const formData = new FormData(); formData.append('productsFile', file, fileName); try { const response = await fetch('/api/admin/upload-products', { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') }, body: formData }); const data = await response.json(); if (!response.ok) throw new Error(data.msg || 'Błąd przesyłania pliku.'); showToast(`Plik ${fileName} został zaktualizowany.`, 'success'); await loadDataFromServer(); } catch (error) { alert(`Błąd: ${error.message}`); } }
+    
+    checkLoginStatus();
+});
