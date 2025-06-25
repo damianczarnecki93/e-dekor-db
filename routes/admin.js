@@ -9,10 +9,9 @@ const User = require('../models/User');
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'client/'); // Zapisz pliki bezpośrednio w folderze client
+        cb(null, path.join(__dirname, '..', 'client'));
     },
     filename: function (req, file, cb) {
-        // Użyj oryginalnej nazwy pliku przesłanej w żądaniu
         cb(null, file.originalname); 
     }
 });
