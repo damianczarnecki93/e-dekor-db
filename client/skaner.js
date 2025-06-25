@@ -183,11 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
         if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { await saveCurrentList(); } clearCurrentList(false); });
         
-        const importBtnInModal = document.getElementById('importCsvBtn');
-        const importInputInModal = document.getElementById('importCsvInput');
-        if(importBtnInModal) importBtnInModal.addEventListener('click', () => importInputInModal.click());
-        if(importInputInModal) importInputInModal.addEventListener('change', handleFileImport);
-        
         if(elements.allUsersList) elements.allUsersList.addEventListener('click', handleAdminAction);
         if(elements.uploadProduktyCsv) elements.uploadProduktyCsv.addEventListener('click', () => uploadProductFile('produkty.csv', elements.produktyCsvUpload));
         if(elements.uploadProdukty2Csv) elements.uploadProdukty2Csv.addEventListener('click', () => uploadProductFile('produkty2.csv', elements.produkty2CsvUpload));
