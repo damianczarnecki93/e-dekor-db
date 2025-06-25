@@ -18,8 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
         mainContent: document.getElementById('main-content'),
         adminPanel: document.getElementById('adminPanel'),
         inventoryPage: document.getElementById('inventoryPage'),
+        pickingPage: document.getElementById('pickingPage'),
         topBar: document.getElementById('topBar'),
-        bottomBar: document.getElementById('bottomBar'),
         darkModeToggle: document.getElementById('darkModeToggle'),
         quickSearchBtn: document.getElementById('quickSearchBtn'),
         menuToggleBtn: document.getElementById('menuToggleBtn'),
@@ -28,73 +28,43 @@ document.addEventListener('DOMContentLoaded', () => {
         menuAdminBtn: document.getElementById('menuAdminBtn'),
         menuListBuilderBtn: document.getElementById('menuListBuilderBtn'),
         menuInventoryBtn: document.getElementById('menuInventoryBtn'),
+        menuPickingBtn: document.getElementById('menuPickingBtn'),
         menuLogoutBtn: document.getElementById('menuLogoutBtn'),
         menuChangePassword: document.getElementById('menuChangePassword'),
         menuSavedLists: document.getElementById('menuSavedLists'),
-        scrollTopBtn: document.getElementById('scrollTopBtn'),
-        scrollBottomBtn: document.getElementById('scrollBottomBtn'),
         lookupBarcodeInput: document.getElementById('lookupBarcodeInput'),
         lookupResultList: document.getElementById('lookupResultList'),
         lookupResultSingle: document.getElementById('lookupResultSingle'),
         quickSearchModal: document.getElementById('quickSearchModal'),
         closeQuickSearchModalBtn: document.getElementById('closeQuickSearchModalBtn'),
-        listBarcodeInput: document.getElementById('listBarcode_Input'),
-        listBuilderSearchResults: document.getElementById('listBuilderSearchResults'),
-        quantityInput: document.getElementById('quantityInput'),
-        addToListBtn: document.getElementById('addToListBtn'),
-        saveListBtn: document.getElementById('saveListBtn'),
-        newListBtn: document.getElementById('newListBtn'),
-        scannedListBody: document.getElementById('scannedListBody'),
-        clientNameInput: document.getElementById('clientNameInput'),
-        additionalInfoInput: document.getElementById('additionalInfoInput'),
-        totalOrderValue: document.getElementById('totalOrderValue'),
-        exportCsvBtn: document.getElementById('exportCsvBtn'),
-        exportExcelBtn: document.getElementById('exportExcelBtn'),
-        printListBtn: document.getElementById('printListBtn'),
-        clearListBtn: document.getElementById('clearListBtn'),
-        allUsersList: document.getElementById('allUsersList'),
-        inventoryEanInput: document.getElementById('inventoryEanInput'),
-        inventoryQuantityInput: document.getElementById('inventoryQuantityInput'),
-        inventoryAddBtn: document.getElementById('inventoryAddBtn'),
-        inventoryListBody: document.getElementById('inventoryListBody'),
-        inventoryExportCsvBtn: document.getElementById('inventoryExportCsvBtn'),
-        inventorySearchResults: document.getElementById('inventorySearchResults'),
         savedListsModal: document.getElementById('savedListsModal'),
         closeSavedListsModalBtn: document.getElementById('closeSavedListsModalBtn'),
         savedListsContainer: document.getElementById('savedListsContainer'),
-        pickingModule: document.getElementById('pickingModule'),
-        closePickingModalBtn: document.getElementById('closePickingModalBtn'),
-        pickingOrderName: document.getElementById('picking-order-name'),
-        pickingEanInput: document.getElementById('picking-ean-input'),
-        pickingSearchResults: document.getElementById('picking-search-results'),
-        pickingTargetList: document.getElementById('picking-target-list'),
-        pickingScannedList: document.getElementById('picking-scanned-list'),
-        pickingVerifyBtn: document.getElementById('picking-verify-btn'),
-        pickingSummaryModal: document.getElementById('pickingSummaryModal'),
-        closePickingSummaryModalBtn: document.getElementById('closePickingSummaryModalBtn'),
-        pickingSummaryBody: document.getElementById('pickingSummaryBody'),
-        pickingAcceptBtn: document.getElementById('picking-accept-btn'),
-        pickingExportCsvBtn: document.getElementById('picking-export-csv-btn'),
         toastContainer: document.getElementById('toast-container'),
-        printArea: document.getElementById('print-area'),
-        printClientName: document.getElementById('print-client-name'),
-        printAdditionalInfo: document.getElementById('print-additional-info'),
-        printTableBody: document.getElementById('print-table-body'),
-        uploadProduktyCsv: document.getElementById('uploadProduktyCsv'),
-        produktyCsvUpload: document.getElementById('produktyCsvUpload'),
-        uploadProdukty2Csv: document.getElementById('uploadProdukty2Csv'),
-        produkty2CsvUpload: document.getElementById('produkty2CsvUpload'),
+        floatingInputBar: document.getElementById('floating-input-bar'),
+        floatingEanInput: document.getElementById('floating-ean-input'),
+        floatingAddBtn: document.getElementById('floating-add-btn'),
+        floatingSearchResults: document.getElementById('floating-search-results'),
     };
 
     let productDatabase = [], scannedItems = [], inventoryItems = [];
+    let activeListId = null;
     let currentPickingOrder = null;
     let pickedItems = [];
+    let activePage = 'listBuilder';
+
+    function debounce(func, delay) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
 
     const showApp = (userData) => {
         elements.loginOverlay.style.display = 'none';
         elements.appContainer.style.display = 'block';
         if (elements.topBar) elements.topBar.style.display = 'flex';
-        if (elements.bottomBar) elements.bottomBar.style.display = 'flex';
         initializeApp(userData);
     };
 
@@ -104,8 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
         await loadDataFromServer();
         if (userData.role === 'admin') { if (elements.menuAdminBtn) elements.menuAdminBtn.style.display = 'flex'; }
         await loadActiveList();
+        renderCurrentPage();
         attachAllEventListeners(); 
-        switchTab('listBuilder');
     };
     
     const checkLoginStatus = async () => {
@@ -131,19 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { console.error('Błąd podczas logowania:', error); elements.loginError.textContent = 'Nie można połączyć się z serwerem lub wystąpił błąd sieci.'; }
     }
 
-    async function handleRegistration() {
-        const { registerUsername, registerPassword, registerError, showLogin, loginUsername } = elements;
-        const username = registerUsername.value.trim();
-        const password = registerPassword.value.trim();
-        if (!username || !password) { registerError.textContent = 'Login i hasło są wymagane.'; return; }
-        try {
-            const response = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-            const data = await response.json();
-            if (!response.ok) { registerError.textContent = data.msg || 'Wystąpił błąd serwera.'; } 
-            else { alert('Rejestracja pomyślna! Konto oczekuje na aktywację.'); showLogin.click(); loginUsername.value = username; elements.loginPassword.value = ''; }
-        } catch (error) { registerError.textContent = 'Nie można połączyć się z serwerem.'; }
-    }
-    
     function attachLoginListeners() {
         if (elements.loginBtn) elements.loginBtn.addEventListener('click', attemptLogin);
         if (elements.loginPassword) elements.loginPassword.addEventListener('keydown', (event) => { if (event.key === 'Enter') attemptLogin(); });
@@ -156,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         attachLoginListeners();
         
         if (elements.menuListBuilderBtn) elements.menuListBuilderBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('listBuilder'); });
+        if (elements.menuPickingBtn) elements.menuPickingBtn.addEventListener('click', (e) => { e.preventDefault(); switchTab('picking'); });
         if (elements.menuToggleBtn) elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
         window.addEventListener('click', () => { if (elements.dropdownMenu && elements.dropdownMenu.classList.contains('show')) elements.dropdownMenu.classList.remove('show'); });
         
@@ -164,60 +122,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (elements.menuLogoutBtn) elements.menuLogoutBtn.addEventListener('click', (e) => { e.preventDefault(); localStorage.clear(); location.reload(); });
         if (elements.menuChangePassword) elements.menuChangePassword.addEventListener('click', (e) => { e.preventDefault(); handleChangePassword(); });
         if (elements.menuSavedLists) elements.menuSavedLists.addEventListener('click', (e) => { e.preventDefault(); showSavedLists(); });
-        if (elements.scrollTopBtn) elements.scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-        if (elements.scrollBottomBtn) elements.scrollBottomBtn.addEventListener('click', () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }));
         
         if (elements.darkModeToggle) elements.darkModeToggle.addEventListener('click', () => setDarkMode(!document.body.classList.contains('dark-mode')));
         
-        if(elements.listBarcodeInput) elements.listBarcodeInput.addEventListener('input', handleListBuilderSearch);
-        if(elements.listBuilderSearchResults) elements.listBuilderSearchResults.addEventListener('click', (event) => { const targetLi = event.target.closest('li'); if (targetLi?.dataset.ean) { addProductToList(targetLi.dataset.ean); } });
-        if(elements.addToListBtn) elements.addToListBtn.addEventListener('click', () => addProductToList(elements.listBarcodeInput.value));
-        if(elements.scannedListBody) elements.scannedListBody.addEventListener('click', (e) => { if(e.target.closest('.delete-btn')) { const index = e.target.closest('.delete-btn').dataset.index; scannedItems.splice(index, 1); renderScannedList(); }});
-        
-        if(elements.quickSearchBtn) elements.quickSearchBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'flex'; elements.lookupBarcodeInput.focus(); });
+        if(elements.quickSearchBtn) elements.quickSearchBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'flex'; elements.lookupBarcodeInput.value = ''; elements.lookupResultList.innerHTML = ''; elements.lookupResultSingle.innerHTML = ''; elements.lookupBarcodeInput.focus(); });
         if(elements.closeQuickSearchModalBtn) elements.closeQuickSearchModalBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'none'; });
-        if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('input', handleLookupSearch);
+        if(elements.lookupBarcodeInput) elements.lookupBarcodeInput.addEventListener('input', debounce(handleLookupSearch, 300));
         if(elements.lookupResultList) elements.lookupResultList.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.productJson) { displaySingleProductInLookup(JSON.parse(li.dataset.productJson)); }});
-        
-        if (elements.printListBtn) elements.printListBtn.addEventListener('click', () => { prepareForPrint(); window.print(); });
-        if (elements.clearListBtn) elements.clearListBtn.addEventListener('click', () => clearCurrentList(true));
-        if (elements.saveListBtn) elements.saveListBtn.addEventListener('click', saveCurrentList);
-        if (elements.newListBtn) elements.newListBtn.addEventListener('click', async () => { if (scannedItems.length > 0) { await saveCurrentList(); } clearCurrentList(false); });
-        
-        const importBtnInModal = document.querySelector('#savedListsModal #importCsvBtn');
-        const importInputInModal = document.querySelector('#savedListsModal #importCsvInput');
-        if(importBtnInModal) importBtnInModal.addEventListener('click', () => importInputInModal.click());
-        if(importInputInModal) importInputInModal.addEventListener('change', handleFileImport);
 
-        if(elements.allUsersList) elements.allUsersList.addEventListener('click', handleAdminAction);
-        if(elements.uploadProduktyCsv) elements.uploadProduktyCsv.addEventListener('click', () => uploadProductFile('produkty.csv', elements.produktyCsvUpload));
-        if(elements.uploadProdukty2Csv) elements.uploadProdukty2Csv.addEventListener('click', () => uploadProductFile('produkty2.csv', elements.produkty2CsvUpload));
-        
-        if(elements.inventoryAddBtn) elements.inventoryAddBtn.addEventListener('click', handleInventoryAdd);
-        if(elements.inventoryEanInput) elements.inventoryEanInput.addEventListener('input', handleInventorySearch);
-        if(elements.inventorySearchResults) elements.inventorySearchResults.addEventListener('click', (e) => { const li = e.target.closest('li'); if (li?.dataset.ean) { elements.inventoryEanInput.value = li.dataset.ean; elements.inventorySearchResults.innerHTML = ''; elements.inventorySearchResults.style.display = 'none'; }});
-        if(elements.inventoryListBody) elements.inventoryListBody.addEventListener('click', handleDeleteInventoryItem);
-        if (elements.inventoryExportCsvBtn) elements.inventoryExportCsvBtn.addEventListener('click', () => exportInventoryToCsv());
-        
-        if (elements.closeSavedListsModalBtn) elements.closeSavedListsModalBtn.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
-        if (elements.savedListsContainer) elements.savedListsContainer.addEventListener('click', handleSavedListAction);
-
-        if (elements.closePickingModalBtn) elements.closePickingModalBtn.addEventListener('click', () => { elements.pickingModule.style.display = 'none'; });
-        if (elements.pickingEanInput) elements.pickingEanInput.addEventListener('input', handlePickingSearch);
-        if (elements.pickingSearchResults) elements.pickingSearchResults.addEventListener('click', e => { const li = e.target.closest('li'); if(li?.dataset.ean) { pickItemFromList(li.dataset.ean); elements.pickingEanInput.value = ''; elements.pickingSearchResults.style.display = 'none'; } });
-        if (elements.pickingTargetList) elements.pickingTargetList.addEventListener('click', e => { const itemDiv = e.target.closest('.pick-item'); if(itemDiv?.dataset.ean) { pickItemFromList(itemDiv.dataset.ean); } });
-        if (elements.pickingScannedList) elements.pickingScannedList.addEventListener('click', handlePickedItemClick);
-        if (elements.pickingVerifyBtn) elements.pickingVerifyBtn.addEventListener('click', verifyPicking);
-        if (elements.closePickingSummaryModalBtn) elements.closePickingSummaryModalBtn.addEventListener('click', () => elements.pickingSummaryModal.style.display = 'none');
-        if (elements.pickingAcceptBtn) elements.pickingAcceptBtn.addEventListener('click', () => { elements.pickingSummaryModal.style.display = 'none'; showToast('Zmiany zaakceptowane.', 'success'); });
-        if (elements.pickingExportCsvBtn) elements.pickingExportCsvBtn.addEventListener('click', exportPickedToCsv);
+        if(elements.floatingEanInput) {
+            elements.floatingEanInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { handleFloatingBarAdd(); }});
+            elements.floatingEanInput.addEventListener('input', debounce(handleFloatingBarSearch, 300));
+        }
+        if(elements.floatingAddBtn) elements.floatingAddBtn.addEventListener('click', handleFloatingBarAdd);
+        if(elements.floatingSearchResults) elements.floatingSearchResults.addEventListener('click', (event) => { const li = event.target.closest('li'); if (li?.dataset.ean) { elements.floatingEanInput.value = li.dataset.ean; handleFloatingBarAdd(); } });
     }
     
     async function loadDataFromServer() { function fetchAndParseCsv(filename) { return fetch(`${filename}?t=${new Date().getTime()}`).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(`Błąd sieci: ${r.statusText}`))).then(b => new TextDecoder("Windows-1250").decode(b)).then(t => new Promise((res, rej) => Papa.parse(t, { header: true, skipEmptyLines: true, complete: rts => res(rts.data), error: e => rej(e) }))); } try { const [data1, data2] = await Promise.all([fetchAndParseCsv('produkty.csv'), fetchAndParseCsv('produkty2.csv')]); const mapData = p => ({ kod_kreskowy: String(p.kod_kreskowy || "").trim(), nazwa_produktu: String(p.nazwa_produktu || "").trim(), cena: String(p.opis || "0").replace(',', '.').trim() || "0", opis: String(p.cena || "").trim() }); productDatabase = [...data1.map(mapData), ...data2.map(mapData)]; showToast("Baza produktów została zaktualizowana.", "success"); } catch (error) { console.error('Krytyczny błąd ładowania danych:', error); alert('BŁĄD: Nie udało się załadować bazy produktów.'); } }
-    function switchTab(newTab) { if(elements.mainContent) elements.mainContent.style.display = 'none'; if(elements.adminPanel) elements.adminPanel.style.display = 'none'; if(elements.inventoryPage) elements.inventoryPage.style.display = 'none'; if (newTab === 'listBuilder') { if(elements.mainContent) elements.mainContent.style.display = 'block'; } else if (newTab === 'admin') { if(elements.adminPanel) { elements.adminPanel.style.display = 'block'; loadAllUsers(); } } else if (newTab === 'inventory') { if(elements.inventoryPage) elements.inventoryPage.style.display = 'block'; } }
-    function setDarkMode(isDark) { const iconElement = elements.darkModeToggle.querySelector('i'); if (isDark) { document.body.classList.add('dark-mode'); iconElement.classList.replace('fa-moon', 'fa-sun'); localStorage.setItem('theme', 'dark'); } else { document.body.classList.remove('dark-mode'); iconElement.classList.replace('fa-sun', 'fa-moon'); localStorage.setItem('theme', 'light'); } }
+    function switchTab(newTab) { activePage = newTab; renderCurrentPage(); }
+    function setDarkMode(isDark) { if (isDark) { document.body.classList.add('dark-mode'); } else { document.body.classList.remove('dark-mode'); } localStorage.setItem('theme', isDark ? 'dark' : 'light'); }
     function performSearch(searchTerm) { if (!searchTerm) return []; const term = searchTerm.toLowerCase(); return productDatabase.filter(p => (p.kod_kreskowy?.toLowerCase().includes(term)) || (p.nazwa_produktu?.toLowerCase().includes(term)) || (p.opis?.toLowerCase().includes(term))); }
-    function showToast(message, type = 'info') { const toast = document.createElement('div'); toast.className = `toast ${type}`; if(type === 'success') toast.style.backgroundColor = 'var(--success-color)'; else if(type === 'error') toast.style.backgroundColor = 'var(--danger-color)'; toast.textContent = message; elements.toastContainer.appendChild(toast); setTimeout(() => { toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }, 10); }
+    function showToast(message, type = 'info') { const toast = document.createElement('div'); toast.className = `toast ${type}`; toast.textContent = message; elements.toastContainer.appendChild(toast); setTimeout(() => { toast.classList.add('show'); setTimeout(() => { toast.classList.remove('show'); toast.addEventListener('transitionend', () => toast.remove()); }, 3000); }, 10); }
     function addProductToList(code = null, quantity = 1) { const ean = code || elements.listBarcodeInput.value.trim(); const qty = quantity || parseInt(elements.quantityInput.value, 10); if (!ean || isNaN(qty) || qty < 1) { return; } let productData = productDatabase.find(p => p.kod_kreskowy === ean || p.nazwa_produktu === ean); if (!productData) { productData = { kod_kreskowy: ean, nazwa_produktu: ean, opis: ean, cena: "0" }; } const existingItem = scannedItems.find(item => item.ean === productData.kod_kreskowy); if (existingItem) { existingItem.quantity += qty; } else { scannedItems.push({ ean: productData.kod_kreskowy, name: productData.nazwa_produktu, description: productData.opis, quantity: qty, price: productData.cena }); } renderScannedList(); showToast(`Dodano: ${productData.nazwa_produktu} (Ilość: ${qty})`); elements.listBarcodeInput.value = ''; elements.quantityInput.value = '1'; elements.listBuilderSearchResults.innerHTML = ''; elements.listBuilderSearchResults.style.display = 'none'; elements.listBarcodeInput.focus(); }
     function handleListBuilderSearch(event) { const searchTerm = event.target.value.trim(); elements.listBuilderSearchResults.style.display = 'none'; if (!searchTerm) return; const results = performSearch(searchTerm); if (results.length > 0) { let listHtml = '<ul>'; results.forEach(p => { listHtml += `<li data-ean="${p.kod_kreskowy}">${p.opis} <small>(${p.nazwa_produktu})</small></li>`; }); listHtml += `<li class="add-unknown-item" data-ean="${searchTerm}"><i class="fa fa-plus"></i> Dodaj "${searchTerm}" jako nową pozycję</li>`; listHtml += '</ul>'; elements.listBuilderSearchResults.innerHTML = listHtml; elements.listBuilderSearchResults.style.display = 'block'; } }
     function handleLookupSearch(event) { const searchTerm = event.target.value.trim(); elements.lookupResultList.innerHTML = ''; elements.lookupResultList.style.display = 'none'; elements.lookupResultSingle.innerHTML = ''; if (!searchTerm) return; const results = performSearch(searchTerm); if (results.length === 1) { displaySingleProductInLookup(results[0]); } else if (results.length > 1) { displayProductListInLookup(results); } else { elements.lookupResultSingle.innerHTML = '<p style="padding: 15px;">Nie znaleziono produktu.</p>'; elements.lookupResultSingle.style.display = 'block'; } }
