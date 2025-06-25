@@ -346,32 +346,41 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
     
-    function renderAdminPage() {
-        if (!elements.adminPanel) return;
-        elements.adminPanel.innerHTML = `
-            <h2><i class="fa-solid fa-users-cog"></i> Panel Administratora</h2>
-            <div class="admin-section">
-                <h3>Użytkownicy</h3>
-                <div id="allUsersList"></div>
-            </div>
-            <div class="admin-section">
-                 <h3>Zarządzanie bazą produktów</h3>
-                 <div>
-                    <label for="productsFileInput1">Plik produkty.csv:</label>
-                    <input type="file" id="productsFileInput1" accept=".csv">
-                    <button id="uploadProducts1Btn" class="btn">Prześlij produkty.csv</button>
-                 </div>
-                 <div style="margin-top: 15px;">
-                    <label for="productsFileInput2">Plik produkty2.csv:</label>
-                    <input type="file" id="productsFileInput2" accept=".csv">
-                    <button id="uploadProducts2Btn" class="btn">Prześlij produkty2.csv</button>
-                 </div>
-            </div>
-        `;
-        loadAllUsers();
-        document.getElementById('uploadProducts1Btn').addEventListener('click', () => uploadProductFile('produkty.csv', document.getElementById('productsFileInput1')));
-        document.getElementById('uploadProducts2Btn').addEventListener('click', () => uploadProductFile('produkty2.csv', document.getElementById('productsFileInput2')));
-    }
+   function renderAdminPage() {
+    if (!elements.adminPanel) return;
+    elements.adminPanel.innerHTML = `
+        <h2><i class="fa-solid fa-users-cog"></i> Panel Administratora</h2>
+        <div class="admin-section">
+            <h3>Zarządzanie użytkownikami</h3>
+            <div id="allUsersList" style="margin-top: 15px;">
+                </div>
+        </div>
+        <div class="admin-section">
+             <h3>Zarządzanie bazą produktów</h3>
+             <div style="margin-top: 15px;">
+                <label for="productsFileInput1">Plik produkty.csv:</label>
+                <input type="file" id="productsFileInput1" accept=".csv" style="display: block; margin-top: 5px;">
+                <button id="uploadProducts1Btn" class="btn" style="margin-top: 10px;">Prześlij produkty.csv</button>
+             </div>
+             <div style="margin-top: 20px;">
+                <label for="productsFileInput2">Plik produkty2.csv:</label>
+                <input type="file" id="productsFileInput2" accept=".csv" style="display: block; margin-top: 5px;">
+                <button id="uploadProducts2Btn" class="btn" style="margin-top: 10px;">Prześlij produkty2.csv</button>
+             </div>
+        </div>
+    `;
+
+    // Teraz, gdy struktura HTML istnieje, możemy bezpiecznie załadować dane
+    loadAllUsers();
+
+    // Podpinamy event listenery do nowo utworzonych przycisków
+    document.getElementById('uploadProducts1Btn').addEventListener('click', () => 
+        uploadProductFile('produkty.csv', document.getElementById('productsFileInput1'))
+    );
+    document.getElementById('uploadProducts2Btn').addEventListener('click', () => 
+        uploadProductFile('produkty2.csv', document.getElementById('productsFileInput2'))
+    );
+}
 
     async function loadAllUsers() { try { const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } }); if (!response.ok) { throw new Error('Nie można załadować użytkowników'); } const users = await response.json(); const userListEl = document.getElementById('allUsersList'); userListEl.innerHTML = users.map(user => ` <div class="user-item"> <div><strong>${user.username}</strong><br><small>Rola: ${user.role} | Status: ${user.isApproved ? 'Zatwierdzony' : 'Oczekujący'}</small></div> <div class="user-actions"> ${!user.isApproved ? `<button class="approve-user-btn btn-primary" data-userid="${user._id}">Zatwierdź</button>` : ''} <button class="edit-user-btn" data-userid="${user._id}" data-username="${user.username}">Zmień hasło</button> <button class="delete-user-btn btn-danger" data-userid="${user._id}">Usuń</button> </div> </div> `).join(''); } catch (error) { document.getElementById('allUsersList').innerHTML = `<p style="color:red;">${error.message}</p>`; } }
     async function handleUserAction(url, options) { try { const response = await fetch(url, options); const data = await response.json(); if (!response.ok) throw new Error(data.msg || 'Błąd operacji'); showToast(data.msg || 'Operacja zakończona sukcesem!'); await loadAllUsers(); } catch (error) { alert(`Błąd: ${error.message}`); } }
