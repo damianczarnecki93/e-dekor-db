@@ -1,88 +1,106 @@
 const express = require('express');
 const router = express.Router();
+const User = require('../models/User'); // Upewnij się, że ścieżka do modelu jest poprawna
+const authMiddleware = require('../middleware/authMiddleware');
+const adminMiddleware = require('../middleware/adminMiddleware');
+const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-const multer = require('multer');
-const bcrypt = require('bcryptjs');
-const adminMiddleware = require('../middleware/adminMiddleware');
-const User = require('../models/User');
 
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, '..', 'client'));
-    },
-    filename: function (req, file, cb) {
-        cb(null, file.originalname); 
+// Konfiguracja Multer do obsługi przesyłania plików
+const upload = multer({ dest: 'uploads/' });
+
+// --- Trasa do pobierania wszystkich użytkowników (TYLKO DLA ADMINA) ---
+// GET /api/admin/users
+router.get('/users', [authMiddleware, adminMiddleware], async (req, res) => {
+    try {
+        // Znajdź wszystkich użytkowników, ale nie wysyłaj ich haseł
+        const users = await User.find().select('-password');
+        res.json(users);
+    } catch (err) {
+        console.error('Błąd serwera przy pobieraniu użytkowników:', err.message);
+        res.status(500).send('Błąd serwera');
     }
 });
 
-const upload = multer({ storage: storage });
-
-router.get('/users', adminMiddleware, async (req, res) => {
+// --- Trasa do zatwierdzania użytkownika (TYLKO DLA ADMINA) ---
+// POST /api/admin/approve-user/:id
+router.post('/approve-user/:id', [authMiddleware, adminMiddleware], async (req, res) => {
     try {
-        const users = await User.find().select('-password').sort({ username: 1 });
-        res.json(users);
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ msg: 'Użytkownik nie znaleziony' });
+        }
+        user.isApproved = true;
+        await user.save();
+        res.json({ msg: 'Użytkownik został zatwierdzony.' });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Błąd serwera');
     }
 });
 
-router.post('/approve-user/:id', adminMiddleware, async (req, res) => {
+// --- Trasa do usuwania użytkownika (TYLKO DLA ADMINA) ---
+// DELETE /api/admin/delete-user/:id
+router.delete('/delete-user/:id', [authMiddleware, adminMiddleware], async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
-        if (!user) return res.status(404).json({ msg: 'Użytkownik nie znaleziony' });
-        user.isApproved = true;
-        await user.save();
-        res.json({ msg: 'Użytkownik zatwierdzony' });
+        if (!user) {
+            return res.status(404).json({ msg: 'Użytkownik nie znaleziony' });
+        }
+        await user.deleteOne(); // Użyj deleteOne() dla Mongoose v6+
+        res.json({ msg: 'Użytkownik został usunięty.' });
     } catch (err) {
+        console.error(err.message);
         res.status(500).send('Błąd serwera');
     }
 });
 
-router.post('/edit-password/:id', adminMiddleware, async (req, res) => {
+// --- Trasa do zmiany hasła użytkownika przez admina ---
+router.post('/edit-password/:id', [authMiddleware, adminMiddleware], async (req, res) => {
     const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ msg: 'Hasło musi mieć co najmniej 6 znaków.' });
+    }
     try {
         const user = await User.findById(req.params.id);
-        if (!user) return res.status(404).json({ msg: 'Użytkownik nie znaleziony' });
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(newPassword, salt);
+        if (!user) {
+            return res.status(404).json({ msg: 'Użytkownik nie znaleziony' });
+        }
+        user.password = newPassword; // Model User powinien automatycznie zahashować hasło przed zapisem (jeśli masz taki pre-save hook)
         await user.save();
-        res.json({ msg: 'Hasło zmienione' });
+        res.json({ msg: `Hasło dla ${user.username} zostało zmienione.` });
     } catch (err) {
+        console.error(err.message);
         res.status(500).send('Błąd serwera');
     }
 });
 
-router.post('/change-role/:id', adminMiddleware, async (req, res) => {
-    const { newRole } = req.body;
+
+// --- Trasa do przesyłania plików produktowych ---
+router.post('/upload-products', [authMiddleware, adminMiddleware, upload.single('productsFile')], (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
-        if (!user) return res.status(404).json({ msg: 'Użytkownik nie znaleziony' });
-        user.role = newRole;
-        await user.save();
-        res.json({ msg: 'Rola zmieniona' });
-    } catch (err) {
-        res.status(500).send('Błąd serwera');
-    }
-});
+        if (!req.file) {
+            return res.status(400).json({ msg: 'Nie przesłano pliku.' });
+        }
+        
+        const tempPath = req.file.path;
+        // Używamy oryginalnej nazwy pliku, aby wiedzieć, który plik nadpisać
+        const targetPath = path.resolve(__dirname, '..', 'client', req.file.originalname);
 
-router.delete('/delete-user/:id', adminMiddleware, async (req, res) => {
-    try {
-        const user = await User.findById(req.params.id);
-        if (!user) return res.status(404).json({ msg: 'Użytkownik nie znaleziony' });
-        await user.deleteOne();
-        res.json({ msg: 'Użytkownik usunięty' });
-    } catch (err) {
-        res.status(500).send('Błąd serwera');
-    }
-});
+        // Przenosimy plik z folderu tymczasowego 'uploads' do folderu 'client'
+        fs.rename(tempPath, targetPath, err => {
+            if (err) {
+                console.error("Błąd podczas przenoszenia pliku:", err);
+                return res.status(500).json({ msg: 'Błąd zapisu pliku na serwerze.' });
+            }
+            res.json({ msg: `Plik ${req.file.originalname} został pomyślnie zaktualizowany.` });
+        });
 
-router.post('/upload-products', adminMiddleware, upload.single('productsFile'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ msg: 'Nie załączono pliku.' });
+    } catch (error) {
+        console.error("Błąd w trasie upload-products:", error);
+        res.status(500).json({ msg: 'Wystąpił wewnętrzny błąd serwera.' });
     }
-    res.json({ msg: `Plik ${req.file.originalname} został pomyślnie zaktualizowany.` });
 });
 
 module.exports = router;
