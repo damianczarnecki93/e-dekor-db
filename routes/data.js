@@ -9,14 +9,16 @@ router.post('/savelist', authMiddleware, async (req, res) => {
     const { listName, clientName, items, listId } = req.body;
     try {
         if (listId) {
-            const updatedList = await ProductList.findByIdAndUpdate(
-                listId,
-                { listName, clientName, items, user: req.user.id },
-                { new: true, upsert: false }
+            // Aktualizacja istniejącej listy
+            const list = await ProductList.findOneAndUpdate(
+                { _id: listId, user: req.user.id }, // Upewnij się, że użytkownik jest właścicielem
+                { listName, clientName, items },
+                { new: true }
             );
-            if (!updatedList) return res.status(404).json({ msg: 'Lista nie znaleziona.' });
-            return res.json(updatedList);
+            if (!list) return res.status(404).json({ msg: 'Lista nie znaleziona lub brak uprawnień.' });
+            return res.json(list);
         } else {
+            // Tworzenie nowej listy
             const newList = new ProductList({ user: req.user.id, listName, clientName, items });
             const savedList = await newList.save();
             return res.status(201).json(savedList);
@@ -27,23 +29,25 @@ router.post('/savelist', authMiddleware, async (req, res) => {
     }
 });
 
-// POBIERANIE WSZYSTKICH LIST
+// POBIERANIE WSZYSTKICH LIST ZAMÓWIEŃ
 router.get('/lists', authMiddleware, async (req, res) => {
     try {
-        const lists = await ProductList.find().populate('user', 'username').sort({ updatedAt: -1 });
+        const lists = await ProductList.find({ user: req.user.id }).populate('user', 'username').sort({ updatedAt: -1 });
         res.json(lists);
     } catch (err) {
+        console.error('Błąd pobierania list:', err.message);
         res.status(500).send('Błąd serwera');
     }
 });
 
-// POBIERANIE JEDNEJ LISTY
+// POBIERANIE JEDNEJ LISTY ZAMÓWIEŃ
 router.get('/list/:id', authMiddleware, async (req, res) => {
     try {
-        const list = await ProductList.findById(req.params.id);
+        const list = await ProductList.findOne({ _id: req.params.id, user: req.user.id });
         if (!list) return res.status(404).json({ msg: 'Lista nie znaleziona.' });
         res.json(list);
     } catch (err) {
+        console.error('Błąd pobierania listy:', err.message);
         res.status(500).send('Błąd serwera');
     }
 });
@@ -55,15 +59,22 @@ router.post('/inventory', authMiddleware, async (req, res) => {
         return res.status(400).json({ msg: "Nazwa i pozycje inwentaryzacji są wymagane."});
     }
     try {
-        const newInventory = new Inventory({
-            user: req.user.id,
-            inventoryName,
-            items
-        });
-        const savedInventory = await newInventory.save();
-        res.status(201).json(savedInventory);
+        const newInventory = new Inventory({ user: req.user.id, inventoryName, items });
+        await newInventory.save();
+        res.status(201).json({ msg: 'Inwentaryzacja została pomyślnie zapisana.' });
     } catch (err) {
         console.error('Błąd zapisu inwentaryzacji:', err.message);
+        res.status(500).send('Błąd serwera');
+    }
+});
+
+// POBIERANIE ZAPISANYCH INWENTARYZACJI
+router.get('/inventories', authMiddleware, async (req, res) => {
+    try {
+        const inventories = await Inventory.find({ user: req.user.id }).populate('user', 'username').sort({ createdAt: -1 });
+        res.json(inventories);
+    } catch (err) {
+        console.error('Błąd pobierania inwentaryzacji:', err.message);
         res.status(500).send('Błąd serwera');
     }
 });
