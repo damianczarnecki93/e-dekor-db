@@ -4,19 +4,21 @@ const authMiddleware = require('../middleware/authMiddleware');
 const ProductList = require('../models/ProductList');
 const Inventory = require('../models/Inventory');
 
-// Zapis lub aktualizacja listy zamówień
+// ZAPIS LUB AKTUALIZACJA LISTY ZAMÓWIEŃ
 router.post('/savelist', authMiddleware, async (req, res) => {
     const { listName, clientName, items, listId } = req.body;
     try {
         if (listId) {
-            const list = await ProductList.findOneAndUpdate(
-                { _id: listId, user: req.user.id },
+            // Aktualizacja istniejącej listy
+            const updatedList = await ProductList.findOneAndUpdate(
+                { _id: listId, user: req.user.id }, // Upewnij się, że użytkownik jest właścicielem
                 { listName, clientName, items },
                 { new: true, upsert: false }
             );
-            if (!list) return res.status(404).json({ msg: 'Lista nie znaleziona lub brak uprawnień.' });
-            return res.json(list);
+            if (!updatedList) return res.status(404).json({ msg: 'Lista nie znaleziona lub brak uprawnień.' });
+            return res.json(updatedList);
         } else {
+            // Tworzenie nowej listy
             const newList = new ProductList({ user: req.user.id, listName, clientName, items });
             const savedList = await newList.save();
             return res.status(201).json(savedList);
@@ -27,7 +29,7 @@ router.post('/savelist', authMiddleware, async (req, res) => {
     }
 });
 
-// Pobieranie wszystkich list zamówień dla zalogowanego użytkownika
+// POBIERANIE WSZYSTKICH LIST ZAMÓWIEŃ
 router.get('/lists', authMiddleware, async (req, res) => {
     try {
         const lists = await ProductList.find({ user: req.user.id }).populate('user', 'username').sort({ updatedAt: -1 });
@@ -38,7 +40,7 @@ router.get('/lists', authMiddleware, async (req, res) => {
     }
 });
 
-// Pobieranie pojedynczej listy zamówień po ID
+// POBIERANIE JEDNEJ LISTY ZAMÓWIEŃ
 router.get('/list/:id', authMiddleware, async (req, res) => {
     try {
         const list = await ProductList.findById(req.params.id);
@@ -51,7 +53,7 @@ router.get('/list/:id', authMiddleware, async (req, res) => {
     }
 });
 
-// Zapis inwentaryzacji
+// ZAPIS INWENTARYZACJI
 router.post('/inventory', authMiddleware, async (req, res) => {
     const { inventoryName, items } = req.body;
     if (!inventoryName || !items || items.length === 0) {
@@ -67,7 +69,7 @@ router.post('/inventory', authMiddleware, async (req, res) => {
     }
 });
 
-// Pobieranie zapisanych inwentaryzacji
+// POBIERANIE ZAPISANYCH INWENTARYZACJI
 router.get('/inventories', authMiddleware, async (req, res) => {
     try {
         const inventories = await Inventory.find({ user: req.user.id }).populate('user', 'username').sort({ createdAt: -1 });
