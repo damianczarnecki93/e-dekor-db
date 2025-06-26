@@ -4,96 +4,52 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const authMiddleware = require('../middleware/authMiddleware');
+require('dotenv').config();
 
+// Rejestracja
 router.post('/register', async (req, res) => {
     const { username, password } = req.body;
     try {
         let user = await User.findOne({ username });
-        if (user) {
-            return res.status(400).json({ msg: 'Użytkownik o tej nazwie już istnieje' });
-        }
-        user = new User({
-            username,
-            password,
-            role: 'user', 
-            isApproved: false
-        });
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(password, salt);
+        if (user) return res.status(400).json({ msg: 'Użytkownik już istnieje' });
+
+        const isAdmin = (await User.countDocuments()) === 0; // Pierwszy użytkownik zostaje adminem
+        user = new User({ username, password, role: isAdmin ? 'admin' : 'user', isApproved: isAdmin });
         await user.save();
-        res.status(201).json({ msg: 'Rejestracja pomyślna. Oczekuj na zatwierdzenie konta przez administratora.' });
+        res.status(201).json({ msg: `Użytkownik ${username} zarejestrowany. Oczekuje na zatwierdzenie przez administratora.` });
     } catch (err) {
-        console.error(err.message);
         res.status(500).send('Błąd serwera');
     }
 });
 
+// Logowanie
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;
     try {
-        let user = await User.findOne({ username });
-        if (!user) {
-            return res.status(400).json({ msg: 'Nieprawidłowe dane uwierzytelniające' });
-        }
+        const user = await User.findOne({ username });
+        if (!user) return res.status(400).json({ msg: 'Nieprawidłowe dane logowania' });
+        if (!user.isApproved) return res.status(403).json({ msg: 'Konto nie zostało jeszcze zatwierdzone.' });
 
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ msg: 'Nieprawidłowe dane uwierzytelniające' });
-        }
+        if (!isMatch) return res.status(400).json({ msg: 'Nieprawidłowe dane logowania' });
 
-        if (user.username !== 'admin' && !user.isApproved) {
-            return res.status(403).json({ msg: 'Konto nie zostało jeszcze zatwierdzone przez administratora.' });
-        }
-
-        const payload = {
-            userId: user.id,
-            role: user.role
-        };
-        
-        jwt.sign(payload, process.env.JWT_SECRET || 'fallbackSecret', { expiresIn: '1h' }, (err, token) => {
+        const payload = { user: { id: user.id, role: user.role } };
+        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '8h' }, (err, token) => {
             if (err) throw err;
-            res.json({
-                token,
-                user: {
-                    id: user.id,
-                    username: user.username,
-                    role: user.role
-                }
-            });
+            res.json({ token, user: { username: user.username, role: user.role } });
         });
-
     } catch (err) {
-        console.error(err.message);
         res.status(500).send('Błąd serwera');
     }
 });
 
+// Weryfikacja tokenu
 router.get('/verify', authMiddleware, async (req, res) => {
     try {
-        const user = await User.findById(req.userId).select('-password');
-        if (!user) {
-            return res.status(404).json({ msg: 'Nie znaleziono użytkownika' });
-        }
+        const user = await User.findById(req.user.id).select('-password');
+        if (!user) return res.status(404).json({ msg: 'Użytkownik nie znaleziony' });
         res.json(user);
     } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Błąd serwera');
-    }
-});
-
-router.post('/change-password', authMiddleware, async (req, res) => {
-    const { newPassword } = req.body;
-    try {
-        const user = await User.findById(req.userId);
-        if (!user) {
-            return res.status(404).json({ msg: 'Nie znaleziono użytkownika' });
-        }
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(newPassword, salt);
-        await user.save();
-        res.json({ msg: 'Hasło zostało pomyślnie zmienione.' });
-    } catch (err) {
-        console.error(err.message);
         res.status(500).send('Błąd serwera');
     }
 });
