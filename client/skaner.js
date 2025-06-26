@@ -1,5 +1,3 @@
-// Pełny kod skaner.js z poprzedniej odpowiedzi (wersja v11)
-// Został on tu umieszczony w całości.
 document.addEventListener('DOMContentLoaded', () => {
 
     const elements = {
