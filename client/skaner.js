@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeListId = localStorage.getItem('activeListId');
 
     // --- FUNKCJE POMOCNICZE ---
+
     const debounce = (func, delay) => {
         let timeout;
         return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); };
@@ -99,7 +100,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const checkLoginStatus = async () => {
         const token = localStorage.getItem('token');
-        if (!token) { elements.loginOverlay.style.display = 'flex'; return; }
+        if (!token) {
+            elements.loginOverlay.style.display = 'flex';
+            return;
+        }
         try {
             const response = await fetch('/api/auth/verify', { headers: { 'x-auth-token': token } });
             if (!response.ok) throw new Error('Token nieprawidłowy');
@@ -125,7 +129,9 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('token', data.token);
             currentUser = data.user;
             showApp();
-        } catch (error) { elements.loginError.textContent = 'Błąd połączenia z serwerem.'; }
+        } catch (error) {
+            elements.loginError.textContent = 'Błąd połączenia z serwerem.';
+        }
     };
     
     const attemptRegister = async () => {
@@ -140,10 +146,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await response.json();
             if (!response.ok) { elements.registerError.textContent = data.msg || 'Błąd rejestracji.'; return; }
-            showToast('Rejestracja pomyślna! Poczekaj na zatwierdzenie.', 'success', 5000);
+            showToast('Rejestracja pomyślna! Poczekaj na zatwierdzenie konta.', 'success', 5000);
             elements.registerForm.style.display = 'none';
             elements.loginForm.style.display = 'block';
-        } catch (error) { elements.registerError.textContent = 'Błąd połączenia z serwerem.'; }
+        } catch (error) {
+            elements.registerError.textContent = 'Błąd połączenia z serwerem.';
+        }
     };
 
     const showApp = async () => {
@@ -151,7 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.appContainer.style.display = 'block';
         elements.topBar.style.display = 'flex';
         elements.menuUsername.textContent = currentUser.username;
-        if (currentUser.role === 'admin') elements.menuAdminBtn.style.display = 'flex';
+        if (currentUser.role === 'admin') {
+            elements.menuAdminBtn.style.display = 'flex';
+        }
         await loadDataFromServer();
         switchTab('listBuilder');
     };
@@ -177,28 +187,28 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('BŁĄD: Nie udało się załadować bazy produktów.', 'error');
         }
     };
-    
+
     // --- NAWIGACJA I RENDEROWANIE ---
+    
     const switchTab = (page) => {
         activePage = page;
-        if(autoSaveInterval) clearInterval(autoSaveInterval);
+        if (autoSaveInterval) clearInterval(autoSaveInterval);
         if (page === 'listBuilder') {
-            autoSaveInterval = setInterval(saveCurrentList, 60000);
+            autoSaveInterval = setInterval(() => saveCurrentList(false), 60000); // Autozapis co minutę
         }
         renderCurrentPage();
     };
 
     const renderCurrentPage = () => {
-        const pages = ['mainContent', 'adminPanel', 'inventoryPage', 'pickingPage'];
-        pages.forEach(id => {
+        ['mainContent', 'adminPanel', 'inventoryPage', 'pickingPage'].forEach(id => {
             if (elements[id]) elements[id].style.display = 'none';
         });
-        const pageMap = {
+        const pageIdMap = {
             listBuilder: 'mainContent', inventory: 'inventoryPage',
             picking: 'pickingPage', admin: 'adminPanel'
         };
-        const activeElement = elements[pageMap[activePage]];
-        if (activeElement) activeElement.style.display = 'block';
+        const pageElement = elements[pageIdMap[activePage]];
+        if (pageElement) pageElement.style.display = 'block';
         
         elements.floatingInputBar.style.display = (['listBuilder', 'inventory'].includes(activePage)) ? 'flex' : 'none';
 
@@ -209,12 +219,8 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'admin': renderAdminPage(); break;
         }
     };
-    
+
     // --- WYSZUKIWANIE I DODAWANIE PRODUKTÓW ---
-    const findProductByCode = (code) => {
-        const search = (db) => db.find(p => p.kod_kreskowy === code || p.ean === code || p.kod_produktu === code);
-        return search(productDatabase.primary) || search(productDatabase.secondary);
-    };
 
     const performSearch = (term) => {
         if (!term || term.length < 2) return [];
@@ -228,6 +234,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return primaryResults.length > 0 ? primaryResults : searchIn(productDatabase.secondary);
     };
     
+    const findProductByCode = (code) => {
+        const search = (db) => db.find(p => p.kod_kreskowy === code || p.ean === code || p.kod_produktu === code);
+        return search(productDatabase.primary) || search(productDatabase.secondary);
+    };
+
     const handleFloatingBarAction = (productDataFromSearch = null) => {
         const code = elements.floatingEanInput.value.trim();
         const quantity = parseInt(elements.floatingQuantityInput.value, 10);
@@ -275,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- MODUŁY ---
+    // --- MODUŁY APLIKACJI ---
 
     // 1. TWORZENIE LISTY
     function renderListBuilderPage() {
@@ -302,8 +313,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function addProductToList(productData, quantity) {
         const code = productData.ean || productData.kod_kreskowy;
         const existingItem = scannedItems.find(item => (item.ean || item.kod_kreskowy) === code);
-        if (existingItem) existingItem.quantity += quantity;
-        else scannedItems.push({ ...productData, quantity });
+        if (existingItem) {
+            existingItem.quantity = parseInt(existingItem.quantity) + quantity;
+        } else {
+            scannedItems.push({ ...productData, quantity });
+        }
         renderScannedList();
         showToast(`Dodano: ${productData.nazwa_produktu} (x${quantity})`, "success");
     }
@@ -316,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${item.nazwa_produktu}</td><td>${item.kod_produktu}</td><td>${item.ean || item.kod_kreskowy}</td>
                 <td>${parseFloat(item.cena).toFixed(2)}</td>
                 <td><input type="number" class="quantity-in-table" value="${item.quantity}" min="1" data-index="${index}" inputmode="numeric"></td>
-                <td><button class="delete-btn btn-icon-danger" data-index="${index}"><i class="fa-solid fa-trash-can"></i></button></td>
+                <td><button class="delete-btn btn-icon-danger" data-index="${index}"><i class="fa-solid fa-trash"></i></button></td>
             </tr>`).join('');
     }
 
@@ -343,7 +357,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // ... reszta funkcji (exportToExcel, exportToOptima, printList) bez zmian
+    function exportToExcel() {
+        if (scannedItems.length === 0) { showToast('Lista jest pusta.', 'warning'); return; }
+        const clientName = document.getElementById('clientNameInput').value.trim() || 'Bez nazwy';
+        let totalValue = 0;
+        let csvContent = "EAN;Nazwa;Ilość;Kod produktu;Cena\n";
+        scannedItems.forEach(item => {
+            csvContent += `${item.ean || item.kod_kreskowy};${item.nazwa_produktu};${item.quantity};${item.kod_produktu};${item.cena}\n`;
+            totalValue += (parseFloat(item.cena) || 0) * item.quantity;
+        });
+        csvContent += "\n;;;;\n";
+        csvContent += `Klient:;${clientName};;;\n`;
+        csvContent += `Suma wartości:;${totalValue.toFixed(2).replace('.', ',')} PLN;;;\n`;
+        downloadFile('\uFEFF' + csvContent, 'text/csv;charset=utf-8;', `${clientName}_export_excel.csv`);
+    }
+
+    function exportToOptima() {
+        if (scannedItems.length === 0) { showToast('Lista jest pusta.', 'warning'); return; }
+        const clientName = document.getElementById('clientNameInput').value.trim() || 'Bez nazwy';
+        const csvContent = scannedItems.map(item => `${item.ean || item.kod_kreskowy};${item.quantity}`).join('\n');
+        downloadFile(csvContent, 'text/plain;charset=utf-8;', `${clientName}_optima.csv`);
+    }
+
+    function printList() {
+        if (scannedItems.length === 0) { showToast('Lista jest pusta.', 'warning'); return; }
+        const clientName = document.getElementById('clientNameInput').value.trim() || 'Zamówienie';
+        elements.printClientName.textContent = `Zamówienie dla: ${clientName}`;
+        elements.printDate.textContent = new Date().toLocaleString('pl-PL');
+        
+        let tableHTML = `<thead><tr><th>Nazwa</th><th>Kod</th><th>Ilość</th><th>Cena</th><th>Wartość</th></tr></thead><tbody>`;
+        let totalValue = 0;
+        scannedItems.forEach(item => {
+            const itemValue = (parseFloat(item.cena) || 0) * item.quantity;
+            totalValue += itemValue;
+            tableHTML += `<tr><td>${item.nazwa_produktu}</td><td>${item.kod_produktu}</td><td>${item.quantity}</td><td>${parseFloat(item.cena).toFixed(2)}</td><td>${itemValue.toFixed(2)}</td></tr>`;
+        });
+        tableHTML += `</tbody>`;
+        elements.printTable.innerHTML = tableHTML;
+        elements.printSummary.textContent = `Suma: ${totalValue.toFixed(2)} PLN`;
+        window.print();
+    }
 
     // 2. INWENTARYZACJA
     function renderInventoryPage() {
@@ -355,7 +408,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tbody id="inventoryListBody"></tbody>
             </table>
             <div style="margin-top: 20px; text-align: right;">
-                 <button id="inventorySaveBtn" class="btn btn-primary"><i class="fa-solid fa-save"></i> Zapisz stan</button>
                  <button id="inventoryExportCsvBtn" class="btn"><i class="fa-solid fa-file-csv"></i> Eksportuj CSV</button>
             </div>
         `;
@@ -363,63 +415,232 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function handleInventoryAdd(productData, quantity) {
-        // ... (bez zmian)
+        const code = productData.ean || productData.kod_kreskowy;
+        const existing = inventoryItems.find(i => (i.ean || i.kod_kreskowy) === code);
+        if (existing) { existing.quantity = parseInt(existing.quantity) + quantity; } 
+        else { inventoryItems.push({ ...productData, quantity }); }
+        renderInventoryList();
+        showToast(`Dodano do inwentaryzacji: ${productData.nazwa_produktu}`);
     }
 
     function renderInventoryList() {
-        // ... (bez zmian)
+        const body = document.getElementById('inventoryListBody');
+        if(!body) return;
+        body.innerHTML = inventoryItems.map((item, i) => `
+            <tr>
+                <td>${item.nazwa_produktu}</td>
+                <td>${item.kod_produktu}</td>
+                <td><span class="editable-quantity" data-index="${i}">${item.quantity}</span></td>
+                <td><button class="delete-inv-item-btn btn-icon-danger" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td>
+            </tr>`).join('');
     }
 
     function exportInventoryToCsv() {
-        // ... (bez zmian)
+        if (inventoryItems.length === 0) { showToast('Lista inwentaryzacyjna jest pusta.', 'warning'); return; }
+        const csvContent = "EAN;Ilość;Nazwa\n" + inventoryItems.map(item => `${item.ean || item.kod_kreskowy};${item.quantity};${item.nazwa_produktu}`).join('\n');
+        downloadFile('\uFEFF' + csvContent, 'text/csv;charset=utf-8;', `inwentaryzacja_${new Date().toISOString().slice(0,10)}.csv`);
     }
     
-    function saveInventory() {
-        // Logika do zaimplementowania - zapis stanu inwentarza na serwer
-        showToast('Zapis inwentaryzacji - funkcja w budowie.', 'info');
-    }
-
     // 3. KOMPLETACJA i ZAPISANE LISTY
     function renderPickingPage() {
-        // ... (pełna implementacja teraz)
+        elements.pickingPage.innerHTML = `<h2><i class="fa-solid fa-box-open"></i> Kompletacja</h2><p>Wybierz zamówienie z menu "Zapisane Listy" aby rozpocząć.</p>`;
     }
     
     async function showSavedLists() {
-        // ... (pełna implementacja teraz)
+        elements.savedListsModal.style.display = 'flex';
+        elements.savedListsContainer.innerHTML = '<p>Ładowanie...</p>';
+        try {
+            const response = await fetch('/api/data/lists', { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if (!response.ok) throw new Error("Błąd wczytywania list");
+            const lists = await response.json();
+            
+            elements.savedListsContainer.innerHTML = lists.length > 0 ? lists.map(list => `
+                <div class="user-item">
+                    <div><strong>${list.listName}</strong><br><small>Autor: ${list.user?.username || 'usunięty'}</small></div>
+                    <div class="user-actions">
+                        <button class="btn pick-order-btn" data-id="${list._id}">Kompletuj</button>
+                    </div>
+                </div>
+            `).join('') : '<p>Brak zapisanych zamówień.</p>';
+        } catch (error) {
+            elements.savedListsContainer.innerHTML = `<p style="color:var(--danger-color)">${error.message}</p>`;
+        }
     }
-    
+
     // 4. PANEL ADMINA
     function renderAdminPage() {
-        // ... (implementacja z poprzedniej odpowiedzi z dodaniem importu/eksportu)
+        elements.adminPanel.innerHTML = `
+            <h2><i class="fa-solid fa-users-cog"></i> Panel Administratora</h2>
+            <div class="admin-section">
+                <h3>Zarządzanie użytkownikami</h3>
+                <div id="allUsersList"><p>Ładowanie...</p></div>
+            </div>
+            <div class="admin-section">
+                <h3>Zarządzanie bazą produktów</h3>
+                <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+                    <div>
+                        <button class="btn btn-import" data-target="importProducts1"><i class="fa-solid fa-upload"></i> Importuj produkty.csv</button>
+                        <input type="file" id="importProducts1" class="import-input" data-filename="produkty.csv" style="display:none;">
+                    </div>
+                    <div>
+                        <button class="btn btn-import" data-target="importProducts2"><i class="fa-solid fa-upload"></i> Importuj produkty2.csv</button>
+                        <input type="file" id="importProducts2" class="import-input" data-filename="produkty2.csv" style="display:none;">
+                    </div>
+                </div>
+            </div>
+        `;
+        loadAllUsers();
     }
 
     const loadAllUsers = async () => {
-        // ... (bez zmian)
+        const userListEl = document.getElementById('allUsersList');
+        if (!userListEl) return;
+        try {
+            const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({ msg: `Błąd serwera (${response.status})` }));
+                throw new Error(errData.msg);
+            }
+            const users = await response.json();
+            userListEl.innerHTML = users.length > 0 ? users.map(user => `
+                <div class="user-item">
+                    <div><strong>${user.username}</strong><br><small>Rola: ${user.role} | ${user.isApproved ? 'Zatwierdzony' : 'Oczekujący'}</small></div>
+                    <div class="user-actions">
+                        ${!user.isApproved ? `<button class="approve-user-btn btn btn-primary" data-userid="${user._id}">Zatwierdź</button>` : ''}
+                        <button class="delete-user-btn btn-danger" data-userid="${user._id}" data-username="${user.username}"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>`).join('') : '<p>Brak użytkowników.</p>';
+        } catch (error) {
+            userListEl.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`;
+        }
     };
-
+    
     const handleUserAction = async (url, options) => {
-        // ... (bez zmian)
+        try {
+            const response = await fetch(url, options);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.msg || 'Błąd operacji');
+            showToast(data.msg || 'Operacja zakończona sukcesem!', 'success');
+            await loadAllUsers();
+        } catch (error) { showToast(`Błąd: ${error.message}`, 'error'); }
     };
     
     const importProductDatabase = async (file, filename) => {
-        // ... (bez zmian)
-    };
-
-    const exportProductDatabase = (dbKey) => {
-        // ... (implementacja z poprzedniej odpowiedzi)
-    };
-
-    // --- GŁÓWNA FUNKCJA PODPINANIA ZDARZEŃ ---
-    const initEventListeners = () => {
-        // ... (wszystkie listenery z poprzedniej odpowiedzi, w tym dla rejestracji i delegacji zdarzeń)
-        
-        // Listener dla przycisku ZAPISZ
-        document.body.addEventListener('click', e => {
-            if (e.target.id === 'saveListBtn') saveCurrentList(true); // Pokaż toast po kliknięciu
-            if (e.target.id === 'inventorySaveBtn') saveInventory();
-        });
+        const formData = new FormData();
+        formData.append('productsFile', file);
+        formData.append('filename', filename);
+        showToast(`Przesyłanie pliku ${filename}...`, 'info');
+        try {
+            const response = await fetch('/api/admin/upload-products', {
+                method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') }, body: formData
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.msg || 'Błąd przesyłania pliku');
+            showToast(data.msg, 'success');
+            await loadDataFromServer();
+        } catch (error) {
+            showToast(`Błąd importu: ${error.message}`, 'error');
+        }
     };
     
+    // --- GŁÓWNA FUNKCJA PODPINANIA ZDARZEŃ ---
+    const initEventListeners = () => {
+        // Logowanie i Rejestracja
+        elements.loginBtn.addEventListener('click', attemptLogin);
+        elements.loginPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') attemptLogin(); });
+        elements.registerBtn.addEventListener('click', attemptRegister);
+        elements.registerPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') attemptRegister(); });
+        elements.showRegister.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'none'; elements.registerForm.style.display = 'block'; });
+        elements.showLogin.addEventListener('click', (e) => { e.preventDefault(); elements.registerForm.style.display = 'none'; elements.loginForm.style.display = 'block'; });
+
+        // Menu główne i nawigacja
+        elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
+        window.addEventListener('click', () => { if (elements.dropdownMenu.classList.contains('show')) elements.dropdownMenu.classList.remove('show'); });
+        elements.menuListBuilderBtn.addEventListener('click', () => switchTab('listBuilder'));
+        elements.menuPickingBtn.addEventListener('click', () => switchTab('picking'));
+        elements.menuInventoryBtn.addEventListener('click', () => switchTab('inventory'));
+        elements.menuAdminBtn.addEventListener('click', () => switchTab('admin'));
+        elements.menuSavedLists.addEventListener('click', showSavedLists);
+        elements.menuLogoutBtn.addEventListener('click', () => { localStorage.clear(); location.reload(); });
+        
+        // Modale i UI
+        document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => e.target.closest('.modal').style.display = 'none'));
+        elements.quickSearchBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'flex'; elements.lookupBarcodeInput.focus(); });
+        elements.lookupBarcodeInput.addEventListener('input', debounce(() => performSearch(elements.lookupBarcodeInput.value), 300));
+        elements.darkModeToggle.addEventListener('click', () => {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+
+        // Dolna belka
+        elements.floatingEanInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleFloatingBarAction(); });
+        elements.floatingAddBtn.addEventListener('click', () => handleFloatingBarAction());
+        elements.floatingEanInput.addEventListener('input', debounce(handleFloatingBarSearch, 300));
+        elements.floatingSearchResults.addEventListener('click', (e) => {
+             const li = e.target.closest('li');
+             if (li && li.dataset.code) {
+                 const product = findProductByCode(li.dataset.code);
+                 if (product) handleFloatingBarAction(product);
+             }
+        });
+
+        // Delegacja zdarzeń dla dynamicznych elementów
+        document.body.addEventListener('click', e => {
+            const target = e.target;
+            const btn = target.closest('button');
+            if (!btn) return; // Jeśli kliknięcie nie było na przycisku, zakończ
+
+            if (btn.id === 'saveListBtn') saveCurrentList(true);
+            if (btn.id === 'printListBtn') printList();
+            if (btn.id === 'exportExcelBtn') exportToExcel();
+            if (btn.id === 'exportOptimaBtn') exportToOptima();
+            if (btn.id === 'inventoryExportCsvBtn') exportInventoryToCsv();
+            
+            if (btn.id === 'clearListBtn') {
+                if(confirm('Czy na pewno chcesz wyczyścić bieżącą listę?')) {
+                    scannedItems = []; renderScannedList();
+                }
+            }
+            if (btn.classList.contains('delete-btn')) {
+                scannedItems.splice(btn.dataset.index, 1);
+                renderScannedList();
+            }
+            if (btn.classList.contains('delete-inv-item-btn')) {
+                inventoryItems.splice(btn.dataset.index, 1);
+                renderInventoryList();
+            }
+            if (target.classList.contains('editable-quantity')) {
+                const index = target.dataset.index;
+                const newQuantity = prompt("Wprowadź nową ilość:", inventoryItems[index].quantity);
+                if (newQuantity !== null && !isNaN(newQuantity) && newQuantity > 0) {
+                    inventoryItems[index].quantity = parseInt(newQuantity, 10);
+                    renderInventoryList();
+                }
+            }
+            
+            if (btn.closest('#adminPanel')) {
+                if(btn.classList.contains('approve-user-btn')) handleUserAction(`/api/admin/approve-user/${btn.dataset.userid}`, { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') } });
+                if(btn.classList.contains('delete-user-btn')) if(confirm(`Na pewno usunąć ${btn.dataset.username}?`)) handleUserAction(`/api/admin/delete-user/${btn.dataset.userid}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('token') } });
+                if (btn.classList.contains('btn-import')) document.getElementById(btn.dataset.target).click();
+            }
+        });
+        
+        document.body.addEventListener('change', e => {
+             if(e.target.classList.contains('quantity-in-table')) {
+                const index = e.target.dataset.index;
+                const newQuantity = parseInt(e.target.value, 10);
+                if(scannedItems[index] && !isNaN(newQuantity) && newQuantity > 0) {
+                    scannedItems[index].quantity = newQuantity;
+                }
+             }
+             if (e.target.classList.contains('import-input')) {
+                const file = e.target.files[0];
+                if (file) importProductDatabase(file, e.target.dataset.filename);
+             }
+        });
+    };
+
+    // --- INICJALIZACJA APLIKACJI ---
     const init = () => {
         if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
         initEventListeners();
