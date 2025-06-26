@@ -2,32 +2,24 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const ProductList = require('../models/ProductList');
+const Inventory = require('../models/Inventory');
 
-// Zapisywanie lub aktualizacja listy zamówień
+// ZAPIS LUB AKTUALIZACJA LISTY ZAMÓWIEŃ
 router.post('/savelist', authMiddleware, async (req, res) => {
     const { listName, clientName, items, listId } = req.body;
     try {
         if (listId) {
-            // Aktualizacja istniejącej listy
-            let list = await ProductList.findById(listId);
-            if (!list) return res.status(404).json({ msg: 'Lista nie znaleziona.' });
-            if (list.user.toString() !== req.user.id) return res.status(401).json({ msg: 'Brak autoryzacji.' });
-            
-            list.listName = listName;
-            list.clientName = clientName;
-            list.items = items;
-            await list.save();
-            res.json(list);
+            const updatedList = await ProductList.findByIdAndUpdate(
+                listId,
+                { listName, clientName, items, user: req.user.id },
+                { new: true, upsert: false }
+            );
+            if (!updatedList) return res.status(404).json({ msg: 'Lista nie znaleziona.' });
+            return res.json(updatedList);
         } else {
-            // Tworzenie nowej listy
-            const newList = new ProductList({
-                user: req.user.id,
-                listName,
-                clientName,
-                items
-            });
+            const newList = new ProductList({ user: req.user.id, listName, clientName, items });
             const savedList = await newList.save();
-            res.status(201).json(savedList);
+            return res.status(201).json(savedList);
         }
     } catch (err) {
         console.error('Błąd zapisu listy:', err.message);
@@ -35,51 +27,45 @@ router.post('/savelist', authMiddleware, async (req, res) => {
     }
 });
 
-// Pobieranie wszystkich list
+// POBIERANIE WSZYSTKICH LIST
 router.get('/lists', authMiddleware, async (req, res) => {
     try {
-        const lists = await ProductList.find()
-            .populate('user', 'username')
-            .sort({ updatedAt: -1 });
+        const lists = await ProductList.find().populate('user', 'username').sort({ updatedAt: -1 });
         res.json(lists);
     } catch (err) {
-        console.error('Błąd pobierania list:', err.message);
         res.status(500).send('Błąd serwera');
     }
 });
 
-// Pobieranie pojedynczej listy po ID
+// POBIERANIE JEDNEJ LISTY
 router.get('/list/:id', authMiddleware, async (req, res) => {
     try {
         const list = await ProductList.findById(req.params.id);
-        if (!list) {
-            return res.status(404).json({ msg: 'Lista nie znaleziona.' });
-        }
+        if (!list) return res.status(404).json({ msg: 'Lista nie znaleziona.' });
         res.json(list);
     } catch (err) {
-        console.error('Błąd pobierania listy:', err.message);
         res.status(500).send('Błąd serwera');
     }
 });
 
-// Usuwanie listy
-router.delete('/list/:id', authMiddleware, async (req, res) => {
-     try {
-        const list = await ProductList.findById(req.params.id);
-        if (!list) {
-            return res.status(404).json({ msg: 'Lista nie znaleziona.' });
-        }
-        // Sprawdzenie czy użytkownik jest właścicielem listy lub adminem
-        if (list.user.toString() !== req.user.id && req.user.role !== 'admin') {
-            return res.status(401).json({ msg: 'Brak autoryzacji.' });
-        }
-        await list.deleteOne();
-        res.json({ msg: 'Lista została usunięta.' });
+// ZAPIS INWENTARYZACJI
+router.post('/inventory', authMiddleware, async (req, res) => {
+    const { inventoryName, items } = req.body;
+    if (!inventoryName || !items || items.length === 0) {
+        return res.status(400).json({ msg: "Nazwa i pozycje inwentaryzacji są wymagane."});
+    }
+    try {
+        const newInventory = new Inventory({
+            user: req.user.id,
+            inventoryName,
+            items
+        });
+        const savedInventory = await newInventory.save();
+        res.status(201).json(savedInventory);
     } catch (err) {
-        console.error('Błąd usuwania listy:', err.message);
+        console.error('Błąd zapisu inwentaryzacji:', err.message);
         res.status(500).send('Błąd serwera');
     }
 });
-
 
 module.exports = router;
