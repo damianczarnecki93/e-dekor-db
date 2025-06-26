@@ -26,11 +26,7 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
-        body {
-            font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color);
-            transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
-            padding: 20px; padding-bottom: 120px;
-        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease; padding: 20px; padding-bottom: 120px; }
         .container { width: 100%; max-width: 1200px; margin: 0 auto; }
         .page-content { background-color: var(--surface-color); padding: 25px; border-radius: var(--border-radius); box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-top:20px; }
         .app-header { text-align: center; margin-bottom: 20px; }
@@ -93,6 +89,7 @@
                 <a id="menuListBuilderBtn"><i class="fa-solid fa-list-check"></i> Tworzenie Listy</a>
                 <a id="menuPickingBtn"><i class="fa-solid fa-box-open"></i> Kompletacja</a>
                 <a id="menuInventoryBtn"><i class="fa-solid fa-clipboard-list"></i> Inwentaryzacja</a>
+                <a id="menuSavedLists"><i class="fa-solid fa-save"></i> Zapisane Listy</a>
                 <a id="menuAdminBtn" style="display: none;"><i class="fa-solid fa-user-shield"></i> Panel Admina</a>
                 <a id="menuLogoutBtn"><i class="fa-solid fa-right-from-bracket"></i> Wyloguj</a>
             </div>
