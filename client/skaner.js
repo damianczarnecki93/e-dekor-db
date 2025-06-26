@@ -277,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- MODUŁY APLIKACJI ---
 
-    // 1. Pulpit
     function renderHomePage() {
         elements.mainContent.innerHTML = `
             <div id="dashboard">
@@ -321,7 +320,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 2. Tworzenie Listy
     function renderListBuilderPage() {
         elements.mainContent.innerHTML = `
             <h2><i class="fa-solid fa-list-check"></i> Tworzenie Listy Zamówienia</h2>
@@ -393,14 +391,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function exportToOptima() { /* ... */ }
     function printList() { /* ... */ }
     
-    // 3. INWENTARYZACJA
     function renderInventoryPage() { /* ... */ }
     function handleInventoryAdd(productData, quantity) { /* ... */ }
     function renderInventoryList() { /* ... */ }
     function exportInventoryToCsv() { /* ... */ }
     async function saveInventory() { /* ... */ }
     
-    // 4. KOMPLETACJA i ZAPISANE LISTY
     function renderPickingPage() {
         elements.pickingPage.innerHTML = `<h2><i class="fa-solid fa-box-open"></i> Kompletacja</h2><div id="picking-lists-container"></div>`;
         loadListsForPicking();
@@ -463,13 +459,81 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 5. PANEL ADMINA
-    function renderAdminPage() { /* ... */ }
-    const loadAllUsers = async () => { /* ... */ };
-    const handleUserAction = async (url, options) => { /* ... */ };
-    const importProductDatabase = async (file, filename) => { /* ... */ };
+    function renderAdminPage() {
+        elements.adminPanel.innerHTML = `
+            <h2><i class="fa-solid fa-users-cog"></i> Panel Administratora</h2>
+            <div class="admin-section">
+                <h3>Zarządzanie użytkownikami</h3>
+                <div id="allUsersList"><p>Ładowanie...</p></div>
+            </div>
+            <div class="admin-section">
+                <h3>Zarządzanie bazą produktów</h3>
+                <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+                    <div>
+                        <button class="btn btn-import" data-target="importProducts1"><i class="fa-solid fa-upload"></i> Importuj produkty.csv</button>
+                        <input type="file" id="importProducts1" class="import-input" data-filename="produkty.csv" style="display:none;">
+                    </div>
+                    <div>
+                        <button class="btn btn-import" data-target="importProducts2"><i class="fa-solid fa-upload"></i> Importuj produkty2.csv</button>
+                        <input type="file" id="importProducts2" class="import-input" data-filename="produkty2.csv" style="display:none;">
+                    </div>
+                </div>
+            </div>
+        `;
+        loadAllUsers();
+    }
+
+    const loadAllUsers = async () => {
+        const userListEl = document.getElementById('allUsersList');
+        if (!userListEl) return;
+        try {
+            const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({ msg: `Błąd serwera (${response.status})`}));
+                throw new Error(errData.msg);
+            }
+            const users = await response.json();
+            userListEl.innerHTML = users.length > 0 ? users.map(user => `
+                <div class="user-item">
+                    <div><strong>${user.username}</strong><br><small>Rola: ${user.role} | ${user.isApproved ? 'Zatwierdzony' : 'Oczekujący'}</small></div>
+                    <div class="user-actions">
+                        ${!user.isApproved ? `<button class="approve-user-btn btn btn-primary" data-userid="${user._id}">Zatwierdź</button>` : ''}
+                        <button class="delete-user-btn btn-danger" data-userid="${user._id}" data-username="${user.username}"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>`).join('') : '<p>Brak użytkowników.</p>';
+        } catch (error) {
+            if (userListEl) userListEl.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`;
+        }
+    };
     
-    // --- GŁÓWNA FUNKCJA PODPINANIA ZDARZEŃ ---
+    const handleUserAction = async (url, options) => {
+        try {
+            const response = await fetch(url, options);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.msg || 'Błąd operacji');
+            showToast(data.msg || 'Operacja zakończona sukcesem!', 'success');
+            await loadAllUsers();
+        } catch (error) { showToast(`Błąd: ${error.message}`, 'error'); }
+    };
+    
+    const importProductDatabase = async (file, filename) => {
+        const formData = new FormData();
+        formData.append('productsFile', file);
+        formData.append('filename', filename);
+        showToast(`Przesyłanie pliku ${filename}...`, 'info');
+        try {
+            const response = await fetch('/api/admin/upload-products', {
+                method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') }, body: formData
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.msg || 'Błąd przesyłania pliku');
+            showToast(data.msg, 'success');
+            await loadDataFromServer();
+        } catch (error) {
+            showToast(`Błąd importu: ${error.message}`, 'error');
+        }
+    };
+    
     const initEventListeners = () => {
         elements.loginBtn.addEventListener('click', attemptLogin);
         elements.registerBtn.addEventListener('click', attemptRegister);
@@ -533,14 +597,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(elements.savedListsModal.style.display === 'flex') elements.savedListsModal.style.display = 'none';
             }
             
-            if (btn.classList.contains('load-list-btn')) { /* ... */ }
-            if (btn.classList.contains('delete-list-btn')) { /* ... */ }
-            if (btn.classList.contains('btn-import')) { document.getElementById(btn.dataset.target).click(); }
-            if (btn.closest('#adminPanel')) { /* ... */ }
+            if (btn.classList.contains('load-list-btn')) {
+                const listId = btn.dataset.id;
+                try {
+                    const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+                    const data = await response.json();
+                    scannedItems = data.items;
+                    localStorage.setItem('clientName', data.clientName);
+                    activeListId = data._id;
+                    localStorage.setItem('activeListId', activeListId);
+                    switchTab('listBuilder');
+                    elements.savedListsModal.style.display = 'none';
+                    showToast('Lista wczytana!', 'success');
+                } catch (error) {
+                    showToast('Błąd wczytywania listy.', 'error');
+                }
+            }
         });
         
         document.body.addEventListener('input', e => {
-             if(e.target.classList.contains('quantity-in-table')) { /* ... */ }
+             if(e.target.classList.contains('quantity-in-table')) {
+                const index = e.target.dataset.index;
+                const newQuantity = parseInt(e.target.value, 10);
+                if(scannedItems[index] && !isNaN(newQuantity) && newQuantity > 0) scannedItems[index].quantity = newQuantity;
+             }
              if (e.target.id === 'importCsvInput') {
                 const file = e.target.files[0];
                 if (file) {
