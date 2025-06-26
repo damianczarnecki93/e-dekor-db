@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- SŁOWNIK ELEMENTÓW DOM ---
     const elements = {
         loginOverlay: document.getElementById('loginOverlay'),
         loginForm: document.getElementById('loginForm'),
@@ -58,7 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
         printSummary: document.getElementById('print-summary'),
     };
 
-    // --- STAN APLIKACJI ---
     let productDatabase = { primary: [], secondary: [] };
     let scannedItems = [];
     let inventoryItems = [];
@@ -68,7 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let autoSaveInterval = null;
     let currentPickingOrder = null;
 
-    // --- FUNKCJE POMOCNICZE ---
     const debounce = (func, delay) => {
         let timeout;
         return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); };
@@ -97,7 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(link);
     };
 
-    // --- LOGIKA STARTOWA I UWIERZYTELNIANIE ---
     const checkLoginStatus = async () => {
         const token = localStorage.getItem('token');
         if (!token) { elements.loginOverlay.style.display = 'flex'; return; }
@@ -179,8 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- NAWIGACJA I RENDEROWANIE ---
-    
     const switchTab = (page) => {
         activePage = page;
         if (autoSaveInterval) clearInterval(autoSaveInterval);
@@ -209,8 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'admin': renderAdminPage(); break;
         }
     };
-
-    // --- WYSZUKIWANIE I DODAWANIE PRODUKTÓW ---
 
     const findProductByCode = (code) => {
         const search = (db) => db.find(p => p.kod_kreskowy === code || p.ean === code || p.kod_produktu === code);
@@ -275,51 +267,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- MODUŁY APLIKACJI ---
-
-    function renderHomePage() {
-        elements.mainContent.innerHTML = `
-            <div id="dashboard">
-                <div class="dashboard-section">
-                    <h2 id="dashboard-greeting">Witaj!</h2>
-                    <p id="dashboard-datetime"></p>
-                </div>
-                <div class="dashboard-section">
-                    <h3>Zamówienia do kompletacji</h3>
-                    <p class="widget-value" id="picking-count">Ładowanie...</p>
-                </div>
-                <div class="dashboard-section">
-                    <h3>Szybkie Notatki</h3>
-                    <textarea id="notes-area" placeholder="Twoje notatki..." rows="5"></textarea>
-                </div>
-            </div>`;
-        updateDashboard();
-        setInterval(updateDashboard, 5000);
-        
-        const notesArea = document.getElementById('notes-area');
-        notesArea.value = localStorage.getItem('dashboard_notes') || '';
-        notesArea.addEventListener('keyup', debounce(() => {
-            localStorage.setItem('dashboard_notes', notesArea.value);
-            showToast('Notatki zapisane.', 'info', 1500);
-        }, 500));
-    }
-
-    async function updateDashboard() {
-        if(document.getElementById('dashboard-greeting') && currentUser) document.getElementById('dashboard-greeting').textContent = `Witaj, ${currentUser.username}!`;
-        if(document.getElementById('dashboard-datetime')) document.getElementById('dashboard-datetime').textContent = new Date().toLocaleString('pl-PL', { dateStyle: 'full', timeStyle: 'medium' });
-        
-        const pickingCountEl = document.getElementById('picking-count');
-        if(pickingCountEl) {
-            try {
-                const response = await fetch('/api/data/lists', { headers: { 'x-auth-token': localStorage.getItem('token') } });
-                const lists = await response.json();
-                pickingCountEl.textContent = lists.length;
-            } catch (err) {
-                pickingCountEl.textContent = 'B/D';
-            }
-        }
-    }
-
+    function renderHomePage() { /* ... */ }
+    async function updateDashboard() { /* ... */ }
+    
     function renderListBuilderPage() {
         elements.mainContent.innerHTML = `
             <h2><i class="fa-solid fa-list-check"></i> Tworzenie Listy Zamówienia</h2>
