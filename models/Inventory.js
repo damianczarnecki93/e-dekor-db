@@ -16,6 +16,7 @@ const InventorySchema = new mongoose.Schema({
         kod_kreskowy: String,
         kod_produktu: String,
         nazwa_produktu: String,
+        cena: String,
         quantity: Number
     }]
 }, { timestamps: true });
