@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    // --- SŁOWNIK ELEMENTÓW DOM ---
     const elements = {
         loginOverlay: document.getElementById('loginOverlay'),
         loginForm: document.getElementById('loginForm'),
@@ -57,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         printSummary: document.getElementById('print-summary'),
     };
 
+    // --- STAN APLIKACJI ---
     let productDatabase = { primary: [], secondary: [] };
     let scannedItems = [];
     let inventoryItems = [];
@@ -66,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let autoSaveInterval = null;
     let currentPickingOrder = null;
 
+    // --- FUNKCJE POMOCNICZE ---
     const debounce = (func, delay) => {
         let timeout;
         return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); };
@@ -94,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(link);
     };
 
+    // --- LOGIKA STARTOWA I UWIERZYTELNIANIE ---
     const checkLoginStatus = async () => {
         const token = localStorage.getItem('token');
         if (!token) { elements.loginOverlay.style.display = 'flex'; return; }
@@ -175,6 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
+    // --- NAWIGACJA I RENDEROWANIE ---
+    
     const switchTab = (page) => {
         activePage = page;
         if (autoSaveInterval) clearInterval(autoSaveInterval);
@@ -203,6 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'admin': renderAdminPage(); break;
         }
     };
+
+    // --- WYSZUKIWANIE I DODAWANIE PRODUKTÓW ---
 
     const findProductByCode = (code) => {
         const search = (db) => db.find(p => p.kod_kreskowy === code || p.ean === code || p.kod_produktu === code);
@@ -267,12 +275,97 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    function renderHomePage() { /* ... */ }
-    async function updateDashboard() { /* ... */ }
+    // --- MODUŁY APLIKACJI ---
+
+    // 1. Pulpit
+    function renderHomePage() {
+        elements.mainContent.innerHTML = `
+            <div id="dashboard">
+                <div class="dashboard-section">
+                    <h2 id="dashboard-greeting">Witaj!</h2>
+                    <p id="dashboard-datetime"></p>
+                </div>
+                <div class="dashboard-section">
+                    <h3>Zamówienia do kompletacji</h3>
+                    <p class="widget-value" id="picking-count">Ładowanie...</p>
+                </div>
+                <div class="dashboard-section">
+                    <h3>Szybkie Notatki</h3>
+                    <textarea id="notes-area" placeholder="Twoje notatki..." rows="5"></textarea>
+                </div>
+            </div>`;
+        updateDashboard();
+        setInterval(updateDashboard, 5000);
+        
+        const notesArea = document.getElementById('notes-area');
+        notesArea.value = localStorage.getItem('dashboard_notes') || '';
+        notesArea.addEventListener('keyup', debounce(() => {
+            localStorage.setItem('dashboard_notes', notesArea.value);
+            showToast('Notatki zapisane.', 'info', 1500);
+        }, 500));
+    }
+
+    async function updateDashboard() {
+        if(document.getElementById('dashboard-greeting') && currentUser) document.getElementById('dashboard-greeting').textContent = `Witaj, ${currentUser.username}!`;
+        if(document.getElementById('dashboard-datetime')) document.getElementById('dashboard-datetime').textContent = new Date().toLocaleString('pl-PL', { dateStyle: 'full', timeStyle: 'medium' });
+        
+        const pickingCountEl = document.getElementById('picking-count');
+        if(pickingCountEl) {
+            try {
+                const response = await fetch('/api/data/lists', { headers: { 'x-auth-token': localStorage.getItem('token') } });
+                const lists = await response.json();
+                pickingCountEl.textContent = lists.length;
+            } catch (err) {
+                pickingCountEl.textContent = 'B/D';
+            }
+        }
+    }
+
+    // 2. Tworzenie Listy
+    function renderListBuilderPage() {
+        elements.mainContent.innerHTML = `
+            <h2><i class="fa-solid fa-list-check"></i> Tworzenie Listy Zamówienia</h2>
+            <div style="margin: 20px 0;">
+                <input type="text" id="clientNameInput" placeholder="Nazwa klienta..." value="${localStorage.getItem('clientName') || ''}">
+            </div>
+            <table id="list-builder-table">
+                <thead><tr><th>Nazwa</th><th>Kod</th><th>EAN</th><th>Cena</th><th>Ilość</th><th>Akcje</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;">
+                 <button id="saveListBtn" class="btn btn-primary"><i class="fa-solid fa-save"></i> Zapisz</button>
+                 <button id="printListBtn" class="btn"><i class="fa-solid fa-print"></i> Drukuj</button>
+                 <button id="exportOptimaBtn" class="btn"><i class="fa-solid fa-file-export"></i> Eksport (Optima)</button>
+                 <button id="exportExcelBtn" class="btn"><i class="fa-solid fa-file-excel"></i> Eksport (Excel)</button>
+                 <button id="newListBtn" class="btn"><i class="fa-solid fa-file-circle-plus"></i> Nowa lista</button>
+            </div>
+        `;
+        renderScannedList();
+    }
     
-    function renderListBuilderPage() { /* ... */ }
-    function addProductToList(productData, quantity) { /* ... */ }
-    function renderScannedList() { /* ... */ }
+    function addProductToList(productData, quantity) {
+        const code = productData.ean || productData.kod_kreskowy;
+        const existingItem = scannedItems.find(item => (item.ean || item.kod_kreskowy) === code);
+        if (existingItem) {
+            existingItem.quantity = parseInt(existingItem.quantity) + quantity;
+        } else {
+            scannedItems.push({ ...productData, quantity });
+        }
+        renderScannedList();
+        showToast(`Dodano: ${productData.nazwa_produktu} (x${quantity})`, "success");
+    }
+
+    function renderScannedList() {
+        const tableBody = document.querySelector('#list-builder-table tbody');
+        if (!tableBody) return;
+        tableBody.innerHTML = scannedItems.map((item, index) => `
+            <tr>
+                <td>${item.nazwa_produktu}</td><td>${item.kod_produktu}</td><td>${item.ean || item.kod_kreskowy}</td>
+                <td>${parseFloat(item.cena).toFixed(2)}</td>
+                <td><input type="number" class="quantity-in-table" value="${item.quantity}" min="1" data-index="${index}" inputmode="numeric"></td>
+                <td><button class="delete-btn btn-icon-danger" data-index="${index}"><i class="fa-solid fa-trash"></i></button></td>
+            </tr>`).join('');
+    }
 
     async function saveCurrentList(showSuccessToast = true) {
         const clientName = document.getElementById('clientNameInput')?.value.trim() || 'Bez nazwy';
@@ -300,12 +393,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function exportToOptima() { /* ... */ }
     function printList() { /* ... */ }
     
+    // 3. INWENTARYZACJA
     function renderInventoryPage() { /* ... */ }
     function handleInventoryAdd(productData, quantity) { /* ... */ }
     function renderInventoryList() { /* ... */ }
     function exportInventoryToCsv() { /* ... */ }
     async function saveInventory() { /* ... */ }
     
+    // 4. KOMPLETACJA i ZAPISANE LISTY
     function renderPickingPage() {
         elements.pickingPage.innerHTML = `<h2><i class="fa-solid fa-box-open"></i> Kompletacja</h2><div id="picking-lists-container"></div>`;
         loadListsForPicking();
@@ -368,81 +463,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderAdminPage() {
-        elements.adminPanel.innerHTML = `
-            <h2><i class="fa-solid fa-users-cog"></i> Panel Administratora</h2>
-            <div class="admin-section">
-                <h3>Zarządzanie użytkownikami</h3>
-                <div id="allUsersList"><p>Ładowanie...</p></div>
-            </div>
-            <div class="admin-section">
-                <h3>Zarządzanie bazą produktów</h3>
-                <div style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
-                    <div>
-                        <button class="btn btn-import" data-target="importProducts1"><i class="fa-solid fa-upload"></i> Importuj produkty.csv</button>
-                        <input type="file" id="importProducts1" class="import-input" data-filename="produkty.csv" style="display:none;">
-                    </div>
-                    <div>
-                        <button class="btn btn-import" data-target="importProducts2"><i class="fa-solid fa-upload"></i> Importuj produkty2.csv</button>
-                        <input type="file" id="importProducts2" class="import-input" data-filename="produkty2.csv" style="display:none;">
-                    </div>
-                </div>
-            </div>
-        `;
-        loadAllUsers();
-    }
-
-    const loadAllUsers = async () => {
-        const userListEl = document.getElementById('allUsersList');
-        if (!userListEl) return;
-        try {
-            const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({ msg: `Błąd serwera (${response.status})`}));
-                throw new Error(errData.msg);
-            }
-            const users = await response.json();
-            userListEl.innerHTML = users.length > 0 ? users.map(user => `
-                <div class="user-item">
-                    <div><strong>${user.username}</strong><br><small>Rola: ${user.role} | ${user.isApproved ? 'Zatwierdzony' : 'Oczekujący'}</small></div>
-                    <div class="user-actions">
-                        ${!user.isApproved ? `<button class="approve-user-btn btn btn-primary" data-userid="${user._id}">Zatwierdź</button>` : ''}
-                        <button class="delete-user-btn btn-danger" data-userid="${user._id}" data-username="${user.username}"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </div>`).join('') : '<p>Brak użytkowników.</p>';
-        } catch (error) {
-            if (userListEl) userListEl.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`;
-        }
-    };
+    // 5. PANEL ADMINA
+    function renderAdminPage() { /* ... */ }
+    const loadAllUsers = async () => { /* ... */ };
+    const handleUserAction = async (url, options) => { /* ... */ };
+    const importProductDatabase = async (file, filename) => { /* ... */ };
     
-    const handleUserAction = async (url, options) => {
-        try {
-            const response = await fetch(url, options);
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.msg || 'Błąd operacji');
-            showToast(data.msg || 'Operacja zakończona sukcesem!', 'success');
-            await loadAllUsers();
-        } catch (error) { showToast(`Błąd: ${error.message}`, 'error'); }
-    };
-    
-    const importProductDatabase = async (file, filename) => {
-        const formData = new FormData();
-        formData.append('productsFile', file);
-        formData.append('filename', filename);
-        showToast(`Przesyłanie pliku ${filename}...`, 'info');
-        try {
-            const response = await fetch('/api/admin/upload-products', {
-                method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') }, body: formData
-            });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.msg || 'Błąd przesyłania pliku');
-            showToast(data.msg, 'success');
-            await loadDataFromServer();
-        } catch (error) {
-            showToast(`Błąd importu: ${error.message}`, 'error');
-        }
-    };
-    
+    // --- GŁÓWNA FUNKCJA PODPINANIA ZDARZEŃ ---
     const initEventListeners = () => {
         elements.loginBtn.addEventListener('click', attemptLogin);
         elements.registerBtn.addEventListener('click', attemptRegister);
