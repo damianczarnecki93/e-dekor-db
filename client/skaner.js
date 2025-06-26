@@ -359,6 +359,15 @@ document.addEventListener('DOMContentLoaded', () => {
             </tr>
         `).join('');
     };
+    
+    // --- **NAPRAWIONA/DODANA FUNKCJA** ---
+    const renderPickingPage = () => {
+        elements.pickingPage.innerHTML = `
+            <h2><i class="fa-solid fa-box-open"></i> Kompletacja</h2>
+            <p style="margin-top: 15px; color: var(--text-secondary-color);">Moduł w budowie. Wybierz zamówienie z zapisanych list, aby rozpocząć kompletację.</p>
+        `;
+        // Tutaj w przyszłości znajdzie się pełna logika kompletacji
+    };
 
     const renderAdminPage = () => {
         elements.adminPanel.innerHTML = `
@@ -375,7 +384,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const userListEl = document.getElementById('allUsersList');
         try {
             const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
-            if (!response.ok) throw new Error('Nie można załadować użytkowników');
+            if (!response.ok) {
+                 // Błąd serwera jest bardziej informacyjny niż generyczny komunikat
+                const errorData = await response.json().catch(() => ({ msg: 'Błąd serwera: nie można odczytać odpowiedzi.' }));
+                throw new Error(errorData.msg || `Błąd serwera: ${response.status}`);
+            }
             const users = await response.json();
             
             if (!userListEl) return;
@@ -394,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `).join('');
         } catch (error) {
-            if (userListEl) userListEl.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`;
+            if (userListEl) userListEl.innerHTML = `<p style="color:var(--danger-color); font-weight: bold;">Nie udało się załadować użytkowników. ${error.message}</p>`;
         }
     };
     
@@ -433,7 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
              }
         });
         
-        document.querySelector('.close-modal-btn').addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
+        document.querySelector('.close-modal-btn')?.addEventListener('click', () => { elements.savedListsModal.style.display = 'none'; });
 
         elements.darkModeToggle.addEventListener('click', () => {
             const isDark = document.body.classList.toggle('dark-mode');
