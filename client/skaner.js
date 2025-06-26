@@ -1,3 +1,4 @@
+```javascript
 document.addEventListener('DOMContentLoaded', () => {
 
     const elements = {
@@ -74,9 +75,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const showToast = (message, type = 'info', duration = 3000) => {
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
-        toast.textContent = message;
         if (type === 'success') toast.style.backgroundColor = 'var(--success-color)';
         if (type === 'error') toast.style.backgroundColor = 'var(--danger-color)';
+        toast.textContent = message;
         elements.toastContainer.appendChild(toast);
         setTimeout(() => {
             toast.classList.add('show');
@@ -113,7 +114,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const password = elements.loginPassword.value.trim();
         if (!username || !password) { elements.loginError.textContent = 'Wszystkie pola są wymagane.'; return; }
         try {
-            const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+            const response = await fetch('/api/auth/login', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
             const data = await response.json();
             if (!response.ok) { elements.loginError.textContent = data.msg || 'Błąd logowania.'; return; }
             localStorage.setItem('token', data.token);
@@ -128,7 +132,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!username || !password) { elements.registerError.textContent = 'Wszystkie pola są wymagane.'; return; }
         if (password.length < 6) { elements.registerError.textContent = 'Hasło musi mieć co najmniej 6 znaków.'; return; }
         try {
-            const response = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+            const response = await fetch('/api/auth/register', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
             const data = await response.json();
             if (!response.ok) { elements.registerError.textContent = data.msg || 'Błąd rejestracji.'; return; }
             showToast('Rejestracja pomyślna! Poczekaj na zatwierdzenie konta.', 'success', 5000);
@@ -260,53 +267,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    function renderHomePage() { /* ... bez zmian ... */ }
-    async function updateDashboard() { /* ... bez zmian ... */ }
+    function renderHomePage() { /* ... */ }
+    async function updateDashboard() { /* ... */ }
     
-    function renderListBuilderPage() {
-        elements.mainContent.innerHTML = `
-            <h2><i class="fa-solid fa-list-check"></i> Nowa Lista Zamówienia</h2>
-            <div style="margin: 20px 0;">
-                <input type="text" id="clientNameInput" placeholder="Nazwa klienta..." value="${localStorage.getItem('clientName') || ''}">
-            </div>
-            <table id="list-builder-table">
-                <thead><tr><th>Nazwa</th><th>Kod</th><th>EAN</th><th>Cena</th><th>Ilość</th><th>Akcje</th></tr></thead>
-                <tbody></tbody>
-            </table>
-            <div style="margin-top: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;">
-                 <button id="saveListBtn" class="btn btn-primary"><i class="fa-solid fa-save"></i> Zapisz listę</button>
-                 <button id="printListBtn" class="btn"><i class="fa-solid fa-print"></i> Drukuj</button>
-                 <button id="exportOptimaBtn" class="btn"><i class="fa-solid fa-file-export"></i> Eksport (Optima)</button>
-                 <button id="exportExcelBtn" class="btn"><i class="fa-solid fa-file-excel"></i> Eksport (Excel)</button>
-                 <button id="clearListBtn" class="btn-danger"><i class="fa-solid fa-eraser"></i> Wyczyść</button>
-            </div>
-        `;
-        renderScannedList();
-    }
-    
-    function addProductToList(productData, quantity) {
-        const code = productData.ean || productData.kod_kreskowy;
-        const existingItem = scannedItems.find(item => (item.ean || item.kod_kreskowy) === code);
-        if (existingItem) {
-            existingItem.quantity = parseInt(existingItem.quantity) + quantity;
-        } else {
-            scannedItems.push({ ...productData, quantity });
-        }
-        renderScannedList();
-        showToast(`Dodano: ${productData.nazwa_produktu} (x${quantity})`, "success");
-    }
-
-    function renderScannedList() {
-        const tableBody = document.querySelector('#list-builder-table tbody');
-        if (!tableBody) return;
-        tableBody.innerHTML = scannedItems.map((item, index) => `
-            <tr>
-                <td>${item.nazwa_produktu}</td><td>${item.kod_produktu}</td><td>${item.ean || item.kod_kreskowy}</td>
-                <td>${parseFloat(item.cena).toFixed(2)}</td>
-                <td><input type="number" class="quantity-in-table" value="${item.quantity}" min="1" data-index="${index}" inputmode="numeric"></td>
-                <td><button class="delete-btn btn-icon-danger" data-index="${index}"><i class="fa-solid fa-trash"></i></button></td>
-            </tr>`).join('');
-    }
+    function renderListBuilderPage() { /* ... */ }
+    function addProductToList(productData, quantity) { /* ... */ }
+    function renderScannedList() { /* ... */ }
 
     async function saveCurrentList(showSuccessToast = true) {
         const clientName = document.getElementById('clientNameInput')?.value.trim() || 'Bez nazwy';
@@ -332,75 +298,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function exportToExcel() { /* ... bez zmian ... */ }
-    function exportToOptima() { /* ... bez zmian ... */ }
-    function printList() { /* ... bez zmian ... */ }
+    function exportToExcel() { /* ... */ }
+    function exportToOptima() { /* ... */ }
+    function printList() { /* ... */ }
     
-    function renderInventoryPage() {
-        elements.inventoryPage.innerHTML = `
-            <h2><i class="fa-solid fa-clipboard-list"></i> Inwentaryzacja</h2>
-            <p style="margin: 15px 0;">Skanuj produkty lub dodaj je ręcznie. Kliknij na ilość, aby ją edytować.</p>
-            <table>
-                <thead><tr><th>Nazwa</th><th>Kod</th><th>Ilość</th><th>Akcje</th></tr></thead>
-                <tbody id="inventoryListBody"></tbody>
-            </table>
-            <div style="margin-top: 20px; text-align: right;">
-                 <button id="inventorySaveBtn" class="btn btn-primary"><i class="fa-solid fa-save"></i> Zapisz inwentaryzację</button>
-                 <button id="inventoryExportCsvBtn" class="btn"><i class="fa-solid fa-file-csv"></i> Eksportuj CSV</button>
-            </div>
-        `;
-        renderInventoryList();
-    }
+    function renderInventoryPage() { /* ... */ }
+    function handleInventoryAdd(productData, quantity) { /* ... */ }
+    function renderInventoryList() { /* ... */ }
+    function exportInventoryToCsv() { /* ... */ }
+    async function saveInventory() { /* ... */ }
     
-    function handleInventoryAdd(productData, quantity) {
-        const code = productData.ean || productData.kod_kreskowy;
-        const existing = inventoryItems.find(i => (i.ean || i.kod_kreskowy) === code);
-        if (existing) existing.quantity = parseInt(existing.quantity) + quantity;
-        else inventoryItems.push({ ...productData, quantity });
-        renderInventoryList();
-        showToast(`Dodano do inwentaryzacji: ${productData.nazwa_produktu}`);
-    }
-
-    function renderInventoryList() {
-        const body = document.getElementById('inventoryListBody');
-        if(!body) return;
-        body.innerHTML = inventoryItems.map((item, i) => `
-            <tr>
-                <td>${item.nazwa_produktu}</td>
-                <td>${item.kod_produktu}</td>
-                <td><span class="editable-quantity" data-index="${i}">${item.quantity}</span></td>
-                <td><button class="delete-inv-item-btn btn-icon-danger" data-index="${i}"><i class="fa-solid fa-trash"></i></button></td>
-            </tr>`).join('');
-    }
-
-    function exportInventoryToCsv() {
-        if (inventoryItems.length === 0) { showToast('Lista inwentaryzacyjna jest pusta.', 'warning'); return; }
-        const csvContent = "EAN;Ilość;Nazwa\n" + inventoryItems.map(item => `${item.ean || item.kod_kreskowy};${item.quantity};${item.nazwa_produktu}`).join('\n');
-        downloadFile('\uFEFF' + csvContent, 'text/csv;charset=utf-8;', `inwentaryzacja_${new Date().toISOString().slice(0,10)}.csv`);
-    }
-
-    async function saveInventory() {
-        if (inventoryItems.length === 0) { showToast('Inwentaryzacja jest pusta.', 'warning'); return; }
-        const inventoryName = prompt('Podaj nazwę dla zapisu inwentaryzacji:', `Inwentaryzacja ${new Date().toLocaleDateString()}`);
-        if (!inventoryName) return;
-        
-        try {
-            const response = await fetch('/api/data/inventory', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-auth-token': localStorage.getItem('token') },
-                body: JSON.stringify({ inventoryName, items: inventoryItems })
-            });
-            if (!response.ok) throw new Error('Błąd zapisu inwentaryzacji.');
-            showToast('Inwentaryzacja została zapisana!', 'success');
-            inventoryItems = [];
-            renderInventoryList();
-        } catch (error) {
-            showToast(`Błąd: ${error.message}`, 'error');
-        }
-    }
-
     function renderPickingPage() {
-        elements.pickingPage.innerHTML = `<h2><i class="fa-solid fa-box-open"></i> Kompletacja Zamówienia</h2><div id="picking-lists-container"></div>`;
+        elements.pickingPage.innerHTML = `<h2><i class="fa-solid fa-box-open"></i> Kompletacja</h2><div id="picking-lists-container"></div>`;
         loadListsForPicking();
     }
     
@@ -437,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
             container.innerHTML = `
                 <div style="margin-bottom: 15px; display:flex; gap:10px;">
                      <button class="btn" id="newListFromSavedBtn"><i class="fa-solid fa-plus"></i> Nowa lista</button>
-                     <button class="btn" id="importListFromCsvBtn"><i class="fa-solid fa-file-import"></i> Importuj z CSV</button>
+                     <button class="btn btn-primary" id="importListFromCsvBtn"><i class="fa-solid fa-file-import"></i> Importuj z CSV</button>
                      <input type="file" id="importCsvInput" accept=".csv" style="display: none;">
                 </div>
                 <h3>Zapisane listy:</h3><div id="saved-lists-items-container"></div>`;
@@ -450,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="user-item">
                         <div><strong>${list.listName}</strong><br><small>Autor: ${list.user?.username || 'usunięty'}</small></div>
                         <div class="user-actions">
-                            <button class="btn btn-primary load-list-btn" data-id="${list._id}">Wczytaj</button>
+                            <button class="btn load-list-btn" data-id="${list._id}">Wczytaj</button>
                             <button class="btn-danger delete-list-btn" data-id="${list._id}"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>`).join('');
@@ -484,20 +393,62 @@ document.addEventListener('DOMContentLoaded', () => {
         loadAllUsers();
     }
 
-    const loadAllUsers = async () => { /* ... bez zmian ... */ };
-    const handleUserAction = async (url, options) => { /* ... bez zmian ... */ };
-    const importProductDatabase = async (file, filename) => { /* ... bez zmian ... */ };
+    const loadAllUsers = async () => {
+        const userListEl = document.getElementById('allUsersList');
+        if (!userListEl) return;
+        try {
+            const response = await fetch('/api/admin/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({ msg: `Błąd serwera (${response.status})`}));
+                throw new Error(errData.msg);
+            }
+            const users = await response.json();
+            userListEl.innerHTML = users.length > 0 ? users.map(user => `
+                <div class="user-item">
+                    <div><strong>${user.username}</strong><br><small>Rola: ${user.role} | ${user.isApproved ? 'Zatwierdzony' : 'Oczekujący'}</small></div>
+                    <div class="user-actions">
+                        ${!user.isApproved ? `<button class="approve-user-btn btn btn-primary" data-userid="${user._id}">Zatwierdź</button>` : ''}
+                        <button class="delete-user-btn btn-danger" data-userid="${user._id}" data-username="${user.username}"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>`).join('') : '<p>Brak użytkowników.</p>';
+        } catch (error) {
+            if (userListEl) userListEl.innerHTML = `<p style="color:var(--danger-color);">${error.message}</p>`;
+        }
+    };
     
-    // --- GŁÓWNA FUNKCJA PODPINANIA ZDARZEŃ ---
+    const handleUserAction = async (url, options) => {
+        try {
+            const response = await fetch(url, options);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.msg || 'Błąd operacji');
+            showToast(data.msg || 'Operacja zakończona sukcesem!', 'success');
+            await loadAllUsers();
+        } catch (error) { showToast(`Błąd: ${error.message}`, 'error'); }
+    };
+    
+    const importProductDatabase = async (file, filename) => {
+        const formData = new FormData();
+        formData.append('productsFile', file);
+        formData.append('filename', filename);
+        showToast(`Przesyłanie pliku ${filename}...`, 'info');
+        try {
+            const response = await fetch('/api/admin/upload-products', { method: 'POST', headers: { 'x-auth-token': localStorage.getItem('token') }, body: formData });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.msg || 'Błąd przesyłania pliku');
+            showToast(data.msg, 'success');
+            await loadDataFromServer();
+        } catch (error) {
+            showToast(`Błąd importu: ${error.message}`, 'error');
+        }
+    };
+    
     const initEventListeners = () => {
         elements.loginBtn.addEventListener('click', attemptLogin);
         elements.registerBtn.addEventListener('click', attemptRegister);
         elements.showRegister.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'none'; elements.registerForm.style.display = 'block'; });
         elements.showLogin.addEventListener('click', (e) => { e.preventDefault(); elements.registerForm.style.display = 'none'; elements.loginForm.style.display = 'block'; });
-
         elements.menuToggleBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.dropdownMenu.classList.toggle('show'); });
         window.addEventListener('click', () => { if (elements.dropdownMenu.classList.contains('show')) elements.dropdownMenu.classList.remove('show'); });
-        
         elements.menuDashboardBtn.addEventListener('click', () => switchTab('dashboard'));
         elements.menuListBuilderBtn.addEventListener('click', () => switchTab('listBuilder'));
         elements.menuPickingBtn.addEventListener('click', () => switchTab('picking'));
@@ -505,19 +456,16 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.menuAdminBtn.addEventListener('click', () => switchTab('admin'));
         elements.menuSavedLists.addEventListener('click', showSavedLists);
         elements.menuLogoutBtn.addEventListener('click', () => { localStorage.clear(); location.reload(); });
-        
         document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', (e) => e.target.closest('.modal').style.display = 'none'));
-        elements.quickSearchBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'flex'; elements.lookupBarcodeInput.value = ''; elements.lookupResultSingle.innerHTML = ''; elements.lookupBarcodeInput.focus(); });
+        elements.quickSearchBtn.addEventListener('click', () => { elements.quickSearchModal.style.display = 'flex'; });
         elements.lookupBarcodeInput.addEventListener('input', debounce(() => {
             const results = performSearch(elements.lookupBarcodeInput.value);
             elements.lookupResultSingle.innerHTML = results.length > 0 ? `<strong>${results[0].nazwa_produktu}</strong><br><small>EAN: ${results[0].ean || results[0].kod_kreskowy}, Kod: ${results[0].kod_produktu}</small>` : `<p>Nie znaleziono</p>`;
         }, 300));
-        
         elements.darkModeToggle.addEventListener('click', () => {
             const isDark = document.body.classList.toggle('dark-mode');
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
         });
-
         elements.floatingEanInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleFloatingBarAction(); });
         elements.floatingAddBtn.addEventListener('click', () => handleFloatingBarAction());
         elements.floatingEanInput.addEventListener('input', debounce(handleFloatingBarSearch, 300));
@@ -528,7 +476,6 @@ document.addEventListener('DOMContentLoaded', () => {
                  if (product) handleFloatingBarAction(product);
              }
         });
-
         document.body.addEventListener('click', async e => {
             const btn = e.target.closest('button');
             if (!btn) return;
@@ -537,15 +484,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btn.id === 'printListBtn') printList();
             if (btn.id === 'exportExcelBtn') exportToExcel();
             if (btn.id === 'exportOptimaBtn') exportToOptima();
-            if (btn.id === 'inventoryExportCsvBtn') exportInventoryToCsv();
             if (btn.id === 'inventorySaveBtn') saveInventory();
+            if (btn.id === 'inventoryExportCsvBtn') exportInventoryToCsv();
             if (btn.id === 'importListFromCsvBtn') document.getElementById('importCsvInput').click();
             
             if(btn.id === 'newListFromSavedBtn') {
                 if(scannedItems.length > 0) {
-                    if(confirm("Masz niezapisaną listę. Zapisać przed utworzeniem nowej?")) {
-                       await saveCurrentList(true);
-                    }
+                    if(confirm("Masz niezapisaną listę. Zapisać przed utworzeniem nowej?")) await saveCurrentList(true);
                 }
                 scannedItems = []; activeListId = null;
                 localStorage.removeItem('activeListId');
@@ -554,18 +499,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.savedListsModal.style.display = 'none';
             }
             
-            if (btn.classList.contains('load-list-btn')) { /* ... bez zmian ... */ }
-            if (btn.classList.contains('delete-list-btn')) { /* ... bez zmian ... */ }
-            if (btn.classList.contains('btn-import')) { document.getElementById(btn.dataset.target).click(); }
-            if (btn.closest('#adminPanel')) { /* ... bez zmian ... */ }
+            if (btn.classList.contains('load-list-btn')) {
+                const listId = btn.dataset.id;
+                try {
+                    const response = await fetch(`/api/data/list/${listId}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+                    const data = await response.json();
+                    scannedItems = data.items;
+                    localStorage.setItem('clientName', data.clientName);
+                    activeListId = data._id;
+                    localStorage.setItem('activeListId', activeListId);
+                    switchTab('listBuilder');
+                    elements.savedListsModal.style.display = 'none';
+                    showToast('Lista wczytana!', 'success');
+                } catch (error) {
+                    showToast('Błąd wczytywania listy.', 'error');
+                }
+            }
         });
         
-        document.body.addEventListener('input', e => {
-             if(e.target.classList.contains('quantity-in-table')) { /* ... bez zmian ... */ }
+        document.body.addEventListener('change', e => {
+             if(e.target.classList.contains('quantity-in-table')) {
+                const index = e.target.dataset.index;
+                const newQuantity = parseInt(e.target.value, 10);
+                if(scannedItems[index] && !isNaN(newQuantity) && newQuantity > 0) scannedItems[index].quantity = newQuantity;
+             }
              if (e.target.id === 'importCsvInput') {
                 const file = e.target.files[0];
                 if (file) {
-                     // Logika importu listy z CSV
+                    // Logika importu listy CSV
                 }
              }
              if (e.target.classList.contains('import-input')) {
