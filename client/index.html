@@ -217,7 +217,7 @@
             let currentList = { clientName: '', items: [] };
             let listsForPicking = [];
 
-            // === NOWA SEKCJA: WYSZUKIWANIE PRODUKTÓW ===
+            // === START NEW SEARCH FUNCTIONS ===
             function renderSearchResults(products) {
                 elements.lookupResultSingle.innerHTML = '';
                 if (!products || products.length === 0) {
@@ -247,8 +247,10 @@
                 }
                 elements.lookupResultSingle.innerHTML = '<p>Szukanie...</p>';
                 try {
-                    const response = await fetch(`/api/data?search=${encodeURIComponent(query)}`);
+                    // POPRAWKA: używamy apiFetch, które dodaje token do każdego zapytania
+                    const response = await apiFetch(`/api/data?search=${encodeURIComponent(query)}`);
                     if (!response.ok) throw new Error('Błąd odpowiedzi serwera');
+                    // POPRAWKA: parsowanie JSON musi być wykonane po sprawdzeniu odpowiedzi
                     const products = await response.json();
                     renderSearchResults(products);
                 } catch (error) {
@@ -256,7 +258,7 @@
                     elements.lookupResultSingle.innerHTML = '<p style="color: var(--danger-color);">Błąd podczas wyszukiwania.</p>';
                 }
             }
-            // === KONIEC NOWEJ SEKCJI ===
+            // === END NEW SEARCH FUNCTIONS ===
 
             function showToast(message, type = 'info') {
                 const container = document.getElementById('toast-container');
@@ -268,7 +270,7 @@
                 setTimeout(() => {
                     toast.classList.remove('show');
                     setTimeout(() => {
-                        if (toast.parentNode === container) {
+                        if (container.contains(toast)) {
                             container.removeChild(toast);
                         }
                     }, 500);
@@ -276,15 +278,27 @@
             }
 
             async function apiFetch(url, options = {}) {
-                options.headers = { ...options.headers, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+                // POPRAWKA: Token jest teraz wysyłany w nagłówku 'x-auth-token'
+                const headers = {
+                    ...options.headers,
+                    'Content-Type': 'application/json'
+                };
+                if (token) {
+                    headers['x-auth-token'] = token;
+                }
+                options.headers = headers;
+
                 const response = await fetch(url, options);
+                
+                // POPRAWKA: Obsługa 401 Unauthorized
                 if (response.status === 401) {
                     logout();
+                    // Rzucamy błąd, aby przerwać dalsze wykonanie kodu, który polega na byciu zalogowanym
                     throw new Error('Sesja wygasła. Zaloguj się ponownie.');
                 }
                 return response;
             }
-
+            
             async function checkLogin() {
                 token = localStorage.getItem('token');
                 if (!token) {
@@ -314,8 +328,12 @@
             }
 
             async function login() {
-                const username = elements.loginUsernameInput.value;
-                const password = elements.loginPasswordInput.value;
+                const username = elements.loginUsernameInput.value.trim();
+                const password = elements.loginPasswordInput.value.trim();
+                if (!username || !password) {
+                    elements.loginError.textContent = 'Wszystkie pola są wymagane.';
+                    return;
+                }
                 elements.loginError.textContent = '';
                 try {
                     const res = await fetch('/api/auth/login', {
@@ -336,8 +354,12 @@
             }
 
             async function register() {
-                const username = elements.registerUsernameInput.value;
-                const password = elements.registerPasswordInput.value;
+                const username = elements.registerUsernameInput.value.trim();
+                const password = elements.registerPasswordInput.value.trim();
+                 if (!username || !password) {
+                    elements.registerError.textContent = 'Wszystkie pola są wymagane.';
+                    return;
+                }
                 elements.registerError.textContent = '';
                 try {
                     const res = await fetch('/api/auth/register', {
@@ -363,7 +385,8 @@
                 token = null;
                 allProducts = [];
                 currentList = { clientName: '', items: [] };
-                checkLogin();
+                // Pełne przeładowanie strony po wylogowaniu jest najbezpieczniejsze
+                window.location.reload();
             }
 
             async function fetchAllProducts() {
@@ -384,33 +407,31 @@
                 elements.floatingInputBar.style.display = 'none';
                 pageRenderer(...args);
             }
-
-            function renderDashboard() { /* ... Implementacja pulpitu ... */ }
-            function renderListBuilder(listToEdit = null) { /* ... Implementacja kreatora listy ... */ }
-            function renderPickingPage() { /* ... Implementacja kompletacji ... */ }
-            function renderInventoryPage() { /* ... Implementacja inwentaryzacji ... */ }
-            async function renderAdminPanel() { /* ... Implementacja panelu admina ... */ }
-            async function renderSavedLists() { /* ... Implementacja zapisanych list ... */ }
+            
+            function renderDashboard() { elements.mainContent.innerHTML = '<h2>Pulpit</h2><p>Witaj w panelu e-Dekor.</p>'; elements.mainContent.style.display = 'block'; }
+            function renderListBuilder(listToEdit = null) { /* ... implementacja ... */ }
+            function renderPickingPage() { /* ... implementacja ... */ }
+            function renderInventoryPage() { /* ... implementacja ... */ }
+            async function renderAdminPanel() { /* ... implementacja ... */ }
+            async function renderSavedLists() { /* ... implementacja ... */ }
             
             function findProduct(input) {
                 return allProducts.find(p => p.ean === input || p.code === input || (p.name && p.name.toLowerCase() === input.toLowerCase()));
             }
 
             function initEventListeners() {
-                // Login/Register
                 elements.showRegister.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'none'; elements.registerForm.style.display = 'block'; });
                 elements.showLogin.addEventListener('click', (e) => { e.preventDefault(); elements.registerForm.style.display = 'none'; elements.loginForm.style.display = 'block'; });
                 elements.loginBtn.addEventListener('click', login);
                 elements.registerBtn.addEventListener('click', register);
-
-                // Nawigacja
+                elements.menuLogoutBtn.addEventListener('click', logout);
                 elements.menuToggleBtn.addEventListener('click', () => elements.dropdownMenu.classList.toggle('show'));
                 document.addEventListener('click', (e) => {
                     if (!elements.menuToggleBtn.contains(e.target) && !elements.dropdownMenu.contains(e.target)) {
                         elements.dropdownMenu.classList.remove('show');
                     }
                 });
-                
+
                 elements.menuDashboardBtn.addEventListener('click', () => navigate(renderDashboard));
                 elements.menuListBuilderBtn.addEventListener('click', () => navigate(() => renderListBuilder()));
                 elements.menuPickingBtn.addEventListener('click', () => navigate(renderPickingPage));
@@ -420,9 +441,8 @@
                     renderSavedLists();
                     elements.savedListsModal.style.display = 'flex';
                 });
-                elements.menuLogoutBtn.addEventListener('click', logout);
                 
-                // === WYSZUKIWARKA ===
+                // WYSZUKIWARKA
                 elements.quickSearchBtn.addEventListener('click', () => {
                     elements.quickSearchModal.style.display = 'flex';
                     elements.lookupBarcodeInput.value = '';
@@ -444,7 +464,6 @@
                     }
                 });
 
-                // Zamykanie modali
                 document.querySelectorAll('.modal').forEach(modal => {
                     modal.addEventListener('click', e => {
                         if (e.target === modal || e.target.closest('.close-modal-btn')) {
@@ -453,7 +472,6 @@
                     });
                 });
                  
-                // Dark Mode
                 elements.darkModeToggle.addEventListener('click', () => {
                     document.body.classList.toggle('dark-mode');
                     localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
@@ -463,7 +481,6 @@
                 }
             }
 
-            // Inicjalizacja aplikacji
             initEventListeners();
             checkLogin();
        });
