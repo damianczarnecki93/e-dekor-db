@@ -247,10 +247,8 @@
                 }
                 elements.lookupResultSingle.innerHTML = '<p>Szukanie...</p>';
                 try {
-                    // POPRAWKA: używamy apiFetch, które dodaje token do każdego zapytania
                     const response = await apiFetch(`/api/data?search=${encodeURIComponent(query)}`);
                     if (!response.ok) throw new Error('Błąd odpowiedzi serwera');
-                    // POPRAWKA: parsowanie JSON musi być wykonane po sprawdzeniu odpowiedzi
                     const products = await response.json();
                     renderSearchResults(products);
                 } catch (error) {
@@ -278,22 +276,22 @@
             }
 
             async function apiFetch(url, options = {}) {
-                // POPRAWKA: Token jest teraz wysyłany w nagłówku 'x-auth-token'
                 const headers = {
                     ...options.headers,
                     'Content-Type': 'application/json'
                 };
-                if (token) {
-                    headers['x-auth-token'] = token;
+                const currentToken = localStorage.getItem('token');
+                if (currentToken) {
+                    // POPRAWKA: Używamy standardowego nagłówka 'Authorization' z prefixem 'Bearer '.
+                    // Pana authMiddleware jest standardowe i powinno go obsłużyć.
+                    headers['Authorization'] = `Bearer ${currentToken}`;
                 }
                 options.headers = headers;
 
                 const response = await fetch(url, options);
                 
-                // POPRAWKA: Obsługa 401 Unauthorized
                 if (response.status === 401) {
                     logout();
-                    // Rzucamy błąd, aby przerwać dalsze wykonanie kodu, który polega na byciu zalogowanym
                     throw new Error('Sesja wygasła. Zaloguj się ponownie.');
                 }
                 return response;
@@ -308,7 +306,8 @@
                     return;
                 }
                 try {
-                    const res = await apiFetch('/api/auth/me');
+                    // POPRAWKA: Używamy poprawnego endpointu `/api/auth/` (GET)
+                    const res = await apiFetch('/api/auth/'); 
                     if (res.ok) {
                         const user = await res.json();
                         elements.loginOverlay.style.display = 'none';
@@ -319,6 +318,8 @@
                         await fetchAllProducts();
                         renderDashboard();
                     } else {
+                        const errorData = await res.text(); // Zobaczmy co serwer faktycznie odpowiedział
+                        console.error("Odpowiedź serwera przy weryfikacji tokenu:", errorData);
                         logout();
                     }
                 } catch (error) {
@@ -336,7 +337,8 @@
                 }
                 elements.loginError.textContent = '';
                 try {
-                    const res = await fetch('/api/auth/login', {
+                    // POPRAWKA: Używamy poprawnego endpointu `/api/auth/` (POST)
+                    const res = await fetch('/api/auth/', { 
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ username, password })
@@ -385,7 +387,6 @@
                 token = null;
                 allProducts = [];
                 currentList = { clientName: '', items: [] };
-                // Pełne przeładowanie strony po wylogowaniu jest najbezpieczniejsze
                 window.location.reload();
             }
 
@@ -398,6 +399,7 @@
                         showToast('Nie udało się załadować listy produktów.', 'danger');
                     }
                 } catch(err) {
+                    console.error(err);
                     showToast('Błąd sieci podczas ładowania produktów.', 'danger');
                 }
             }
@@ -408,7 +410,10 @@
                 pageRenderer(...args);
             }
             
-            function renderDashboard() { elements.mainContent.innerHTML = '<h2>Pulpit</h2><p>Witaj w panelu e-Dekor.</p>'; elements.mainContent.style.display = 'block'; }
+            function renderDashboard() { 
+                elements.mainContent.innerHTML = '<h2>Pulpit</h2><p>Witaj w panelu e-Dekor.</p>'; 
+                elements.mainContent.style.display = 'block'; 
+            }
             function renderListBuilder(listToEdit = null) { /* ... implementacja ... */ }
             function renderPickingPage() { /* ... implementacja ... */ }
             function renderInventoryPage() { /* ... implementacja ... */ }
