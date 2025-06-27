@@ -217,7 +217,7 @@
             let currentList = { clientName: '', items: [] };
             let listsForPicking = [];
 
-            // === SEARCH FUNCTIONS (NEW) ===
+            // === SEARCH FUNCTIONS ===
             function renderSearchResults(products) {
                 elements.lookupResultSingle.innerHTML = '';
                 if (!products || products.length === 0) {
@@ -227,7 +227,7 @@
                 const productList = document.createElement('div');
                 products.forEach(product => {
                     const productItem = document.createElement('div');
-                    productItem.className = 'list-item'; // Re-use existing style
+                    productItem.className = 'list-item';
                     productItem.innerHTML = `
                         <div>
                             <strong>${product.name}</strong>
@@ -255,8 +255,8 @@
                     elements.lookupResultSingle.innerHTML = '<p style="color: var(--danger-color);">Błąd podczas wyszukiwania.</p>';
                 }
             }
-            // === END SEARCH FUNCTIONS ===
 
+            // --- CORE APP LOGIC ---
             function showToast(message, type = 'info') {
                 const container = document.getElementById('toast-container');
                 const toast = document.createElement('div');
@@ -276,7 +276,6 @@
                 const headers = { ...options.headers, 'Content-Type': 'application/json' };
                 const currentToken = localStorage.getItem('token');
                 if (currentToken) {
-                    // POPRAWKA: W Pana middleware jest 'x-auth-token', a nie 'Authorization'
                     headers['x-auth-token'] = currentToken;
                 }
                 options.headers = headers;
@@ -285,7 +284,7 @@
                 
                 if (response.status === 401) {
                     logout();
-                    throw new Error('Sesja wygasła. Zaloguj się ponownie.');
+                    throw new Error('Sesja wygasła.');
                 }
                 return response;
             }
@@ -299,8 +298,7 @@
                     return;
                 }
                 try {
-                    // POPRAWKA: Endpoint weryfikacji to GET /api/auth/ (zgodnie z auth.js)
-                    const res = await apiFetch('/api/auth'); 
+                    const res = await apiFetch('/api/auth');
                     if (res.ok) {
                         const user = await res.json();
                         elements.loginOverlay.style.display = 'none';
@@ -311,7 +309,7 @@
                         await fetchAllProducts();
                         renderDashboard();
                     } else {
-                        throw new Error(`Server responded with status: ${res.status}`);
+                        throw new Error(`Server validation failed: ${res.status}`);
                     }
                 } catch (error) {
                     console.error("Błąd weryfikacji tokenu:", error);
@@ -328,21 +326,22 @@
                 }
                 elements.loginError.textContent = '';
                 try {
-                    // POPRAWKA: Endpoint logowania to POST /api/auth/login (zgodnie z auth.js)
                     const res = await fetch('/api/auth/login', { 
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ username, password })
                     });
-                    const data = await res.json();
+                    
                     if (res.ok) {
+                        const data = await res.json();
                         localStorage.setItem('token', data.token);
                         await checkLogin();
                     } else {
-                        elements.loginError.textContent = data.message || 'Błąd logowania';
+                        const data = await res.json().catch(() => ({ message: 'Nieprawidłowe dane logowania lub błąd serwera.' }));
+                        elements.loginError.textContent = data.message;
                     }
                 } catch (err) {
-                    elements.loginError.textContent = 'Błąd sieci lub serwera';
+                    elements.loginError.textContent = 'Błąd sieci lub serwera.';
                 }
             }
 
@@ -376,8 +375,6 @@
             function logout() {
                 localStorage.removeItem('token');
                 token = null;
-                allProducts = [];
-                currentList = { clientName: '', items: [] };
                 window.location.reload();
             }
 
@@ -405,12 +402,7 @@
                 elements.mainContent.innerHTML = '<h2>Pulpit</h2><p>Witaj w panelu e-Dekor.</p>'; 
                 elements.mainContent.style.display = 'block'; 
             }
-            function renderListBuilder(listToEdit = null) { /* Pozostawiam jako placeholder */ }
-            function renderPickingPage() { /* Pozostawiam jako placeholder */ }
-            function renderInventoryPage() { /* Pozostawiam jako placeholder */ }
-            async function renderAdminPanel() { /* Pozostawiam jako placeholder */ }
-            async function renderSavedLists() { /* Pozostawiam jako placeholder */ }
-            
+
             function findProduct(input) {
                 if(!allProducts || allProducts.length === 0) return null;
                 const lowerCaseInput = input.toLowerCase();
@@ -431,16 +423,7 @@
                 });
 
                 elements.menuDashboardBtn.addEventListener('click', () => navigate(renderDashboard));
-                elements.menuListBuilderBtn.addEventListener('click', () => navigate(() => renderListBuilder()));
-                elements.menuPickingBtn.addEventListener('click', () => navigate(renderPickingPage));
-                elements.menuInventoryBtn.addEventListener('click', () => navigate(renderInventoryPage));
-                elements.menuAdminBtn.addEventListener('click', () => navigate(renderAdminPanel));
-                elements.menuSavedLists.addEventListener('click', () => {
-                    renderSavedLists();
-                    elements.savedListsModal.style.display = 'flex';
-                });
                 
-                // WYSZUKIWARKA
                 elements.quickSearchBtn.addEventListener('click', () => {
                     elements.quickSearchModal.style.display = 'flex';
                     elements.lookupBarcodeInput.value = '';
