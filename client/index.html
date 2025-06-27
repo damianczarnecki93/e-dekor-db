@@ -279,7 +279,7 @@
                     headers['x-auth-token'] = currentToken;
                 }
                 options.headers = headers;
-
+                
                 const response = await fetch(url, options);
                 
                 if (response.status === 401) {
@@ -298,7 +298,7 @@
                     return;
                 }
                 try {
-                    const res = await apiFetch('/api/auth'); 
+                    const res = await apiFetch('/api/auth');
                     if (res.ok) {
                         const user = await res.json();
                         elements.loginOverlay.style.display = 'none';
@@ -422,15 +422,15 @@
                     }
                 });
 
+                // Zastąpiono puste funkcje wywołaniem showToast
                 elements.menuDashboardBtn.addEventListener('click', () => navigate(renderDashboard));
-                // Te funkcje zostawiam jako puste, aby uniknąć błędów. Należy je zaimplementować.
-                elements.menuListBuilderBtn.addEventListener('click', () => showToast('Funkcja w budowie!'));
-                elements.menuPickingBtn.addEventListener('click', () => showToast('Funkcja w budowie!'));
-                elements.menuInventoryBtn.addEventListener('click', () => showToast('Funkcja w budowie!'));
-                elements.menuAdminBtn.addEventListener('click', () => showToast('Funkcja w budowie!'));
+                elements.menuListBuilderBtn.addEventListener('click', () => showToast('Funkcja "Tworzenie Listy" jest w budowie!'));
+                elements.menuPickingBtn.addEventListener('click', () => showToast('Funkcja "Kompletacja" jest w budowie!'));
+                elements.menuInventoryBtn.addEventListener('click', () => showToast('Funkcja "Inwentaryzacja" jest w budowie!'));
+                elements.menuAdminBtn.addEventListener('click', () => showToast('Funkcja "Panel Admina" jest w budowie!'));
                 elements.menuSavedLists.addEventListener('click', () => {
-                    showToast('Funkcja w budowie!');
-                    elements.savedListsModal.style.display = 'flex';
+                    showToast('Funkcja "Zapisane Listy" jest w budowie!');
+                    // elements.savedListsModal.style.display = 'flex'; // Można odkomentować, jeśli modal ma się pojawiać
                 });
                 
                 elements.quickSearchBtn.addEventListener('click', () => {
