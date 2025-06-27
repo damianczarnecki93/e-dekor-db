@@ -279,8 +279,7 @@
                     headers['x-auth-token'] = currentToken;
                 }
                 options.headers = headers;
-                console.log(`[DIAGNOSTYKA] Wysyłanie zapytania do: ${url}`);
-                
+
                 const response = await fetch(url, options);
                 
                 if (response.status === 401) {
@@ -299,7 +298,7 @@
                     return;
                 }
                 try {
-                    const res = await apiFetch('/api/auth'); // Poprawny endpoint
+                    const res = await apiFetch('/api/auth'); 
                     if (res.ok) {
                         const user = await res.json();
                         elements.loginOverlay.style.display = 'none';
@@ -310,12 +309,10 @@
                         await fetchAllProducts();
                         renderDashboard();
                     } else {
-                        const errorText = await res.text();
-                        console.error(`Błąd weryfikacji tokenu. Status: ${res.status}. Odpowiedź serwera:`, errorText);
-                        logout();
+                        throw new Error(`Server validation failed with status: ${res.status}`);
                     }
                 } catch (error) {
-                    console.error("Błąd krytyczny w checkLogin (np. błąd sieci):", error);
+                    console.error("Błąd weryfikacji tokenu:", error);
                     logout();
                 }
             }
@@ -426,6 +423,15 @@
                 });
 
                 elements.menuDashboardBtn.addEventListener('click', () => navigate(renderDashboard));
+                // Te funkcje zostawiam jako puste, aby uniknąć błędów. Należy je zaimplementować.
+                elements.menuListBuilderBtn.addEventListener('click', () => showToast('Funkcja w budowie!'));
+                elements.menuPickingBtn.addEventListener('click', () => showToast('Funkcja w budowie!'));
+                elements.menuInventoryBtn.addEventListener('click', () => showToast('Funkcja w budowie!'));
+                elements.menuAdminBtn.addEventListener('click', () => showToast('Funkcja w budowie!'));
+                elements.menuSavedLists.addEventListener('click', () => {
+                    showToast('Funkcja w budowie!');
+                    elements.savedListsModal.style.display = 'flex';
+                });
                 
                 elements.quickSearchBtn.addEventListener('click', () => {
                     elements.quickSearchModal.style.display = 'flex';
