@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const Product = require('../models/Product'); // Upewniamy się, że model jest zaimportowany
+const Product = require('../models/Product');
 
-// Trasa do pobierania produktów, teraz z obsługą wyszukiwania
+/**
+ * Zmodyfikowana trasa do pobierania produktów.
+ * Obsługuje teraz opcjonalne wyszukiwanie za pomocą Atlas Search.
+ */
 router.get('/', async (req, res) => {
   try {
-    const { search } = req.query; // Sprawdzamy, czy w adresie URL jest parametr 'search'
+    // Sprawdzamy, czy w adresie URL jest parametr 'search' (np. /api/data?search=lampa)
+    const { search } = req.query; 
     let products;
 
     if (search && search.trim() !== '') {
@@ -13,24 +17,14 @@ router.get('/', async (req, res) => {
       products = await Product.aggregate([
         {
           $search: {
-            index: 'searchProducts', // Nazwa indeksu, który został stworzony w Atlas
+            index: 'searchProducts', // WAŻNE: Nazwa indeksu, który został stworzony w Atlas
             text: {
               query: search,
-              path: ['name', 'category'], // Pola do przeszukania
+              path: ['name', 'category'], // Przeszukujemy pola 'name' i 'category'
               fuzzy: {
-                maxEdits: 1 // Zezwalamy na 1 literówkę
+                maxEdits: 1 // Zezwalamy na 1 literówkę w zapytaniu
               }
             }
-          }
-        },
-        {
-          // Ograniczamy wyniki do 50, aby nie przeciążać aplikacji
-          $limit: 50 
-        },
-        {
-          // Dodajemy pole 'score' z oceną trafności od Atlas Search
-          $addFields: {
-            score: { $meta: 'searchScore' }
           }
         }
       ]);
