@@ -217,7 +217,7 @@
             let currentList = { clientName: '', items: [] };
             let listsForPicking = [];
 
-            // === START NEW SEARCH FUNCTIONS ===
+            // === SEARCH FUNCTIONS ===
             function renderSearchResults(products) {
                 elements.lookupResultSingle.innerHTML = '';
                 if (!products || products.length === 0) {
@@ -255,8 +255,8 @@
                     elements.lookupResultSingle.innerHTML = '<p style="color: var(--danger-color);">Błąd podczas wyszukiwania.</p>';
                 }
             }
-            // === END NEW SEARCH FUNCTIONS ===
 
+            // --- CORE APP LOGIC ---
             function showToast(message, type = 'info') {
                 const container = document.getElementById('toast-container');
                 const toast = document.createElement('div');
@@ -276,11 +276,11 @@
                 const headers = { ...options.headers, 'Content-Type': 'application/json' };
                 const currentToken = localStorage.getItem('token');
                 if (currentToken) {
-                    // Zgodnie z authMiddleware.js, używamy nagłówka 'x-auth-token'
                     headers['x-auth-token'] = currentToken;
                 }
                 options.headers = headers;
-
+                console.log(`[DIAGNOSTYKA] Wysyłanie zapytania do: ${url}`);
+                
                 const response = await fetch(url, options);
                 
                 if (response.status === 401) {
@@ -299,8 +299,7 @@
                     return;
                 }
                 try {
-                    // Poprawka: Ten endpoint (GET /api/auth) jest poprawny do weryfikacji tokenu
-                    const res = await apiFetch('/api/auth');
+                    const res = await apiFetch('/api/auth'); // Poprawny endpoint
                     if (res.ok) {
                         const user = await res.json();
                         elements.loginOverlay.style.display = 'none';
@@ -311,10 +310,12 @@
                         await fetchAllProducts();
                         renderDashboard();
                     } else {
-                        throw new Error(`Server validation failed with status: ${res.status}`);
+                        const errorText = await res.text();
+                        console.error(`Błąd weryfikacji tokenu. Status: ${res.status}. Odpowiedź serwera:`, errorText);
+                        logout();
                     }
                 } catch (error) {
-                    console.error("Błąd weryfikacji tokenu:", error);
+                    console.error("Błąd krytyczny w checkLogin (np. błąd sieci):", error);
                     logout();
                 }
             }
@@ -328,7 +329,6 @@
                 }
                 elements.loginError.textContent = '';
                 try {
-                    // Poprawka: Endpoint logowania to POST /api/auth/login
                     const res = await fetch('/api/auth/login', { 
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
