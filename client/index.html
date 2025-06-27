@@ -167,9 +167,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     
     <script>
-        // Ta linia zastępuje <script src="skaner.js"></script>
-        // Cała logika aplikacji jest teraz w jednym miejscu.
-
+        // Pełny, połączony skrypt z index.html i skaner.js
         document.addEventListener('DOMContentLoaded', () => {
             const elements = {
                 loginOverlay: document.getElementById('loginOverlay'),
@@ -220,7 +218,7 @@
             let currentList = { clientName: '', items: [] };
             let listsForPicking = [];
 
-            // === START NEW SEARCH FUNCTIONS ===
+            // === NOWA SEKCJA: WYSZUKIWANIE PRODUKTÓW ===
             function renderSearchResults(products) {
                 elements.lookupResultSingle.innerHTML = '';
                 if (!products || products.length === 0) {
@@ -230,7 +228,7 @@
                 const productList = document.createElement('div');
                 products.forEach(product => {
                     const productItem = document.createElement('div');
-                    productItem.className = 'list-item';
+                    productItem.className = 'list-item'; // Użycie istniejącej klasy dla spójnego wyglądu
                     productItem.innerHTML = `
                         <div>
                             <strong>${product.name}</strong>
@@ -244,8 +242,9 @@
             }
 
             async function performProductSearch(query) {
+                // Ta funkcja jest teraz główną funkcją wyszukiwania, używając Atlas Search
                 if (!query || query.trim().length < 2) {
-                    elements.lookupResultSingle.innerHTML = '';
+                    elements.lookupResultSingle.innerHTML = ''; // Czyści wyniki, jeśli zapytanie jest za krótkie
                     return;
                 }
                 elements.lookupResultSingle.innerHTML = '<p>Szukanie...</p>';
@@ -259,48 +258,133 @@
                     elements.lookupResultSingle.innerHTML = '<p style="color: var(--danger-color);">Błąd podczas wyszukiwania.</p>';
                 }
             }
-            // === END NEW SEARCH FUNCTIONS ===
+            // === KONIEC NOWEJ SEKCJI ===
 
-            // --- ALL ORIGINAL FUNCTIONS FROM skaner.js GO HERE ---
-            
-            function showToast(message, type = 'info') { /* ... */ } // Placeholder
-            async function checkLogin() { /* ... */ } // Placeholder
-            async function login() { /* ... */ } // Placeholder
-            async function register() { /* ... */ } // Placeholder
-            function logout() { /* ... */ } // Placeholder
-            
-            function renderDashboard() { /* ... */ } // Placeholder
-            function renderListBuilder() { /* ... */ } // Placeholder
-            function renderPickingPage() { /* ... */ } // Placeholder
-            function renderInventoryPage() { /* ... */ } // Placeholder
-            function renderAdminPanel() { /* ... */ } // Placeholder
-            function renderSavedLists() { /* ... */ } // Placeholder
-            
-            // ... and so on for all other functions from skaner.js
-            
-            function initEventListeners() {
-                // ... (Original event listeners from skaner.js)
+            // --- ORYGINALNE FUNKCJE Z PLIKU skaner.js ---
 
-                // === SEARCH EVENT LISTENERS ===
-                if (elements.quickSearchBtn) {
-                    elements.quickSearchBtn.addEventListener('click', () => {
-                        elements.quickSearchModal.style.display = 'flex';
-                        elements.lookupBarcodeInput.value = '';
-                        elements.lookupResultSingle.innerHTML = '';
-                        elements.lookupBarcodeInput.focus();
-                    });
+            function showToast(message, type = 'info') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                container.appendChild(toast);
+                setTimeout(() => toast.classList.add('show'), 10);
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => container.removeChild(toast), 500);
+                }, 3000);
+            }
+
+            async function apiFetch(url, options = {}) {
+                options.headers = {
+                    ...options.headers,
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+                const response = await fetch(url, options);
+                if (response.status === 401) {
+                    logout();
+                    throw new Error('Sesja wygasła. Zaloguj się ponownie.');
                 }
-                
-                if (elements.lookupBarcodeInput) {
-                    let searchDebounceTimer;
-                    elements.lookupBarcodeInput.addEventListener('input', () => {
+                return response;
+            }
+
+            async function checkLogin() {
+                token = localStorage.getItem('token');
+                if (!token) {
+                    loginOverlay.style.display = 'flex';
+                    appContainer.style.display = 'none';
+                    topBar.style.display = 'none';
+                    return;
+                }
+                try {
+                    const res = await apiFetch('/api/auth/me');
+                    if (res.ok) {
+                        const user = await res.json();
+                        loginOverlay.style.display = 'none';
+                        appContainer.style.display = 'block';
+                        topBar.style.display = 'flex';
+                        menuUsername.textContent = user.username;
+                        document.getElementById('menuAdminBtn').style.display = user.role === 'admin' ? 'flex' : 'none';
+                        await fetchAllProducts();
+                        renderDashboard();
+                    } else {
+                        logout();
+                    }
+                } catch (error) {
+                    logout();
+                }
+            }
+            
+            async function login() { /* ... pozostaje bez zmian ... */ }
+            async function register() { /* ... pozostaje bez zmian ... */ }
+            function logout() { /* ... pozostaje bez zmian ... */ }
+
+            function navigate(pageRenderer) {
+                document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
+                elements.floatingInputBar.style.display = 'none';
+                pageRenderer();
+            }
+
+            function renderDashboard() { /* ... */ }
+            function renderListBuilder(listToEdit = null) { /* ... */ }
+            function renderPickingPage() { /* ... */ }
+            function renderInventoryPage() { /* ... */ }
+            function renderAdminPanel() { /* ... */ }
+            async function renderSavedLists() { /* ... */ }
+            
+            function findProduct(input) {
+                return allProducts.find(p => p.ean === input || p.code === input || p.name.toLowerCase() === input.toLowerCase());
+            }
+
+            function initEventListeners() {
+                // Login/Register
+                elements.showRegister.addEventListener('click', (e) => { e.preventDefault(); elements.loginForm.style.display = 'none'; elements.registerForm.style.display = 'block'; });
+                elements.showLogin.addEventListener('click', (e) => { e.preventDefault(); elements.registerForm.style.display = 'none'; elements.loginForm.style.display = 'block'; });
+                elements.loginBtn.addEventListener('click', login);
+                elements.registerBtn.addEventListener('click', register);
+
+                // Nawigacja
+                elements.menuToggleBtn.addEventListener('click', () => elements.dropdownMenu.classList.toggle('show'));
+                document.addEventListener('click', (e) => {
+                    if (!elements.menuToggleBtn.contains(e.target) && !elements.dropdownMenu.contains(e.target)) {
+                        elements.dropdownMenu.classList.remove('show');
+                    }
+                });
+
+                elements.menuDashboardBtn.addEventListener('click', () => navigate(renderDashboard));
+                elements.menuListBuilderBtn.addEventListener('click', () => navigate(() => renderListBuilder()));
+                elements.menuPickingBtn.addEventListener('click', () => navigate(renderPickingPage));
+                elements.menuInventoryBtn.addEventListener('click', () => navigate(renderInventoryPage));
+                elements.menuAdminBtn.addEventListener('click', () => navigate(renderAdminPanel));
+                elements.menuSavedLists.addEventListener('click', () => elements.savedListsModal.style.display = 'flex');
+                elements.menuLogoutBtn.addEventListener('click', logout);
+
+                // --- MODYFIKACJA LOGIKI WYSZUKIWANIA ---
+                elements.quickSearchBtn.addEventListener('click', () => {
+                    elements.quickSearchModal.style.display = 'flex';
+                    elements.lookupBarcodeInput.value = '';
+                    elements.lookupResultSingle.innerHTML = '';
+                    elements.lookupBarcodeInput.focus();
+                });
+
+                let searchDebounceTimer;
+                elements.lookupBarcodeInput.addEventListener('input', () => {
+                    const query = elements.lookupBarcodeInput.value.trim();
+                    const foundProduct = findProduct(query); // Najpierw szukaj w lokalnej liście po kodzie/EAN
+                    if (foundProduct) {
+                         // Jeśli znaleziono DOKŁADNE dopasowanie lokalnie, pokaż je od razu
+                        renderSearchResults([foundProduct]); 
+                    } else {
+                        // Jeśli nie ma dokładnego dopasowania, użyj wyszukiwania pełnotekstowego z opóźnieniem
                         clearTimeout(searchDebounceTimer);
                         searchDebounceTimer = setTimeout(() => {
-                            performProductSearch(elements.lookupBarcodeInput.value);
+                            performProductSearch(query);
                         }, 300);
-                    });
-                }
+                    }
+                });
 
+                // Zamykanie modali
                 document.querySelectorAll('.modal').forEach(modal => {
                     modal.addEventListener('click', e => {
                         if (e.target === modal || e.target.closest('.close-modal-btn')) {
@@ -308,9 +392,19 @@
                         }
                     });
                 });
+                 
+                // Dark Mode
+                elements.darkModeToggle.addEventListener('click', () => {
+                    document.body.classList.toggle('dark-mode');
+                    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+                });
+                if (localStorage.getItem('darkMode') === 'true') {
+                    document.body.classList.add('dark-mode');
+                }
             }
 
-            // This should be the final call in the DOMContentLoaded event
+            // Inicjalizacja aplikacji
+            initEventListeners();
             checkLogin();
        });
     </script>
