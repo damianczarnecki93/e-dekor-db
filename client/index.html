@@ -279,7 +279,8 @@
                 const headers = { ...options.headers, 'Content-Type': 'application/json' };
                 const currentToken = localStorage.getItem('token');
                 if (currentToken) {
-                    headers['Authorization'] = `Bearer ${currentToken}`;
+                    // POPRAWKA: Nagłówek 'x-auth-token' jest używany zgodnie z tym, czego oczekuje authMiddleware.js
+                    headers['x-auth-token'] = currentToken;
                 }
                 options.headers = headers;
 
@@ -341,7 +342,7 @@
                     const data = await res.json();
                     if (res.ok) {
                         localStorage.setItem('token', data.token);
-                        token = data.token; // Aktualizujemy token natychmiast
+                        token = data.token;
                         await checkLogin();
                     } else {
                         elements.loginError.textContent = data.message || 'Błąd logowania';
@@ -445,6 +446,7 @@
                     elements.savedListsModal.style.display = 'flex';
                 });
                 
+                // WYSZUKIWARKA
                 elements.quickSearchBtn.addEventListener('click', () => {
                     elements.quickSearchModal.style.display = 'flex';
                     elements.lookupBarcodeInput.value = '';
