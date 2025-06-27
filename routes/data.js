@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
-// Ta funkcja przyjmuje model 'Product' jako argument
-module.exports = function(Product) {
+// Ta funkcja przyjmuje model 'ProductList' jako argument
+module.exports = function(ProductList) {
   /**
    * Trasa do pobierania produktów, z obsługą wyszukiwania.
    */
@@ -13,7 +13,7 @@ module.exports = function(Product) {
 
       if (search && search.trim() !== '') {
         // Logika wyszukiwania Atlas Search
-        products = await Product.aggregate([
+        products = await ProductList.aggregate([ // Używamy ProductList
           {
             $search: {
               index: 'searchProducts', // Nazwa indeksu z Atlas
@@ -29,7 +29,7 @@ module.exports = function(Product) {
         ]);
       } else {
         // Domyślna logika: pobierz wszystkie produkty
-        products = await Product.find({});
+        products = await ProductList.find({}); // Używamy ProductList
       }
 
       res.status(200).json(products);
