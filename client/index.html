@@ -131,7 +131,7 @@
             <div class="modal-header"><h2>Szybkie wyszukiwanie</h2><button class="close-modal-btn btn-icon" style="background:none; box-shadow:none;">&times;</button></div>
             <div class="modal-body">
                 <input type="text" id="lookupBarcodeInput" placeholder="Wpisz EAN, kod lub nazwę...">
-                <div id="lookupResultSingle" style="margin-top: 15px;"></div>
+                <div id="lookupResultContainer" style="margin-top: 15px; max-height: 50vh; overflow-y: auto;"></div>
             </div>
         </div>
     </div>
@@ -166,5 +166,156 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="skaner.js"></script>
+
+    <script>
+       document.addEventListener('DOMContentLoaded', () => {
+            // === NOWY KOD - INTEGRACJA WYSZUKIWARKI ===
+            const lookupBarcodeInput = document.getElementById('lookupBarcodeInput');
+            const lookupResultContainer = document.getElementById('lookupResultContainer');
+            
+            function renderSearchResults(products) {
+                lookupResultContainer.innerHTML = ''; 
+
+                if (!products || products.length === 0) {
+                    lookupResultContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary-color); padding: 20px;">Nie znaleziono produktów.</p>';
+                    return;
+                }
+
+                const productList = document.createElement('div');
+                products.forEach(product => {
+                    const productItem = document.createElement('div');
+                    productItem.className = 'list-item'; 
+                    
+                    productItem.innerHTML = `
+                        <div>
+                            <strong>${product.name}</strong>
+                            <div style="font-size: 0.9em; color: var(--text-secondary-color);">${product.category}</div>
+                        </div>
+                        <span style="font-weight: 600;">${(product.price || 0).toFixed(2)} zł</span>
+                    `;
+                    productList.appendChild(productItem);
+                });
+                lookupResultContainer.appendChild(productList);
+            }
+
+            async function performProductSearch(query) {
+                if (!query || query.trim().length < 2) {
+                    lookupResultContainer.innerHTML = '';
+                    return;
+                }
+                
+                lookupResultContainer.innerHTML = '<p>Szukanie...</p>';
+                
+                try {
+                    const response = await fetch(`/api/data?search=${encodeURIComponent(query)}`);
+                    if (!response.ok) {
+                        throw new Error('Błąd odpowiedzi serwera');
+                    }
+                    const products = await response.json();
+                    renderSearchResults(products);
+                } catch (error) {
+                    console.error('Błąd wyszukiwania produktów:', error);
+                    lookupResultContainer.innerHTML = '<p style="color: var(--danger-color);">Błąd podczas wyszukiwania.</p>';
+                }
+            }
+
+            let searchDebounceTimer;
+            lookupBarcodeInput.addEventListener('input', () => {
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                    performProductSearch(lookupBarcodeInput.value);
+                }, 300); 
+            });
+            // === KONIEC NOWEGO KODU ===
+
+            // Tutaj wklejona jest reszta oryginalnego skryptu z Pana aplikacji
+            const loginOverlay = document.getElementById('loginOverlay');
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const showRegister = document.getElementById('showRegister');
+            const showLogin = document.getElementById('showLogin');
+            const loginBtn = document.getElementById('loginBtn');
+            const registerBtn = document.getElementById('registerBtn');
+            const loginUsernameInput = document.getElementById('loginUsername');
+            const loginPasswordInput = document.getElementById('loginPassword');
+            const registerUsernameInput = document.getElementById('registerUsername');
+            const registerPasswordInput = document.getElementById('registerPassword');
+            const loginError = document.getElementById('loginError');
+            const registerError = document.getElementById('registerError');
+            const topBar = document.getElementById('topBar');
+            const menuUsername = document.getElementById('menuUsername');
+            const menuLogoutBtn = document.getElementById('menuLogoutBtn');
+            const appContainer = document.getElementById('appContainer');
+
+            let token = localStorage.getItem('token');
+            let allProducts = [];
+
+            function showToast(message, type = 'info') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        container.removeChild(toast);
+                    }, 500);
+                }, 3000);
+            }
+
+            async function checkLogin() {
+                token = localStorage.getItem('token');
+                if (!token) {
+                    loginOverlay.style.display = 'flex';
+                    appContainer.style.display = 'none';
+                    topBar.style.display = 'none';
+                    return;
+                }
+                try {
+                    const res = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (res.ok) {
+                        const user = await res.json();
+                        loginOverlay.style.display = 'none';
+                        appContainer.style.display = 'block';
+                        topBar.style.display = 'flex';
+                        menuUsername.textContent = user.username;
+                        document.getElementById('menuAdminBtn').style.display = user.role === 'admin' ? 'flex' : 'none';
+                        await fetchAllProducts();
+                        renderDashboard();
+                    } else {
+                        logout();
+                    }
+                } catch (error) {
+                    logout();
+                }
+            }
+
+            async function fetchAllProducts() {
+                try {
+                    const res = await fetch('/api/data', { headers: { 'Authorization': `Bearer ${token}` } });
+                    if (res.ok) {
+                        allProducts = await res.json();
+                    } else {
+                        showToast('Nie udało się załadować listy produktów.', 'danger');
+                    }
+                } catch(err) {
+                    showToast('Błąd sieci podczas ładowania produktów.', 'danger');
+                }
+            }
+
+            function logout() {
+                localStorage.removeItem('token');
+                token = null;
+                allProducts = [];
+                checkLogin();
+            }
+
+            // ... i tak dalej, aż do końca oryginalnego skryptu ...
+       });
+    </script>
 </body>
 </html>
