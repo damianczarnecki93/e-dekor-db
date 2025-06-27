@@ -1,7 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path');
+const path = require('path'); // Dodajemy moduł 'path'
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -10,14 +10,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- Zaimportuj modele TUTAJ, w głównym pliku ---
-const Product = require('./models/Product');
-// Możesz tu też zaimportować inne modele, jeśli będą potrzebne w innych routerach
+// --- POPRAWKA: Tworzymy absolutną ścieżkę do modelu ---
+// To rozwiązanie jest bardziej odporne na różnice w środowiskach (lokalne vs. serwer)
+const productModelPath = path.resolve(__dirname, 'models', 'Product.js');
+console.log(`[DEBUG] Próba załadowania modelu Product z: ${productModelPath}`); // Logowanie ścieżki dla celów diagnostycznych
+const Product = require(productModelPath);
 
-// --- Podłączenie tras API z przekazaniem modeli ---
-// Zmieniamy sposób, w jaki przekazujemy model do pliku z trasami
+// --- Podłączenie tras API ---
+// Przekazujemy załadowany model 'Product' do routera '/api/data'
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/data', require('./routes/data')(Product)); // <--- WAŻNA ZMIANA
+app.use('/api/data', require('./routes/data')(Product)); // Ta linia jest kluczowa dla nowego podejścia
 app.use('/api/admin', require('./routes/admin'));
 
 // --- Serwowanie plików statycznych z folderu 'client' ---
