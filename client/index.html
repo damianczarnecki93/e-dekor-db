@@ -399,11 +399,10 @@
             }
             
             function renderDashboard() { 
+                elements.mainContent.style.display = 'block';
                 elements.mainContent.innerHTML = '<h2>Pulpit</h2><p>Witaj w panelu e-Dekor. Wybierz opcję z menu, aby rozpocząć.</p>'; 
-                elements.mainContent.style.display = 'block'; 
             }
             
-            // --- FULL IMPLEMENTATIONS OF RENDER FUNCTIONS (from skaner.js) ---
             function renderListBuilder(listToEdit = null) {
                 currentList = listToEdit ? JSON.parse(JSON.stringify(listToEdit)) : { clientName: '', items: [] };
                 
@@ -511,7 +510,10 @@
                 }
             }
 
-            async function renderAdminPanel() { /* ... implementacja ... */ }
+            async function renderAdminPanel() { 
+                elements.adminPanel.style.display = 'block';
+                elements.adminPanel.innerHTML = `<h2>Panel Administratora</h2><p>Funkcjonalność w budowie.</p>`;
+            }
 
             async function renderSavedLists() {
                 try {
@@ -540,7 +542,11 @@
                     showToast(err.message, 'danger');
                 }
             }
-            
+             function renderInventoryPage() {
+                elements.inventoryPage.style.display = 'block';
+                elements.inventoryPage.innerHTML = '<h2>Inwentaryzacja</h2><p>Funkcjonalność w budowie.</p>';
+            }
+
             function findProduct(input) {
                 if(!allProducts || allProducts.length === 0) return null;
                 const lowerCaseInput = input.toLowerCase();
