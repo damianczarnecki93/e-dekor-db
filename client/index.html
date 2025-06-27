@@ -167,7 +167,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     
     <script>
-       document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', () => {
             const elements = {
                 loginOverlay: document.getElementById('loginOverlay'),
                 loginForm: document.getElementById('loginForm'),
@@ -279,14 +279,18 @@
                 const headers = { ...options.headers, 'Content-Type': 'application/json' };
                 const currentToken = localStorage.getItem('token');
                 if (currentToken) {
-                    // POPRAWKA: Nagłówek 'x-auth-token' jest używany zgodnie z tym, czego oczekuje authMiddleware.js
                     headers['x-auth-token'] = currentToken;
                 }
                 options.headers = headers;
 
+                console.log(`[DIAGNOSTYKA] Wysyłanie zapytania do: ${url} z nagłówkami:`, options.headers);
+
                 const response = await fetch(url, options);
                 
+                console.log(`[DIAGNOSTYKA] Otrzymano odpowiedź ze statusu: ${response.status} dla ${url}`);
+                
                 if (response.status === 401) {
+                    console.error("[DIAGNOSTYKA] Błąd 401 Unauthorized. Wylogowywanie.");
                     logout();
                     throw new Error('Sesja wygasła. Zaloguj się ponownie.');
                 }
@@ -294,17 +298,22 @@
             }
             
             async function checkLogin() {
+                console.log("[DIAGNOSTYKA] Uruchomiono checkLogin().");
                 token = localStorage.getItem('token');
+                console.log(`[DIAGNOSTYKA] Token z localStorage: ${token ? 'istnieje' : 'brak'}`);
+                
                 if (!token) {
+                    console.log("[DIAGNOSTYKA] Brak tokenu. Wyświetlanie ekranu logowania.");
                     elements.loginOverlay.style.display = 'flex';
                     elements.appContainer.style.display = 'none';
                     elements.topBar.style.display = 'none';
                     return;
                 }
                 try {
-                    // POPRAWKA: Używamy endpointu, który istnieje w routes/auth.js, czyli GET '/'
+                    console.log("[DIAGNOSTYKA] Próba weryfikacji tokenu na /api/auth/");
                     const res = await apiFetch('/api/auth/'); 
                     if (res.ok) {
+                        console.log("[DIAGNOSTYKA] Weryfikacja tokenu pomyślna. Przechodzenie do aplikacji.");
                         const user = await res.json();
                         elements.loginOverlay.style.display = 'none';
                         elements.appContainer.style.display = 'block';
@@ -315,11 +324,11 @@
                         renderDashboard();
                     } else {
                         const errorText = await res.text();
-                        console.error("Błąd weryfikacji tokenu, odpowiedź serwera:", errorText);
+                        console.error("[DIAGNOSTYKA] Błąd weryfikacji tokenu, status:", res.status, "Odpowiedź serwera:", errorText);
                         logout();
                     }
                 } catch (error) {
-                    console.error("Błąd wykonania fetch przy weryfikacji tokenu:", error);
+                    console.error("[DIAGNOSTYKA] Błąd krytyczny w checkLogin (np. błąd sieci):", error);
                     logout();
                 }
             }
@@ -332,8 +341,8 @@
                     return;
                 }
                 elements.loginError.textContent = '';
+                console.log("[DIAGNOSTYKA] Próba logowania na /api/auth/login");
                 try {
-                    // POPRAWKA: Używamy endpointu '/api/auth/login'
                     const res = await fetch('/api/auth/login', { 
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -341,13 +350,16 @@
                     });
                     const data = await res.json();
                     if (res.ok) {
+                        console.log("[DIAGNOSTYKA] Logowanie pomyślne. Otrzymano token.");
                         localStorage.setItem('token', data.token);
                         token = data.token;
                         await checkLogin();
                     } else {
+                        console.error("[DIAGNOSTYKA] Błąd logowania:", data.message);
                         elements.loginError.textContent = data.message || 'Błąd logowania';
                     }
                 } catch (err) {
+                    console.error("[DIAGNOSTYKA] Błąd sieci przy logowaniu:", err);
                     elements.loginError.textContent = 'Błąd sieci lub serwera';
                 }
             }
@@ -380,6 +392,7 @@
             }
 
             function logout() {
+                console.log("[DIAGNOSTYKA] Wylogowywanie.");
                 localStorage.removeItem('token');
                 token = null;
                 allProducts = [];
@@ -411,11 +424,11 @@
                 elements.mainContent.innerHTML = '<h2>Pulpit</h2><p>Witaj w panelu e-Dekor.</p>'; 
                 elements.mainContent.style.display = 'block'; 
             }
-            function renderListBuilder(listToEdit = null) { /* Pozostawiam jako placeholder */ }
-            function renderPickingPage() { /* Pozostawiam jako placeholder */ }
-            function renderInventoryPage() { /* Pozostawiam jako placeholder */ }
-            async function renderAdminPanel() { /* Pozostawiam jako placeholder */ }
-            async function renderSavedLists() { /* Pozostawiam jako placeholder */ }
+            function renderListBuilder(listToEdit = null) { /* ... */ }
+            function renderPickingPage() { /* ... */ }
+            function renderInventoryPage() { /* ... */ }
+            async function renderAdminPanel() { /* ... */ }
+            async function renderSavedLists() { /* ... */ }
             
             function findProduct(input) {
                 if(!allProducts || allProducts.length === 0) return null;
@@ -446,7 +459,6 @@
                     elements.savedListsModal.style.display = 'flex';
                 });
                 
-                // WYSZUKIWARKA
                 elements.quickSearchBtn.addEventListener('click', () => {
                     elements.quickSearchModal.style.display = 'flex';
                     elements.lookupBarcodeInput.value = '';
