@@ -3,52 +3,25 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const dotenv = require('dotenv');
-const fs = require('fs'); // Dodajemy moduł File System do odczytu folderów
 
 dotenv.config();
-
-// === SKRYPT DIAGNOSTYCZNY: LOGOWANIE STRUKTURY PLIKÓW ===
-// Ten kod pomoże nam zrozumieć, jak Render organizuje pliki.
-try {
-    const startPath = path.resolve(__dirname);
-    console.log('--- START DIAGNOSTYKI PLIKÓW ---');
-    console.log(`[DIAGNOSTYKA] Bieżący katalog (__dirname): ${startPath}`);
-    
-    const itemsInCurrentDir = fs.readdirSync(startPath);
-    console.log(`[DIAGNOSTYKA] Zawartość katalogu ${startPath}:`, itemsInCurrentDir);
-
-    // Sprawdzamy, czy folder 'models' istnieje w bieżącym katalogu
-    const modelsPath = path.join(startPath, 'models');
-    if (fs.existsSync(modelsPath)) {
-        console.log(`[DIAGNOSTYKA] Folder 'models' ZNALEZIONY w: ${modelsPath}`);
-        const filesInModelsDir = fs.readdirSync(modelsPath);
-        console.log("[DIAGNOSTYKA] Zawartość folderu 'models':", filesInModelsDir);
-    } else {
-        console.error(`[DIAGNOSTYKA] KRYTYCZNY BŁĄD: Nie znaleziono folderu 'models' pod ścieżką: ${modelsPath}`);
-    }
-    console.log('--- KONIEC DIAGNOSTYKI ---');
-} catch (e) {
-    console.error('[DIAGNOSTYKA] Błąd podczas listowania plików:', e);
-}
-// === KONIEC SKRYPTU DIAGNOSTYCZNEGO ===
-
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Import modelu. Błąd prawdopodobnie wystąpi tutaj, ale logi diagnostyczne powyżej pomogą go rozwiązać.
-const Product = require('./models/Product');
+// === POPRAWKA: Używamy właściwej nazwy modelu 'ProductList' ===
+const ProductList = require('./models/ProductList'); 
 
-// Podłączenie tras API. Przekazujemy model do pliku z trasami.
+// --- Podłączenie tras API z przekazaniem modelu ---
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/data', require('./routes/data')(Product));
+app.use('/api/data', require('./routes/data')(ProductList)); // Przekazujemy właściwy model
 app.use('/api/admin', require('./routes/admin'));
 
-// Serwowanie plików statycznych z folderu 'client'
+// --- Serwowanie plików statycznych z folderu 'client' ---
 app.use(express.static(path.join(__dirname, 'client')));
 
-// Reguła "Catch-all"
+// --- Reguła "Catch-all" - serwuje index.html dla każdej innej trasy ---
 app.get('*', (req, res) => {
     res.sendFile(path.resolve(__dirname, 'client', 'index.html'));
 });
