@@ -167,8 +167,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     
     <script>
-        // Pełny, połączony skrypt z index.html i skaner.js
-        document.addEventListener('DOMContentLoaded', () => {
+       document.addEventListener('DOMContentLoaded', () => {
             const elements = {
                 loginOverlay: document.getElementById('loginOverlay'),
                 loginForm: document.getElementById('loginForm'),
@@ -228,7 +227,7 @@
                 const productList = document.createElement('div');
                 products.forEach(product => {
                     const productItem = document.createElement('div');
-                    productItem.className = 'list-item'; // Użycie istniejącej klasy dla spójnego wyglądu
+                    productItem.className = 'list-item';
                     productItem.innerHTML = `
                         <div>
                             <strong>${product.name}</strong>
@@ -242,9 +241,8 @@
             }
 
             async function performProductSearch(query) {
-                // Ta funkcja jest teraz główną funkcją wyszukiwania, używając Atlas Search
                 if (!query || query.trim().length < 2) {
-                    elements.lookupResultSingle.innerHTML = ''; // Czyści wyniki, jeśli zapytanie jest za krótkie
+                    elements.lookupResultSingle.innerHTML = '';
                     return;
                 }
                 elements.lookupResultSingle.innerHTML = '<p>Szukanie...</p>';
@@ -260,8 +258,6 @@
             }
             // === KONIEC NOWEJ SEKCJI ===
 
-            // --- ORYGINALNE FUNKCJE Z PLIKU skaner.js ---
-
             function showToast(message, type = 'info') {
                 const container = document.getElementById('toast-container');
                 const toast = document.createElement('div');
@@ -271,16 +267,16 @@
                 setTimeout(() => toast.classList.add('show'), 10);
                 setTimeout(() => {
                     toast.classList.remove('show');
-                    setTimeout(() => container.removeChild(toast), 500);
+                    setTimeout(() => {
+                        if (toast.parentNode === container) {
+                            container.removeChild(toast);
+                        }
+                    }, 500);
                 }, 3000);
             }
 
             async function apiFetch(url, options = {}) {
-                options.headers = {
-                    ...options.headers,
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                };
+                options.headers = { ...options.headers, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
                 const response = await fetch(url, options);
                 if (response.status === 401) {
                     logout();
@@ -292,49 +288,112 @@
             async function checkLogin() {
                 token = localStorage.getItem('token');
                 if (!token) {
-                    loginOverlay.style.display = 'flex';
-                    appContainer.style.display = 'none';
-                    topBar.style.display = 'none';
+                    elements.loginOverlay.style.display = 'flex';
+                    elements.appContainer.style.display = 'none';
+                    elements.topBar.style.display = 'none';
                     return;
                 }
                 try {
                     const res = await apiFetch('/api/auth/me');
                     if (res.ok) {
                         const user = await res.json();
-                        loginOverlay.style.display = 'none';
-                        appContainer.style.display = 'block';
-                        topBar.style.display = 'flex';
-                        menuUsername.textContent = user.username;
-                        document.getElementById('menuAdminBtn').style.display = user.role === 'admin' ? 'flex' : 'none';
+                        elements.loginOverlay.style.display = 'none';
+                        elements.appContainer.style.display = 'block';
+                        elements.topBar.style.display = 'flex';
+                        elements.menuUsername.textContent = user.username;
+                        elements.menuAdminBtn.style.display = user.role === 'admin' ? 'flex' : 'none';
                         await fetchAllProducts();
                         renderDashboard();
                     } else {
                         logout();
                     }
                 } catch (error) {
+                    console.error("Błąd weryfikacji tokenu:", error);
                     logout();
                 }
             }
-            
-            async function login() { /* ... pozostaje bez zmian ... */ }
-            async function register() { /* ... pozostaje bez zmian ... */ }
-            function logout() { /* ... pozostaje bez zmian ... */ }
 
-            function navigate(pageRenderer) {
-                document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
-                elements.floatingInputBar.style.display = 'none';
-                pageRenderer();
+            async function login() {
+                const username = elements.loginUsernameInput.value;
+                const password = elements.loginPasswordInput.value;
+                elements.loginError.textContent = '';
+                try {
+                    const res = await fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        localStorage.setItem('token', data.token);
+                        await checkLogin();
+                    } else {
+                        elements.loginError.textContent = data.message || 'Błąd logowania';
+                    }
+                } catch (err) {
+                    elements.loginError.textContent = 'Błąd sieci';
+                }
             }
 
-            function renderDashboard() { /* ... */ }
-            function renderListBuilder(listToEdit = null) { /* ... */ }
-            function renderPickingPage() { /* ... */ }
-            function renderInventoryPage() { /* ... */ }
-            function renderAdminPanel() { /* ... */ }
-            async function renderSavedLists() { /* ... */ }
+            async function register() {
+                const username = elements.registerUsernameInput.value;
+                const password = elements.registerPasswordInput.value;
+                elements.registerError.textContent = '';
+                try {
+                    const res = await fetch('/api/auth/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        showToast('Rejestracja pomyślna. Możesz się zalogować.');
+                        elements.registerForm.style.display = 'none';
+                        elements.loginForm.style.display = 'block';
+                    } else {
+                        elements.registerError.textContent = data.message || 'Błąd rejestracji';
+                    }
+                } catch (err) {
+                    elements.registerError.textContent = 'Błąd sieci';
+                }
+            }
+
+            function logout() {
+                localStorage.removeItem('token');
+                token = null;
+                allProducts = [];
+                currentList = { clientName: '', items: [] };
+                checkLogin();
+            }
+
+            async function fetchAllProducts() {
+                try {
+                    const res = await apiFetch('/api/data');
+                    if (res.ok) {
+                        allProducts = await res.json();
+                    } else {
+                        showToast('Nie udało się załadować listy produktów.', 'danger');
+                    }
+                } catch(err) {
+                    showToast('Błąd sieci podczas ładowania produktów.', 'danger');
+                }
+            }
+
+            function navigate(pageRenderer, ...args) {
+                document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
+                elements.floatingInputBar.style.display = 'none';
+                pageRenderer(...args);
+            }
+
+            function renderDashboard() { /* ... Implementacja pulpitu ... */ }
+            function renderListBuilder(listToEdit = null) { /* ... Implementacja kreatora listy ... */ }
+            function renderPickingPage() { /* ... Implementacja kompletacji ... */ }
+            function renderInventoryPage() { /* ... Implementacja inwentaryzacji ... */ }
+            async function renderAdminPanel() { /* ... Implementacja panelu admina ... */ }
+            async function renderSavedLists() { /* ... Implementacja zapisanych list ... */ }
             
             function findProduct(input) {
-                return allProducts.find(p => p.ean === input || p.code === input || p.name.toLowerCase() === input.toLowerCase());
+                return allProducts.find(p => p.ean === input || p.code === input || (p.name && p.name.toLowerCase() === input.toLowerCase()));
             }
 
             function initEventListeners() {
@@ -351,16 +410,19 @@
                         elements.dropdownMenu.classList.remove('show');
                     }
                 });
-
+                
                 elements.menuDashboardBtn.addEventListener('click', () => navigate(renderDashboard));
                 elements.menuListBuilderBtn.addEventListener('click', () => navigate(() => renderListBuilder()));
                 elements.menuPickingBtn.addEventListener('click', () => navigate(renderPickingPage));
                 elements.menuInventoryBtn.addEventListener('click', () => navigate(renderInventoryPage));
                 elements.menuAdminBtn.addEventListener('click', () => navigate(renderAdminPanel));
-                elements.menuSavedLists.addEventListener('click', () => elements.savedListsModal.style.display = 'flex');
+                elements.menuSavedLists.addEventListener('click', () => {
+                    renderSavedLists();
+                    elements.savedListsModal.style.display = 'flex';
+                });
                 elements.menuLogoutBtn.addEventListener('click', logout);
-
-                // --- MODYFIKACJA LOGIKI WYSZUKIWANIA ---
+                
+                // === WYSZUKIWARKA ===
                 elements.quickSearchBtn.addEventListener('click', () => {
                     elements.quickSearchModal.style.display = 'flex';
                     elements.lookupBarcodeInput.value = '';
@@ -371,12 +433,10 @@
                 let searchDebounceTimer;
                 elements.lookupBarcodeInput.addEventListener('input', () => {
                     const query = elements.lookupBarcodeInput.value.trim();
-                    const foundProduct = findProduct(query); // Najpierw szukaj w lokalnej liście po kodzie/EAN
+                    const foundProduct = findProduct(query);
                     if (foundProduct) {
-                         // Jeśli znaleziono DOKŁADNE dopasowanie lokalnie, pokaż je od razu
                         renderSearchResults([foundProduct]); 
                     } else {
-                        // Jeśli nie ma dokładnego dopasowania, użyj wyszukiwania pełnotekstowego z opóźnieniem
                         clearTimeout(searchDebounceTimer);
                         searchDebounceTimer = setTimeout(() => {
                             performProductSearch(query);
