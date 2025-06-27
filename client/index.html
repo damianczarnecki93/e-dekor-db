@@ -403,6 +403,7 @@
                 elements.mainContent.innerHTML = '<h2>Pulpit</h2><p>Witaj w panelu e-Dekor. Wybierz opcję z menu, aby rozpocząć.</p>'; 
             }
             
+            // --- FULL IMPLEMENTATIONS OF RENDER FUNCTIONS (from skaner.js) ---
             function renderListBuilder(listToEdit = null) {
                 currentList = listToEdit ? JSON.parse(JSON.stringify(listToEdit)) : { clientName: '', items: [] };
                 
