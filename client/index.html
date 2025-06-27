@@ -279,7 +279,7 @@
                     headers['x-auth-token'] = currentToken;
                 }
                 options.headers = headers;
-
+                
                 const response = await fetch(url, options);
                 
                 if (response.status === 401) {
@@ -298,7 +298,7 @@
                     return;
                 }
                 try {
-                    const res = await apiFetch('/api/auth'); 
+                    const res = await apiFetch('/api/auth');
                     if (res.ok) {
                         const user = await res.json();
                         elements.loginOverlay.style.display = 'none';
@@ -403,7 +403,6 @@
                 elements.mainContent.innerHTML = '<h2>Pulpit</h2><p>Witaj w panelu e-Dekor. Wybierz opcję z menu, aby rozpocząć.</p>'; 
             }
             
-            // --- FULL IMPLEMENTATIONS OF RENDER FUNCTIONS (from skaner.js) ---
             function renderListBuilder(listToEdit = null) {
                 currentList = listToEdit ? JSON.parse(JSON.stringify(listToEdit)) : { clientName: '', items: [] };
                 
