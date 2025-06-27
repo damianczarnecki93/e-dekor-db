@@ -276,14 +276,9 @@
             }
 
             async function apiFetch(url, options = {}) {
-                const headers = {
-                    ...options.headers,
-                    'Content-Type': 'application/json'
-                };
+                const headers = { ...options.headers, 'Content-Type': 'application/json' };
                 const currentToken = localStorage.getItem('token');
                 if (currentToken) {
-                    // POPRAWKA: Używamy standardowego nagłówka 'Authorization' z prefixem 'Bearer '.
-                    // Pana authMiddleware jest standardowe i powinno go obsłużyć.
                     headers['Authorization'] = `Bearer ${currentToken}`;
                 }
                 options.headers = headers;
@@ -306,7 +301,7 @@
                     return;
                 }
                 try {
-                    // POPRAWKA: Używamy poprawnego endpointu `/api/auth/` (GET)
+                    // POPRAWKA: Używamy endpointu, który istnieje w routes/auth.js, czyli GET '/'
                     const res = await apiFetch('/api/auth/'); 
                     if (res.ok) {
                         const user = await res.json();
@@ -318,12 +313,12 @@
                         await fetchAllProducts();
                         renderDashboard();
                     } else {
-                        const errorData = await res.text(); // Zobaczmy co serwer faktycznie odpowiedział
-                        console.error("Odpowiedź serwera przy weryfikacji tokenu:", errorData);
+                        const errorText = await res.text();
+                        console.error("Błąd weryfikacji tokenu, odpowiedź serwera:", errorText);
                         logout();
                     }
                 } catch (error) {
-                    console.error("Błąd weryfikacji tokenu:", error);
+                    console.error("Błąd wykonania fetch przy weryfikacji tokenu:", error);
                     logout();
                 }
             }
@@ -337,8 +332,8 @@
                 }
                 elements.loginError.textContent = '';
                 try {
-                    // POPRAWKA: Używamy poprawnego endpointu `/api/auth/` (POST)
-                    const res = await fetch('/api/auth/', { 
+                    // POPRAWKA: Używamy endpointu '/api/auth/login'
+                    const res = await fetch('/api/auth/login', { 
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ username, password })
@@ -346,12 +341,13 @@
                     const data = await res.json();
                     if (res.ok) {
                         localStorage.setItem('token', data.token);
+                        token = data.token; // Aktualizujemy token natychmiast
                         await checkLogin();
                     } else {
                         elements.loginError.textContent = data.message || 'Błąd logowania';
                     }
                 } catch (err) {
-                    elements.loginError.textContent = 'Błąd sieci';
+                    elements.loginError.textContent = 'Błąd sieci lub serwera';
                 }
             }
 
@@ -414,14 +410,16 @@
                 elements.mainContent.innerHTML = '<h2>Pulpit</h2><p>Witaj w panelu e-Dekor.</p>'; 
                 elements.mainContent.style.display = 'block'; 
             }
-            function renderListBuilder(listToEdit = null) { /* ... implementacja ... */ }
-            function renderPickingPage() { /* ... implementacja ... */ }
-            function renderInventoryPage() { /* ... implementacja ... */ }
-            async function renderAdminPanel() { /* ... implementacja ... */ }
-            async function renderSavedLists() { /* ... implementacja ... */ }
+            function renderListBuilder(listToEdit = null) { /* Pozostawiam jako placeholder */ }
+            function renderPickingPage() { /* Pozostawiam jako placeholder */ }
+            function renderInventoryPage() { /* Pozostawiam jako placeholder */ }
+            async function renderAdminPanel() { /* Pozostawiam jako placeholder */ }
+            async function renderSavedLists() { /* Pozostawiam jako placeholder */ }
             
             function findProduct(input) {
-                return allProducts.find(p => p.ean === input || p.code === input || (p.name && p.name.toLowerCase() === input.toLowerCase()));
+                if(!allProducts || allProducts.length === 0) return null;
+                const lowerCaseInput = input.toLowerCase();
+                return allProducts.find(p => p.ean === input || p.code === input || (p.name && p.name.toLowerCase() === lowerCaseInput));
             }
 
             function initEventListeners() {
@@ -447,7 +445,6 @@
                     elements.savedListsModal.style.display = 'flex';
                 });
                 
-                // WYSZUKIWARKA
                 elements.quickSearchBtn.addEventListener('click', () => {
                     elements.quickSearchModal.style.display = 'flex';
                     elements.lookupBarcodeInput.value = '';
